@@ -80,4 +80,8 @@ dependencies:
     - urllib3==1.26.9
     - werkzeug==2.1.2
     - wrapt==1.14.1
+    - pandas
+    - problog
+    - tensorflow-probability
+    - tensorflow_ranking
 
