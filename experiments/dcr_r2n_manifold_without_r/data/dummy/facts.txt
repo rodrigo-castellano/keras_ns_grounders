@@ -1,0 +1,12 @@
+r_concept(0,1).
+r_concept(1,2).
+r_concept(2,3).
+r_concept(4,5).
+r_concept(5,6).
+r_concept(6,7).
+r_concept(1,0).
+r_concept(2,1).
+r_concept(3,2).
+r_concept(5,4).
+r_concept(6,5).
+r_concept(7,6).
