@@ -1,6 +1,9 @@
 import sys
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\code\\keras-ns')
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\code\\keras-ns\\experiments\\countries')
+sys.path.append('\\home\\castellanoontiv\\keras_ns_grounders\\experiments\\countries')
+sys.path.append('\\home\\castellanoontiv\\keras_ns_grounders')
+
 import copy
 import datetime
 import os
@@ -48,7 +51,7 @@ if __name__ == '__main__':
     RULE_FILE = ["rules.txt"]  # rules
     TRAIN_FILE = ["train_S2_p.txt"]#,["train_S1_p.txt","train_S2_p.txt","train_S3_p.txt"] # "train_S1_p_no_neighbor.txt",
     GROUNDER = ["domainbody","backward","known","full","domain"] # 'backward', 'known', 'full', 'domain'
-    MODEL_NAME = ['no_reasoner','dcr','r2n','sbr','rnm']  #['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']
+    MODEL_NAME = ['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']  #['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']
     all_args = []
 
     for train_file, grounder, kge, e, w_loss, seed, dropout, r, neg, lr, nr, h, dp, v, rr, model_name in product(
