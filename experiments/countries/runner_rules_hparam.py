@@ -1,8 +1,8 @@
 import sys
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\code\\keras-ns')
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\code\\keras-ns\\experiments\\countries')
-sys.path.append('home/castellanoontiv/keras_ns_grounders/experiments/countries')
-sys.path.append('home/castellanoontiv/keras_ns_grounders')
+sys.path.append('/home/castellanoontiv/keras_ns_grounders/experiments/countries')
+sys.path.append('/home/castellanoontiv/keras_ns_grounders')
 for p in sys.path:
     print(p)
 import copy
