@@ -59,7 +59,7 @@ if __name__ == '__main__':
             NUM_RULES, HARD, DEPTH,
             VALID_SIZE, RR, MODEL_NAME ):  
          
-        run_vars = (train_file[:train_file.index('.')],grounder, kge, e,w_loss, seed, dropout, r, 
+        run_vars = (train_file[:train_file.index('.')],grounder, kge, e,w_loss, dropout, r, 
                     neg, lr, nr, h, dp, v, rr,model_name)
 
         # Base parameters
@@ -172,10 +172,10 @@ if __name__ == '__main__':
     def main_wrapper(args): 
         # Check if the experiment has already been run.
         #create a string for the run_vars, each substring separated by a '_'
-        print("Run vars:", args.run_signature)
+        print("\nRun vars:", args.run_signature+'\n')
         hparam_folder = './hparamsearch/'
         if not os.path.exists(hparam_folder): os.mkdir(hparam_folder)
-        hparam_filename = hparam_folder+'hparamsearch.csv'
+        hparam_filename = hparam_folder+'hparamsearch.txt'
         # If the file does not exist, create it and write run_vars 
         if not os.path.exists(hparam_filename):
             with open(hparam_filename, 'w') as f:
@@ -185,16 +185,16 @@ if __name__ == '__main__':
         else:
             with open(hparam_filename, 'r') as f:
                 lines = f.readlines()
+                # print(lines[all_args.index(args)])
+                # print(args.run_signature)
+                # print(lines[all_args.index(args)]==args.run_signature)
                 if args.run_signature+'\n' in lines:
                     print("Run vars already in file")
                     return
                 else:
                     with open(hparam_filename, 'a') as f:
                         f.write(args.run_signature)
-                        f.write('\n')
-
-
-        return
+                        f.write('\n')              
         # Check if the logger exists, if so, skip the experiment, otherwise run it.
         logger = ns.utils.FileLogger(log_folder)
         if logger.exists(args.__dict__):
