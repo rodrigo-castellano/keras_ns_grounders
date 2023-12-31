@@ -51,7 +51,7 @@ if __name__ == '__main__':
     WEIGHT_LOSS = [.5] #,1,0.7,0.3,0 
     RULE_FILE = ["rules.txt"]  # rules
     TRAIN_FILE = ["train_S2_p.txt"]#,["train_S1_p.txt","train_S2_p.txt","train_S3_p.txt"] # "train_S1_p_no_neighbor.txt",
-    GROUNDER = ["domainbody","backward","known","full","domain"] # 'backward', 'known', 'full', 'domain'
+    GROUNDER = ["backward","known","domain"] # 'backward', 'known', 'full', 'domain'
     MODEL_NAME = ['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']  #['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']
     all_args = []
 
