@@ -3,8 +3,6 @@ sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\code\\keras
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\code\\keras-ns\\experiments\\countries')
 sys.path.append('/home/castellanoontiv/keras_ns_grounders/experiments/countries')
 sys.path.append('/home/castellanoontiv/keras_ns_grounders')
-for p in sys.path:
-    print(p)
 import copy
 import datetime  
 import os
@@ -172,11 +170,36 @@ if __name__ == '__main__':
             f.write(combined_results)
 
     def main_wrapper(args): 
+        # Check if the experiment has already been run.
+        #create a string for the run_vars, each substring separated by a '_'
+        print("Run vars:", args.run_signature)
+        hparam_folder = './hparamsearch/'
+        if not os.path.exists(hparam_folder): os.mkdir(hparam_folder)
+        hparam_filename = hparam_folder+'hparamsearch.csv'
+        # If the file does not exist, create it and write run_vars 
+        if not os.path.exists(hparam_filename):
+            with open(hparam_filename, 'w') as f:
+                f.write(args.run_signature)
+                f.write('\n')
+        # If the file exists, check if the run_vars are already in the file, if not, write them
+        else:
+            with open(hparam_filename, 'r') as f:
+                lines = f.readlines()
+                if args.run_signature+'\n' in lines:
+                    print("Run vars already in file")
+                    return
+                else:
+                    with open(hparam_filename, 'a') as f:
+                        f.write(args.run_signature)
+                        f.write('\n')
+
+
+        return
         # Check if the logger exists, if so, skip the experiment, otherwise run it.
         logger = ns.utils.FileLogger(log_folder)
         if logger.exists(args.__dict__):
             print("Skipping", args)
-            return
+            # return
         else:
             date = str(datetime.datetime.now()).replace(":","-")
             log_filename_tmp = os.path.join(log_folder, '_tmp_log%s.csv' % date)
