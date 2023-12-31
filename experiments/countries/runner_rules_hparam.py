@@ -184,17 +184,10 @@ if __name__ == '__main__':
         # If the file exists, check if the run_vars are already in the file, if not, write them
         else:
             with open(hparam_filename, 'r') as f:
-                lines = f.readlines()
-                # print(lines[all_args.index(args)])
-                # print(args.run_signature)
-                # print(lines[all_args.index(args)]==args.run_signature)
+                lines = f.readlines() 
                 if args.run_signature+'\n' in lines:
                     print("Run vars already in file")
-                    return
-                else:
-                    with open(hparam_filename, 'a') as f:
-                        f.write(args.run_signature)
-                        f.write('\n')              
+                    return           
         # Check if the logger exists, if so, skip the experiment, otherwise run it.
         logger = ns.utils.FileLogger(log_folder)
         if logger.exists(args.__dict__):
@@ -226,12 +219,8 @@ if __name__ == '__main__':
                     args)
                 test_acc_avg[:,i] = np.array(test_acc)
                 valid_acc_avg[:,i] = np.array(valid_acc)
-                train_acc_avg[:,i] = np.array(train_acc)
-                # print("Test acc:", test_acc)
-                # print("Valid acc:", valid_acc)
-                # print("Train acc:", train_acc)
-                print('test acc avg', test_acc_avg)
-                # print('valid acc avg', valid_acc_avg)
+                train_acc_avg[:,i] = np.array(train_acc) 
+                print('test acc avg', test_acc_avg) 
                 print('train acc avg', train_acc_avg)
                 end = time.time()
                 time_arr[i] = end - start
@@ -260,7 +249,10 @@ if __name__ == '__main__':
             if os.path.exists(log_filename):
                 os.remove(log_filename)
             os.rename(log_filename_tmp, log_filename)
-
+            # Write the run_vars to the file
+            with open(hparam_filename, 'a') as f:
+                f.write(args.run_signature)
+                f.write('\n')   
             if save_hparam_results: 
                 save_results(args, train_acc, valid_acc, test_acc, training_info, total_time, total_time_std, train_std, valid_std, test_std)
                 
