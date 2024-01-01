@@ -53,12 +53,12 @@ if __name__ == '__main__':
     MODEL_NAME = ['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']  #['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']
     all_args = []
 
-    for train_file, grounder, kge, e, w_loss, seed, dropout, r, neg, lr, nr, h, dp, v, rr, model_name in product(
-            TRAIN_FILE, GROUNDER, KGE, E, WEIGHT_LOSS, SEED, DROPOUT, R,
+    for train_file, kge, grounder, model_name, e, w_loss, seed, dropout, r, neg, lr, nr, h, dp, v, rr in product(
+            TRAIN_FILE, KGE, GROUNDER, MODEL_NAME, E, WEIGHT_LOSS, SEED, DROPOUT, R,
             NEG_PER_SIDE, LR,
             NUM_RULES, HARD, DEPTH,
-            VALID_SIZE, RR, MODEL_NAME ):  
-         
+            VALID_SIZE, RR ):  
+        
         run_vars = (train_file[:train_file.index('.')],grounder, kge, e,w_loss, dropout, r, 
                     neg, lr, nr, h, dp, v, rr,model_name)
 
