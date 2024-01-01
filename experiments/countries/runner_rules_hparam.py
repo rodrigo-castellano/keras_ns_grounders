@@ -199,62 +199,62 @@ if __name__ == '__main__':
             log_filename = os.path.join(
                 log_folder, 'log%s_%s.csv' % (args.run_signature, date))
 
-            # Create a dict with the keys coming from a list
-            keys = ['loss', 'concept_loss', 'task_loss', 'concept_mrr', 'concept_hits@1@1', 'concept_hits@3@3', 'concept_hits@5@5', 'concept_hits@10@10', 'task_mrr', 'task_hits@1@1', 'task_hits@3@3', 'task_hits@5@5', 'task_hits@10@10']
-            # create a dict with the keys and empty lists as values
-            runs = 5
-            test_acc_avg = np.zeros((len(keys),runs))
-            valid_acc_avg = np.zeros((len(keys),runs))
-            train_acc_avg = np.zeros((len(keys),runs))
-            time_arr = np.zeros((runs))
-            for i in range(runs):
-                print("Run number ", i, " out of ", runs)
-                start = time.time()
-                args.seed_run_i = args.seed[i]
-                best_val, _, valid_acc, test_acc, _, train_acc, training_info = main(
-                    base_path,
-                    None,
-                    None,
-                    log_filename_tmp,
-                    args)
-                test_acc_avg[:,i] = np.array(test_acc)
-                valid_acc_avg[:,i] = np.array(valid_acc)
-                train_acc_avg[:,i] = np.array(train_acc) 
-                print('test acc avg', test_acc_avg) 
-                print('train acc avg', train_acc_avg)
-                end = time.time()
-                time_arr[i] = end - start
-            total_time =  np.mean(time_arr)
-            total_time_std = np.std(time_arr)
-            # Take the average across cols
-            test_acc =  np.mean(test_acc_avg, axis=1)
-            valid_acc = np.mean(valid_acc_avg, axis=1)
-            train_acc = np.mean(train_acc_avg, axis=1)
-            # Take the standard deviation across cols
-            test_std = np.std(test_acc_avg, axis=1)
-            valid_std = np.std(valid_acc_avg, axis=1)
-            train_std = np.std(train_acc_avg, axis=1)
+        # Create a dict with the keys coming from a list
+        keys = ['loss', 'concept_loss', 'task_loss', 'concept_mrr', 'concept_hits@1@1', 'concept_hits@3@3', 'concept_hits@5@5', 'concept_hits@10@10', 'task_mrr', 'task_hits@1@1', 'task_hits@3@3', 'task_hits@5@5', 'task_hits@10@10']
+        # create a dict with the keys and empty lists as values
+        runs = 5
+        test_acc_avg = np.zeros((len(keys),runs))
+        valid_acc_avg = np.zeros((len(keys),runs))
+        train_acc_avg = np.zeros((len(keys),runs))
+        time_arr = np.zeros((runs))
+        for i in range(runs):
+            print("Run number ", i, " out of ", runs)
+            start = time.time()
+            args.seed_run_i = args.seed[i]
+            best_val, _, valid_acc, test_acc, _, train_acc, training_info = main(
+                base_path,
+                None,
+                None,
+                log_filename_tmp,
+                args)
+            test_acc_avg[:,i] = np.array(test_acc)
+            valid_acc_avg[:,i] = np.array(valid_acc)
+            train_acc_avg[:,i] = np.array(train_acc) 
+            print('test acc avg', test_acc_avg) 
+            print('train acc avg', train_acc_avg)
+            end = time.time()
+            time_arr[i] = end - start
+        total_time =  np.mean(time_arr)
+        total_time_std = np.std(time_arr)
+        # Take the average across cols
+        test_acc =  np.mean(test_acc_avg, axis=1)
+        valid_acc = np.mean(valid_acc_avg, axis=1)
+        train_acc = np.mean(train_acc_avg, axis=1)
+        # Take the standard deviation across cols
+        test_std = np.std(test_acc_avg, axis=1)
+        valid_std = np.std(valid_acc_avg, axis=1)
+        train_std = np.std(train_acc_avg, axis=1)
 
-            # Split the args used for trainig from the logged data.
-            if hasattr(args, 'model'):
-                delattr(args, 'model')
-            logged_data = copy.deepcopy(args)
-            # Add some extra info to log.
-            logged_data.valid_acc = valid_acc
-            logged_data.best_val = best_val
-            logged_data.test_acc = test_acc
-            logged_data.log_filename = log_filename
-            # Log the data to its final location.
-            logger.log(logged_data.__dict__, log_filename_tmp)
-            if os.path.exists(log_filename):
-                os.remove(log_filename)
-            os.rename(log_filename_tmp, log_filename)
-            # Write the run_vars to the file
-            with open(hparam_filename, 'a') as f:
-                f.write(args.run_signature)
-                f.write('\n')   
-            if save_hparam_results: 
-                save_results(args, train_acc, valid_acc, test_acc, training_info, total_time, total_time_std, train_std, valid_std, test_std)
+        # Split the args used for trainig from the logged data.
+        if hasattr(args, 'model'):
+            delattr(args, 'model')
+        logged_data = copy.deepcopy(args)
+        # Add some extra info to log.
+        logged_data.valid_acc = valid_acc
+        logged_data.best_val = best_val
+        logged_data.test_acc = test_acc
+        logged_data.log_filename = log_filename
+        # Log the data to its final location.
+        logger.log(logged_data.__dict__, log_filename_tmp)
+        if os.path.exists(log_filename):
+            os.remove(log_filename)
+        os.rename(log_filename_tmp, log_filename)
+        # Write the run_vars to the file
+        with open(hparam_filename, 'a') as f:
+            f.write(args.run_signature)
+            f.write('\n')   
+        if save_hparam_results: 
+            save_results(args, train_acc, valid_acc, test_acc, training_info, total_time, total_time_std, train_std, valid_std, test_std)
                 
 
     for args in all_args:
