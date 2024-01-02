@@ -44,9 +44,63 @@ def get_arg(args, name: str, default=None, assert_defined=False):
         assert value is not None, 'Arg %s is not defined: %s' % (name, str(args))
     return value
 
+def read_rules(path):
+    print('Reading rules')
+    rules = []
+    #open file data/nations/rules.txt and real all the lines
+    with open(path, 'r') as f:
+        for line in f:
+            print(line)
+            # split by :
+            line = line.split(':')
+            # first element is the name of the rule
+            rule_name = line[0]
+            # second element is the weight of the rule
+            rule_weight = float(line[1].replace(',', '.'))
+            # third element is the rule itself. Split by ->
+            rule = line[2].split('->')
+            # second element is the head of the rule
+            rule_head = rule[1]
+            # remove the \n from the head and the space
+            rule_head = [rule_head[1:-1]]
+            # first element is the body of the rule
+            rule_body = rule[0]
+            # split the body by ,
+            rule_body = rule_body.split(', ')
+            # for every body element, if the last character is a " ", remove it
+            for i in range(len(rule_body)):
+                if rule_body[i][-1] == " ":
+                    rule_body[i] = rule_body[i][:-1]
+            # Take the vars of the body and head and put them in a dictionary
+            all_vars = rule_body + rule_head
+            # print(all_vars)
+            var_names = {}
+            for i in range(len(all_vars)):
+                # print(all_vars[i])
+                # split the element of the body by (
+                open_parenthesis = all_vars[i].split('(')
+                # Split the second element by )
+                variables = open_parenthesis[1].split(')')
+                # divide the variables by ,
+                variables = variables[0].split(',')
+                # Create a dictionary with the variables as keys and the value "countries" as values
+                for var in variables:
+                    var_names[var] = "countries"
+                # print(var_names)
+
+            # print all the info
+            # print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
+            #         'rule body: ', rule_body, 'var_names: ', var_names)
+            rules.append(Rule(name=rule_name,var2domain=var_names,body=rule_body,head=rule_head))
+    return rules
+
 def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     # print("Num GPUs Available: ", len(gpus))
+    # print whether the GPU is being used
+    print('gpus:',tf.test.gpu_device_name())
+    # print whether the CPU is being used
+    print('cpus',tf.config.list_physical_devices('CPU'))
     csv_logger = CSVLogger(log_filename, append=True, separator=';')
     print('\nARGS', args,'\n')
 
@@ -98,30 +152,31 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     ### defining rules and grounding engine
     enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
     if enable_rules:
+        rules = read_rules('data/nations/rules.txt')
         # For KGEs with no domains.
         # domains = {Rule.default_domain(): fol.domains[0]}
 
-        rules = [
-            Rule(name='f1',  # S1
-                 var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
-                 body=["locatedInCS(X,W)", "locatedInSR(W,Z)"],
-                 head=["locatedInCR(X,Z)"])
-                ]
+        # rules = [
+        #     Rule(name='f1',  # S1
+        #          var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
+        #          body=["locatedInCS(X,W)", "locatedInSR(W,Z)"],
+        #          head=["locatedInCR(X,Z)"])
+        #         ]
         
-        if args.train_file == "train_S2_p.txt" or args.train_file == "train_S3_p.txt":
-            rules.append(
-                Rule(name='f2',   # S2
-                    var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
-                    body=["neighborOf(X,Y)", "locatedInCR(Y,Z)", "locatedInCS(X,W)", "locatedInSR(W,Z)"],
-                    head=["locatedInCR(X,Z)"])
-                        )
-        if args.train_file == "train_S3_p.txt":
-            rules.append(
-                Rule(name='f3',   # S3
-                     var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
-                     body=["neighborOf(X,Y)", "neighborOf(Y,K)", "locatedInCR(K,Z)"],
-                     head=["locatedInCR(X,Z)"]),
-                        )      
+        # if args.train_file == "train_S2_p.txt" or args.train_file == "train_S3_p.txt":
+        #     rules.append(
+        #         Rule(name='f2',   # S2
+        #             var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
+        #             body=["neighborOf(X,Y)", "locatedInCR(Y,Z)", "locatedInCS(X,W)", "locatedInSR(W,Z)"],
+        #             head=["locatedInCR(X,Z)"])
+        #                 )
+        # if args.train_file == "train_S3_p.txt":
+        #     rules.append(
+        #         Rule(name='f3',   # S3
+        #              var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
+        #              body=["neighborOf(X,Y)", "neighborOf(Y,K)", "locatedInCR(K,Z)"],
+        #              head=["locatedInCR(X,Z)"]),
+        #                 )      
 
 
 
@@ -216,9 +271,9 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     end = time.time()
     print("Time to create data generator test: ",  np.round(end - start,2))
 
-    data_gen_test_positive_only = ns.dataset.DataGenerator(
-        dataset_test_positive_only, fol, serializer, engine,
-        batch_size=args.eval_batch_size, ragged=ragged)
+    # data_gen_test_positive_only = ns.dataset.DataGenerator(
+    #     dataset_test_positive_only, fol, serializer, engine,
+    #     batch_size=args.eval_batch_size, ragged=ragged)
 
     #Loss
     loss_name = get_arg(args, 'loss', 'binary_crossentropy')
