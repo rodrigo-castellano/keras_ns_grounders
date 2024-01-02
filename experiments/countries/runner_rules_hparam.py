@@ -50,7 +50,7 @@ if __name__ == '__main__':
     RULE_FILE = ["rules.txt"]  # rules
     TRAIN_FILE = ["train_S3_p.txt"]#,["train_S1_p.txt","train_S2_p.txt","train_S3_p.txt"] # "train_S1_p_no_neighbor.txt",
     GROUNDER = ["domain"] # 'backward', 'known', 'full', 'domain'
-    MODEL_NAME = ['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']  #['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']
+    MODEL_NAME = ['dcr','r2n','sbr','rnm','gsbr','cdcr','no_reasoner',]  #['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']
     all_args = []
 
     for train_file, kge, grounder, model_name, e, w_loss, seed, dropout, r, neg, lr, nr, h, dp, v, rr in product(
