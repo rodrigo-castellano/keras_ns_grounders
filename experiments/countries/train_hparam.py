@@ -50,7 +50,6 @@ def read_rules(path):
     #open file data/nations/rules.txt and real all the lines
     with open(path, 'r') as f:
         for line in f:
-            print(line)
             # split by :
             line = line.split(':')
             # first element is the name of the rule
@@ -73,10 +72,8 @@ def read_rules(path):
                     rule_body[i] = rule_body[i][:-1]
             # Take the vars of the body and head and put them in a dictionary
             all_vars = rule_body + rule_head
-            # print(all_vars)
             var_names = {}
             for i in range(len(all_vars)):
-                # print(all_vars[i])
                 # split the element of the body by (
                 open_parenthesis = all_vars[i].split('(')
                 # Split the second element by )
@@ -86,8 +83,6 @@ def read_rules(path):
                 # Create a dictionary with the variables as keys and the value "countries" as values
                 for var in variables:
                     var_names[var] = "countries"
-                # print(var_names)
-
             # print all the info
             # print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
             #         'rule body: ', rule_body, 'var_names: ', var_names)
@@ -127,8 +122,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         domain_file='domain2constants.txt',
         train_file= args.train_file,
         # train_file=get_arg(args, 'train_file', None, "train_S1_p.txt"),
-        valid_file="valid_p.txt",
-        test_file="test_p.txt",
+        valid_file="valid.txt",
+        test_file="test.txt",
         fact_file="facts.txt")
     
     dataset_train = data_handler.get_dataset(
@@ -143,6 +138,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         split="test", number_negatives=0, corrupt_mode='TAIL')
     
     fol = data_handler.fol
+    print('FOL info\n', fol, flush=True)
+    print('FOL domains', fol.domains, '\n',' FOL predicates', fol.predicates, '\n', 'FOL name2domain', fol.name2domain, flush=True)
     domain2adaptive_constants: Dict[str, List[str]] = None
     num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
 
@@ -219,7 +216,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         predicates=fol.predicates, domains=fol.domains,
         constant2domain_name=fol.constant2domain_name,
         domain2adaptive_constants=domain2adaptive_constants)
-
+    print('grounder, serializer initialized', flush=True)
     # KGE
     kge_embedder = KGEFactory(args.kge)
     assert kge_embedder is not None
@@ -249,7 +246,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         num_adaptive_constants=num_adaptive_constants)
 
     # Preparing data as generators for model fit
-
+    print('Generating train data')
     start = time.time()
     data_gen_train = ns.dataset.DataGenerator(
         dataset_train, fol, serializer, engine,
