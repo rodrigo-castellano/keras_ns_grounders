@@ -24,7 +24,7 @@ def differentiable_sign(x):
     return sign, grad
 
 # Skips lines starting with comment_start, otherwise all lines are kept.
-def read_file_as_lines(file, allow_empty=False, comment_start='#'):
+def read_file_as_lines(file, allow_empty=True, comment_start='#'):
     try:
         with open(file, 'r') as f:
             if comment_start:

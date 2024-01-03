@@ -14,59 +14,6 @@ from keras_ns.utils import MMapModelCheckpoint, NSParser
 import time
 import numpy as np
 
-
-# from keras_ns.logic.commons import Rule
-# # Create a list for the rules
-# rules = []
-# #open file data/nations/rules.txt and real all the lines
-# with open('data/nations/rules.txt', 'r') as f:
-#     for line in f:
-#         print(line)
-#         # split by :
-#         line = line.split(':')
-#         # first element is the name of the rule
-#         rule_name = line[0]
-#         # second element is the weight of the rule
-#         rule_weight = float(line[1].replace(',', '.'))
-#         # third element is the rule itself. Split by ->
-#         rule = line[2].split('->')
-#         # second element is the head of the rule
-#         rule_head = rule[1]
-#         # remove the \n from the head and the space
-#         rule_head = [rule_head[1:-1]]
-#         # first element is the body of the rule
-#         rule_body = rule[0]
-#         # split the body by ,
-#         rule_body = rule_body.split(', ')
-#         # for every body element, if the last character is a " ", remove it
-#         for i in range(len(rule_body)):
-#             if rule_body[i][-1] == " ":
-#                 rule_body[i] = rule_body[i][:-1]
-#         # Take the vars of the body and head and put them in a dictionary
-#         all_vars = rule_body + rule_head
-#         # print(all_vars)
-#         var_names = {}
-#         for i in range(len(all_vars)):
-#             # print(all_vars[i])
-#             # split the element of the body by (
-#             open_parenthesis = all_vars[i].split('(')
-#             # Split the second element by )
-#             variables = open_parenthesis[1].split(')')
-#             # divide the variables by ,
-#             variables = variables[0].split(',')
-#             # Create a dictionary with the variables as keys and the value "countries" as values
-#             for var in variables:
-#                 var_names[var] = "countries"
-#             # print(var_names)
-
-#         # print all the info
-#         print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
-#                 'rule body: ', rule_body, 'var_names: ', var_names)
-#         rules.append(Rule(name=rule_name,var2domain=var_names,body=rule_body,head=rule_head))
-# print(paco)
-
-# show the current path
-
 NUM_CPUS :int = 1  # set to a larger num to enable parallel processing
 
 if __name__ == '__main__':
@@ -78,7 +25,7 @@ if __name__ == '__main__':
     log_folder :str = "results_002"
     if not os.path.exists(log_folder): os.mkdir(log_folder)
 
-    dataset_name :str = 'countries'
+    dataset_name :str = 'nations'
     base_path :str = "data"
     parallel :bool = False
     epochs: int = 120
@@ -98,7 +45,7 @@ if __name__ == '__main__':
     KGE = ['complex','distmult','transe']  # ["distmult", "transe","complex", "rotate"]
     WEIGHT_LOSS = [.5] #,1,0.7,0.3,0 
     RULE_FILE = ["rules.txt"]  # rules
-    TRAIN_FILE = ["train_S1_p.txt"]#,["train_S1_p.txt","train_S2_p.txt","train_S3_p.txt"] # "train_S1_p_no_neighbor.txt",
+    TRAIN_FILE = ["train.txt"]#,["train_S1_p.txt","train_S2_p.txt","train_S3_p.txt"] # "train_S1_p_no_neighbor.txt",
     GROUNDER = ['known','domain','backward', 'full', 'domainbody']
     MODEL_NAME = ['dcr','r2n','sbr','rnm','gsbr','cdcr','no_reasoner',]  #['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']
     all_args = []
