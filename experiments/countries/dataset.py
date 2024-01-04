@@ -112,7 +112,7 @@ def read_ontology(paths: List[str], format: str):
     predicates = OrderedDict()
     constants = OrderedDict()
     atoms = read_atoms(paths, format)
-    print('atoms', len(atoms),atoms[:10], flush=True)
+    # print('atoms', len(atoms),atoms[:10], flush=True)
     for a in atoms:
         p = a[0]
         if p not in predicates:
@@ -329,18 +329,18 @@ class KGCDataHandler():
         predicate2domains: Dict[str, List[Tuple[str]]] = Predicate2Domains(
             atoms=list(self.ground_facts_set),
             constant2domain=self.constant2domain)
-        print('predicate2domains', predicate2domains, flush=True)
+        # print('predicate2domains', predicate2domains, flush=True)
         # Computes the domains for each positional input of a predicate, checking
         # that the possible domains are univocally determined.
         for p,domain_list in predicate2domains.items():
-            print('p', p, 'domain_list', domain_list, flush=True)
+            # print('p', p, 'domain_list', domain_list, flush=True)
             assert len(domain_list) > 0
             num_possible_domains = len(domain_list)
             arity = len(domain_list[0])
             assert num_possible_domains == 1, '%s %s'%(p, domain_list)
             domains = [name2domain[d] for d in domain_list[0]]
             self.predicates.append(Predicate(p, tuple(domains)))
-            print('appended ',Predicate(p, tuple(domains)), flush=True)
+            # print('appended ',Predicate(p, tuple(domains)), flush=True)
 
         self.fol = FOL(self.domains, self.predicates, self.train_facts_set,
                        constant2domain_name=self.constant2domain)
