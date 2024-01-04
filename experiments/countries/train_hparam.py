@@ -91,11 +91,6 @@ def read_rules(path):
 
 def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
-    # print("Num GPUs Available: ", len(gpus))
-    # print whether the GPU is being used
-    print('gpus:',tf.test.gpu_device_name())
-    # print whether the CPU is being used
-    print('cpus',tf.config.list_physical_devices('CPU'))
     csv_logger = CSVLogger(log_filename, append=True, separator=';')
     print('\nARGS', args,'\n')
 
@@ -122,24 +117,27 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         domain_file='domain2constants.txt',
         train_file= args.train_file,
         # train_file=get_arg(args, 'train_file', None, "train_S1_p.txt"),
-        valid_file="valid.txt",
-        test_file="test.txt",
+        valid_file="valid_p.txt",
+        test_file="test_p.txt",
         fact_file="facts.txt")
     
     dataset_train = data_handler.get_dataset(
         split="train",
         number_negatives=args.num_negatives)
+    # print('DATASET_TRAIN num queries', len(dataset_train),dataset_train)
     # print('DATASET_TRAIN query', dataset_train[0][0])
-    # print('DATASET_TRAIN label', dataset_train[0][1])
+    # print('DATASET_TRAIN label', len(dataset_train[0][1]), dataset_train[0][1])
     dataset_valid = data_handler.get_dataset(
        split="valid",number_negatives=args.valid_negatives, corrupt_mode='TAIL')
     dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL')
-    dataset_test_positive_only = data_handler.get_dataset(
-        split="test", number_negatives=0, corrupt_mode='TAIL')
+    # print('DATASET_test query', dataset_test[0][0])
+    # print('DATASET_test label', dataset_test[0][1])
+    # dataset_test_positive_only = data_handler.get_dataset(
+        # split="test", number_negatives=0, corrupt_mode='TAIL')
     
     fol = data_handler.fol
-    print('FOL info\n', fol, flush=True)
-    print('FOL domains', fol.domains, '\n',' FOL predicates', fol.predicates, '\n', 'FOL name2domain', fol.name2domain, flush=True)
+    # print('FOL info\n', fol, flush=True)
+    # print('FOL domains', fol.domains, '\n',' FOL predicates', fol.predicates, '\n', 'FOL name2domain', fol.name2domain, flush=True)
     domain2adaptive_constants: Dict[str, List[str]] = None
     num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
 
@@ -149,31 +147,31 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     ### defining rules and grounding engine
     enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
     if enable_rules:
-        rules = read_rules('data/nations/rules.txt')
+        # rules = read_rules('data/nations/rules.txt')
         # For KGEs with no domains.
         # domains = {Rule.default_domain(): fol.domains[0]}
 
-        # rules = [
-        #     Rule(name='f1',  # S1
-        #          var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
-        #          body=["locatedInCS(X,W)", "locatedInSR(W,Z)"],
-        #          head=["locatedInCR(X,Z)"])
-        #         ]
+        rules = [
+            Rule(name='f1',  # S1
+                 var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
+                 body=["locatedInCS(X,W)", "locatedInSR(W,Z)"],
+                 head=["locatedInCR(X,Z)"])
+                ]
         
-        # if args.train_file == "train_S2_p.txt" or args.train_file == "train_S3_p.txt":
-        #     rules.append(
-        #         Rule(name='f2',   # S2
-        #             var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
-        #             body=["neighborOf(X,Y)", "locatedInCR(Y,Z)", "locatedInCS(X,W)", "locatedInSR(W,Z)"],
-        #             head=["locatedInCR(X,Z)"])
-        #                 )
-        # if args.train_file == "train_S3_p.txt":
-        #     rules.append(
-        #         Rule(name='f3',   # S3
-        #              var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
-        #              body=["neighborOf(X,Y)", "neighborOf(Y,K)", "locatedInCR(K,Z)"],
-        #              head=["locatedInCR(X,Z)"]),
-        #                 )      
+        if args.train_file == "train_S2_p.txt" or args.train_file == "train_S3_p.txt":
+            rules.append(
+                Rule(name='f2',   # S2
+                    var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
+                    body=["neighborOf(X,Y)", "locatedInCR(Y,Z)", "locatedInCS(X,W)", "locatedInSR(W,Z)"],
+                    head=["locatedInCR(X,Z)"])
+                        )
+        if args.train_file == "train_S3_p.txt":
+            rules.append(
+                Rule(name='f3',   # S3
+                     var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
+                     body=["neighborOf(X,Y)", "neighborOf(Y,K)", "locatedInCR(K,Z)"],
+                     head=["locatedInCR(X,Z)"]),
+                        )      
 
 
 
@@ -198,11 +196,12 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         elif args.grounder == 'known':
             engine = ns.grounding.KnownBodyGrounder(rules, facts=list(data_handler.train_known_facts_set))
         
-        elif args.grounder == 'backward':
+        elif 'backward' in args.grounder:
+            num_steps = int(args.grounder.split('_')[1])
+            print('Using backward chaining with %d steps' % num_steps)
             engine = ns.grounding.BackwardChainingGrounder(rules, facts=list(data_handler.train_known_facts_set),
                                                         domains={d.name:d for d in fol.domains},
-                                                        num_steps=1,
-                                                        known_body_only=False)
+                                                        num_steps=num_steps)
         elif args.grounder == 'domainbody':
             engine = ns.grounding.DomainBodyGrounder(domains={d.name:d for d in fol.domains},
                                                     rules=rules,
@@ -216,7 +215,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         predicates=fol.predicates, domains=fol.domains,
         constant2domain_name=fol.constant2domain_name,
         domain2adaptive_constants=domain2adaptive_constants)
-    print('grounder, serializer initialized', flush=True)
+
     # KGE
     kge_embedder = KGEFactory(args.kge)
     assert kge_embedder is not None
@@ -255,6 +254,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     # print('batch 0 from data_gen_train', data_gen_train[0][0])
     # print('batch 0 from data_gen_train',data_gen_train.__getitem__(0))
     print("Time to create data generator train: ", np.round(end - start,2))
+    # print(paco)
     start = time.time()
     data_gen_valid = ns.dataset.DataGenerator(
        dataset_valid, fol, serializer, engine,

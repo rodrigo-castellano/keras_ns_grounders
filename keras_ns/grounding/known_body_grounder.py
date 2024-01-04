@@ -38,8 +38,19 @@ class KnownBodyGrounder(Engine):
             return []
 
         self._init_internals(queries)
+        # print('facts', len(facts),facts[:50])
+        # print('queries', len(queries),queries[:50])
+        # print('relation2queries')
+        # for k,v in self.relation2queries.items():
+        #     print(k, len(v))
+        # print('rule2groundings', self.rule2groundings)
+        
         for rule in self.rules:
+            # print('rule', rule)
+            # print('rule.body', rule.body)
+            # print('rule.head[0][0]', rule.head[0][0])
             rel_queries = self.relation2queries.get(rule.head[0][0], [])
+            # print('rel_queries',rel_queries)
             if rel_queries:
                 if len(rule.body) <= 2:
                     self.ground_one_rule_body_len2(rule, rel_queries)
@@ -69,32 +80,47 @@ class KnownBodyGrounder(Engine):
           'not supported yet')
 
       new_groundings = set()
-
+    #   cont = 0 
+    #   print('cont')
       for q in queries:
+        # cont +=1
+        # if cont< 10:
+        #     print('\nq', q)
+            # print('q[0]', q[0], 'head[0]', head[0])
         if q[0] != head[0]:  # predicates must match.
           continue
 
         # Get the variable assignments from the head.
         head_var_assignments = {v: a for v, a in zip(head[1:], q[1:])}
-
+        # if cont< 10:
+        #     print('head_var_assignments', head_var_assignments)
         # Ground first body atom by replacing variables with constants.
         # The result is the partially ground atom A('Antonio',None)
         # with None indicating unground variables.
         body_atom = rule.body[0]
+        # if cont< 10:
+        #     print('body_atom', body_atom)
         ground_body_atom = (body_atom[0], ) + tuple(
             [head_var_assignments.get(body_atom[j+1], None)
              for j in range(len(body_atom)-1)])
+        # if cont< 10:
+        #     print('ground_body_atom', ground_body_atom)
+            # print('ground_body_atom[1:]', ground_body_atom[1:])
         if all(ground_body_atom[1:]):
           # Variables all match, so we have already the wanted grounding.
           # Rule was in the form A(x,y) ^ ... -> B(x,y)
           groundings = (ground_body_atom,)
+        #   if cont< 10:
+        #     print('holds. groundings', groundings)
         else:
           # One varibale match, rule was in the form A(x,z) ^ ... -> B(x,y)
           # Tuple of atoms matching A(Antonio,None) in the facts.
           # This is the list of ground atoms for the i-th atom in the body.
           # groundings = self._fact_index.get_matching_atoms(ground_body_atom)
           groundings = self._fact_index._index.get(ground_body_atom, [])  # optimization to avoid one extra function call
-
+        #   if cont< 10:
+        #     # print('self._fact_index._index', self._fact_index._index)
+            # print('not holds. groundings', groundings)
         if len(rule.body) == 1:
           # Shortcut, we are done, the clause has no free variables.
           # Return the groundings.
@@ -103,9 +129,14 @@ class KnownBodyGrounder(Engine):
 
         # Select the other atom in the body and ground it with the
         # assignments with the head and the other body ground atom fixed.
+        # if cont< 10:
+        #    print('starting second body atom')
+        #    print('rule.body[1]', rule.body[1])
         body_atom2 = rule.body[1]
 
         for atom in groundings:
+        #   if cont< 10:
+        #     print('atom', atom)
           head_body_var_assignments = copy.copy(head_var_assignments)
           head_body_var_assignments.update(
               {v: a for v, a in zip(body_atom[1:], atom[1:])})
@@ -118,8 +149,16 @@ class KnownBodyGrounder(Engine):
               body_grounding = (atom, new_grounding)
               new_groundings.add(((q,), body_grounding))
               # print('ADDED', q, '->', tuple(body_grounding))
+        #   if cont< 10:
+        #     print('new_grounding', new_grounding)
+            # print('new_groundings', new_groundings)
 
       self.rule2groundings[rule.name].update(new_groundings)
+    #   if cont< 10:
+    #     print('--------------new_groundings', new_groundings)
+      print('NUM_GROUNDINGS', len(new_groundings))
+    #   if cont< 10:
+    #     print('self.rule2groundings', self.rule2groundings)
 
     def ground_one_rule(self, rule: Rule, queries: List[Tuple]):
       # We have a rule like A(x,y) B(y,z) => C(x,z)

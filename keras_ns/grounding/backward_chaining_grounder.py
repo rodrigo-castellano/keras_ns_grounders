@@ -132,7 +132,11 @@ def backward_chaining_grounding_one_rule_with_domains(
 
     new_ground_atoms = set()
 
+    # print('cont')
+    cont = 0
     for q in queries:
+      cont += 1 
+    #   print('q', q) if cont< 5 else None
       if q[0] != head[0]:  # predicates must match.
         continue
 
@@ -140,6 +144,7 @@ def backward_chaining_grounding_one_rule_with_domains(
       head_ground_vars = {v: a for v, a in zip(head[1:], q[1:])}
 
       for i in range(len(rule.body)):
+        # print('\n\ni', i, 'body atom',  rule.body[i]) if cont< 5 else None
         # Ground atom by replacing variables with constants.
         # The result is the partially ground atom A('Antonio',None)
         # with None indicating unground variables.
@@ -147,6 +152,8 @@ def backward_chaining_grounding_one_rule_with_domains(
         ground_body_atom = (body_atom[0], ) + tuple(
             [head_ground_vars.get(body_atom[j+1], None)
              for j in range(len(body_atom)-1)])
+
+        # print('ground_body_atom', ground_body_atom) if cont< 5 else None
         if all(ground_body_atom[1:]):
             groundings = (ground_body_atom,)
         else:
@@ -160,42 +167,57 @@ def backward_chaining_grounding_one_rule_with_domains(
             # Return the groundings.
             new_ground_atoms.add(((q,), groundings))
             continue
-
+        # print('groundings', groundings) if cont< 5 else None
         for ground_atom in groundings:
+            # print('\nground_atom', ground_atom) if cont< 5 else None
             head_body_ground_vars = copy.copy(head_ground_vars)
             head_body_ground_vars.update(
                 {v: a for v, a in zip(body_atom[1:], ground_atom[1:])})
+    
+            # print('head_body_ground_vars', head_body_ground_vars) if cont< 5 else None
 
             free_var2domain = [(v,d) for v,d in rule.vars2domain.items()
                                if v not in head_body_ground_vars]
             free_vars = [vd[0] for vd in free_var2domain]
+            # print('free_var2domain', free_var2domain) if cont< 5 else None
+            # print('free_vars', free_vars) if cont< 5 else None
             for ground_vars in product(
                 *[domains[vd[1]].constants for vd in free_var2domain]):
                 var2ground = dict(zip(free_vars, ground_vars))
                 full_ground_vars = {**head_body_ground_vars,
                                     **var2ground}
+                # print('ground_vars', ground_vars) if cont< 5 else None
+                # print('var2ground', var2ground) if cont< 5 else None
+                # print('full_ground_vars', full_ground_vars) if cont< 5 else None
 
                 accepted = True
                 body_grounding = []
+                # print('rule.body', rule.body) if cont< 5 else None
                 for j in range(len(rule.body)):
+                    # print('j', j) if cont< 5 else None
                     if i == j:
                         body_grounding.append(ground_atom)
+                        # print('body_grounding,i=j', body_grounding) if cont< 5 else None
                         continue
                     body_atom2 = rule.body[j]
+                    # print('body_atom2', body_atom2) if cont< 5 else None
                     new_ground_atom = (body_atom2[0], ) + tuple(
                         [full_ground_vars.get(body_atom2[k+1], None)
                          for k in range(len(body_atom2)-1)])
+                    # print('new_ground_atom', new_ground_atom) if cont< 5 else None
 
                     if all(new_ground_atom) and (
                         not known_body_only or
                         fact_index._index.get(new_ground_atom, [])):
                         body_grounding.append(new_ground_atom)
+                        # print('body_grounding,i=!j,', body_grounding) if cont< 5 else None
                     else:
                         accepted = False
                         break
                 if accepted:
                     # print('ADDED', q, '->', tuple(body_grounding))
                     new_ground_atoms.add(((q,), tuple(body_grounding)))
+    #   print('----------------new_ground_atoms', new_ground_atoms) if cont< 5 else None
 
     end = time.time()
     print('NUM_GROUNDINGS', len(new_ground_atoms), end - start)
@@ -210,13 +232,11 @@ class BackwardChainingGrounder(Engine):
     def __init__(self, rules: List[Rule], facts: List[Union[Atom, str, Tuple]],
                  domains: Dict[str, Domain]=None,
                  num_steps: int=1,
-                 known_body_only: bool=False,
                  # Unused.
                  n_threads: int=kNThreads):
         self.num_steps = num_steps
         self.rules = rules
         self.domains = domains
-        self.known_body_only = known_body_only
         self.facts = [a if isinstance(a,Tuple) else a.toTuple() if isinstance(a,Atom) else Atom(s=a).toTuple() for a in facts]
         # self.facts = facts
         for rule in self.rules:
@@ -248,20 +268,27 @@ class BackwardChainingGrounder(Engine):
 
         self._init_internals(queries)
         for step in range(self.num_steps):
+            if step == self.num_steps - 1:
+                known_body_only = True
+            else:
+                known_body_only = False
             for rule in self.rules:
                 queries = self.relation2queries.get(rule.head[0][0], [])
+                # print('queries', len(queries),queries)
                 if not queries:
                     continue
                 if self.domains is not None:
                     backward_chaining_grounding_one_rule_with_domains(
                         self.domains, rule, queries, self._fact_index,
-                        self.known_body_only,
+                        known_body_only,
                         # Output added here.
                         self.rule2groundings[rule.name])
+
+
                 else:
                     backward_chaining_grounding_one_rule(
                         rule, queries, self._fact_index,
-                        self.known_body_only,
+                        known_body_only,
                         # Output added here.
                         self.rule2groundings[rule.name])
 
