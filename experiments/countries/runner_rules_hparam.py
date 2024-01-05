@@ -45,13 +45,13 @@ if __name__ == '__main__':
     KGE = ['complex','distmult','transe']  # ["distmult", "transe","complex", "rotate"]
     WEIGHT_LOSS = [.5] #,1,0.7,0.3,0 
     RULE_FILE = ["rules.txt"]  # rules
-    TRAIN_FILE = ["train_S1_p_no_neighbor.txt"]#,["train_S1_p.txt","train_S2_p.txt","train_S3_p.txt"] # "train_S1_p_no_neighbor.txt",
+    TRAIN_FILE = ["train_S1_p_no_neighbor.txt","train_S2_p.txt","train_S3_p.txt"] # "train_S1_p_no_neighbor.txt",
     GROUNDER = ['known','backward_1','backward_2','backward_3']#['known','backward_1', 'domain', 'full', 'domainbody']
     MODEL_NAME = ['dcr','r2n','sbr','rnm','gsbr','cdcr','no_reasoner',]  #['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']
     all_args = []
 
     for train_file, grounder, kge, model_name, e, w_loss, seed, dropout, r, neg, lr, nr, h, dp, v, rr in product(
-            TRAIN_FILE, KGE, GROUNDER, MODEL_NAME, E, WEIGHT_LOSS, SEED, DROPOUT, R,
+            TRAIN_FILE, GROUNDER, KGE, MODEL_NAME, E, WEIGHT_LOSS, SEED, DROPOUT, R,
             NEG_PER_SIDE, LR,
             NUM_RULES, HARD, DEPTH,
             VALID_SIZE, RR ):  
