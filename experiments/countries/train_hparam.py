@@ -217,6 +217,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         domain2adaptive_constants=domain2adaptive_constants)
 
     # KGE
+    print('Loading KGE', args.kge)
     kge_embedder = KGEFactory(args.kge)
     assert kge_embedder is not None
 
