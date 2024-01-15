@@ -144,6 +144,7 @@ class CollectiveModel(Model):
                                   kge_atom_embedding_size,
                                   dropout_rate_embedder,
                                   num_adaptive_constants)
+        
         self.model_name = model_name
 
         # OUTPUT LAYER
