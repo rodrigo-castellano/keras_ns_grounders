@@ -1,1 +1,2 @@
-train_S1_p_no_neighbor_complex_known_100_0.5_0.0_0.0_1_0.01_1_False_1_None_0.0_dcr
+countries_s1_known_complex_100_0.5_0.0_0.0_1_0.01_1_False_1_None_0.0_dcr
+countries_s1_known_complex_100_0.5_0.0_0.0_1_0.01_1_False_1_None_0.0_dcr

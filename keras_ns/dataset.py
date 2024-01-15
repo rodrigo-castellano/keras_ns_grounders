@@ -32,8 +32,7 @@ AtomTuples = Union[List[List[AtomId]], Tensor] # a list of groundings (lists of 
 
 def _from_strings_to_tensors(fol, serializer,
                              queries, labels, engine, ragged,
-                             constants_features=None, deterministic=True):
-
+                             constants_features=None, deterministic=True): 
     # Symbolic step
     facts = fol.facts
     if engine is not None:
@@ -155,7 +154,6 @@ class DataGenerator(tf.keras.utils.Sequence):
                 self._num_batches = len(self.dataset) // self._batch_size
             else:
                 self._num_batches = len(self.dataset) // self._batch_size + 1
-
         if self._num_batches == 1:
             print('Building Full Batch Dataset', self.name)
             self._full_batch = self._get_batch(0, len(self.dataset))
@@ -172,11 +170,9 @@ class DataGenerator(tf.keras.utils.Sequence):
         return self._num_batches
 
 
-    def _get_batch(self, i, b):
-
-        queries, labels = self.dataset[b*i:b*(i+1)]
-        constants_features = self.dataset.constants_features
-
+    def _get_batch(self, i, b): 
+        queries, labels = self.dataset[b*i:b*(i+1)] 
+        constants_features = self.dataset.constants_features 
         ((X_domains_data, A_predicates_data, A_rules_data, Q), y) = _from_strings_to_tensors(
             fol=self.fol,
             serializer=self.serializer,

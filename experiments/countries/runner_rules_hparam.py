@@ -25,12 +25,12 @@ if __name__ == '__main__':
     log_folder :str = "results_002"
     if not os.path.exists(log_folder): os.mkdir(log_folder)
 
-    dataset_name :str = 'countries'
     base_path :str = "data"
     parallel :bool = False
-    epochs: int = 120
+    epochs: int = 10
     assert epochs > 0
 
+    DATASET_NAME = ['test_dataset']
     SEED = [[0,1,2,3,4]]
     E = [100] 
     DROPOUT = [0.0]
@@ -38,31 +38,43 @@ if __name__ == '__main__':
     R = [0.0]
     RR = [0.0]
     LR = [0.01]
-    NUM_RULES = [1] #####################check HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+    NUM_RULES = [1] 
     HARD = [False]
     DEPTH = [1]
     VALID_SIZE = [None]
     KGE = ['complex','distmult','transe']  # ["distmult", "transe","complex", "rotate"]
-    WEIGHT_LOSS = [.5] #,1,0.7,0.3,0 
-    RULE_FILE = ["rules.txt"]  # rules
-    TRAIN_FILE = ["train_S1_p_no_neighbor.txt","train_S2_p.txt","train_S3_p.txt"] # "train_S1_p_no_neighbor.txt",
-    GROUNDER = ['known','backward_1','backward_2','backward_3']#['known','backward_1', 'domain', 'full', 'domainbody']
-    MODEL_NAME = ['dcr','r2n','sbr','rnm','gsbr','cdcr','no_reasoner',]  #['no_reasoner','dcr','r2n','sbr','rnm','gsbr','cdcr']
+    WEIGHT_LOSS = [.5]  
+    GROUNDER = ['backward_2','known','backward_1','backward_2','backward_3']#['known','backward_1', 'domain', 'full', 'domainbody']
+    MODEL_NAME = ['dcr','r2n','sbr','rnm','gsbr','cdcr','no_reasoner',] 
     all_args = []
 
-    for train_file, grounder, kge, model_name, e, w_loss, seed, dropout, r, neg, lr, nr, h, dp, v, rr in product(
-            TRAIN_FILE, GROUNDER, KGE, MODEL_NAME, E, WEIGHT_LOSS, SEED, DROPOUT, R,
-            NEG_PER_SIDE, LR,
-            NUM_RULES, HARD, DEPTH,
-            VALID_SIZE, RR ):  
+    for dataset_name, grounder, kge, model_name, e, w_loss, seed, dropout, r, neg, lr, nr, h, dp, v, rr in product(
+            DATASET_NAME, GROUNDER, KGE, MODEL_NAME, E, WEIGHT_LOSS, SEED, DROPOUT, R,
+            NEG_PER_SIDE, LR, NUM_RULES, HARD, DEPTH, VALID_SIZE, RR ):  
         
-        run_vars = (train_file[:train_file.index('.')],grounder, kge, e,w_loss, dropout, r, 
+        run_vars = (dataset_name,grounder, kge, e,w_loss, dropout, r, 
                     neg, lr, nr, h, dp, v, rr,model_name)
 
         # Base parameters
         parser = NSParser()
         args = parser.parse_args()
         args.run_signature = '_'.join(f'{v}' for v in run_vars) 
+
+        args.train_file = 'train.txt'  
+        args.valid_file = 'valid.txt'
+        args.test_file = 'test.txt'
+        args.facts_file = 'facts.txt'
+        args.domain_file = 'domain2constants.txt'
+        args.rules_file = 'rules.txt'
+        if 'countries' in dataset_name:
+            # task is the last two letters of the dataset name
+            task = dataset_name[-2:]
+            args.train_file = 'train_'+task+'_p'+'.txt'
+            args.rules_file = 'rules_'+task+'.txt'
+        elif 'nations' in dataset_name:
+            # args.rules_file = 'rules_nations_NCRL.txt'  
+            args.rules_file = 'rules_nations_amie.txt' 
+
         # args.reasoner = "r2n"  # "latent_worlds"
         args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
         args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
@@ -83,7 +95,6 @@ if __name__ == '__main__':
         args.dataset_name = dataset_name
         args.format = "functional"
         args.grounder = grounder
-        args.train_file = train_file
         args.kge = kge
         args.num_negatives = neg
         # DCR/R2N params
@@ -136,7 +147,7 @@ if __name__ == '__main__':
             )  
         
         combined_results = ';'.join(
-            [args.train_file[:train_file.index('.')], args.grounder, str(args.kge),
+            [args.dataset_name, args.grounder, str(args.kge),
                 str(args.kge_atom_embedding_size),str(args.weight_loss),str(args.reasoner_depth),args.model_name]+
             [str([total_time,total_time_std])] +
             [str([round(acc, 4), round(std, 4)]) for acc, std in zip(train_acc, train_std)] +

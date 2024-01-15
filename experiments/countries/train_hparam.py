@@ -44,49 +44,55 @@ def get_arg(args, name: str, default=None, assert_defined=False):
         assert value is not None, 'Arg %s is not defined: %s' % (name, str(args))
     return value
 
-def read_rules(path):
+def read_rules(path,args):
     print('Reading rules')
     rules = []
     #open file data/nations/rules.txt and real all the lines
     with open(path, 'r') as f:
         for line in f:
-            # split by :
-            line = line.split(':')
-            # first element is the name of the rule
-            rule_name = line[0]
-            # second element is the weight of the rule
-            rule_weight = float(line[1].replace(',', '.'))
-            # third element is the rule itself. Split by ->
-            rule = line[2].split('->')
-            # second element is the head of the rule
-            rule_head = rule[1]
-            # remove the \n from the head and the space
-            rule_head = [rule_head[1:-1]]
-            # first element is the body of the rule
-            rule_body = rule[0]
-            # split the body by ,
-            rule_body = rule_body.split(', ')
-            # for every body element, if the last character is a " ", remove it
-            for i in range(len(rule_body)):
-                if rule_body[i][-1] == " ":
-                    rule_body[i] = rule_body[i][:-1]
-            # Take the vars of the body and head and put them in a dictionary
-            all_vars = rule_body + rule_head
-            var_names = {}
-            for i in range(len(all_vars)):
-                # split the element of the body by (
-                open_parenthesis = all_vars[i].split('(')
-                # Split the second element by )
-                variables = open_parenthesis[1].split(')')
-                # divide the variables by ,
-                variables = variables[0].split(',')
-                # Create a dictionary with the variables as keys and the value "countries" as values
-                for var in variables:
-                    var_names[var] = "countries"
-            # print all the info
-            # print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
-            #         'rule body: ', rule_body, 'var_names: ', var_names)
-            rules.append(Rule(name=rule_name,var2domain=var_names,body=rule_body,head=rule_head))
+            if len(rules) < 10:
+                print('len(rules)', len(rules))
+                # split by :
+                line = line.split(':')
+                # first element is the name of the rule
+                rule_name = line[0]
+                # second element is the weight of the rule
+                rule_weight = float(line[1].replace(',', '.'))
+                # third element is the rule itself. Split by ->
+                rule = line[2].split('->')
+                # second element is the head of the rule
+                rule_head = rule[1]
+                # remove the \n from the head and the space
+                rule_head = [rule_head[1:-1]]
+                # first element is the body of the rule
+                rule_body = rule[0]
+                # split the body by ,
+                rule_body = rule_body.split(', ')
+                # for every body element, if the last character is a " ", remove it
+                for i in range(len(rule_body)):
+                    if rule_body[i][-1] == " ":
+                        rule_body[i] = rule_body[i][:-1]
+                # Take the vars of the body and head and put them in a dictionary
+                all_vars = rule_body + rule_head
+                var_names = {}
+                for i in range(len(all_vars)):
+                    # split the element of the body by (
+                    open_parenthesis = all_vars[i].split('(')
+                    # Split the second element by )
+                    variables = open_parenthesis[1].split(')')
+                    # divide the variables by ,
+                    variables = variables[0].split(',')
+                    # Create a dictionary with the variables as keys and the value "countries" as values
+                    if args.dataset_name == 'nations':
+                        for var in variables:
+                            var_names[var] = "countries"
+                    elif ('countries' in args.dataset_name) or ('test_dataset' in args.dataset_name):
+                            var_names = {"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"}
+                        
+                # print all the info
+                print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
+                        'rule body: ', rule_body, 'var_names: ', var_names)
+                rules.append(Rule(name=rule_name,var2domain=var_names,body=rule_body,head=rule_head))
     return rules
 
 def main(base_path, output_filename, kge_output_filename, log_filename, args):
@@ -114,19 +120,18 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         dataset_name=args.dataset_name,
         base_path=base_path,
         format=get_arg(args, 'format', None, True),
-        domain_file='domain2constants.txt',
+        domain_file= args.domain_file,
         train_file= args.train_file,
-        # train_file=get_arg(args, 'train_file', None, "train_S1_p.txt"),
-        valid_file="valid_p.txt",
-        test_file="test_p.txt",
-        fact_file="facts.txt")
+        valid_file=args.valid_file,
+        test_file= args.test_file,
+        fact_file= args.facts_file)
     
     dataset_train = data_handler.get_dataset(
         split="train",
         number_negatives=args.num_negatives)
     # print('DATASET_TRAIN num queries', len(dataset_train),dataset_train)
     # print('DATASET_TRAIN query', dataset_train[0][0])
-    # print('DATASET_TRAIN label', len(dataset_train[0][1]), dataset_train[0][1])
+    # print('DATASET_TRAIN label', len(dataset_train[0][1]), dataset_train[0][1]) 
     dataset_valid = data_handler.get_dataset(
        split="valid",number_negatives=args.valid_negatives, corrupt_mode='TAIL')
     dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL')
@@ -146,40 +151,16 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     ### defining rules and grounding engine
     enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
-    if enable_rules:
-        # rules = read_rules('data/nations/rules.txt')
+    if enable_rules: 
+        rules = read_rules(join(base_path, args.dataset_name, args.rules_file),args)
         # For KGEs with no domains.
         # domains = {Rule.default_domain(): fol.domains[0]}
-
-        rules = [
-            Rule(name='f1',  # S1
-                 var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
-                 body=["locatedInCS(X,W)", "locatedInSR(W,Z)"],
-                 head=["locatedInCR(X,Z)"])
-                ]
-        
-        if args.train_file == "train_S2_p.txt" or args.train_file == "train_S3_p.txt":
-            rules.append(
-                Rule(name='f2',   # S2
-                    var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
-                    body=["neighborOf(X,Y)", "locatedInCR(Y,Z)", "locatedInCS(X,W)", "locatedInSR(W,Z)"],
-                    head=["locatedInCR(X,Z)"])
-                        )
-        if args.train_file == "train_S3_p.txt":
-            rules.append(
-                Rule(name='f3',   # S3
-                     var2domain={"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"},
-                     body=["neighborOf(X,Y)", "neighborOf(Y,K)", "locatedInCR(K,Z)"],
-                     head=["locatedInCR(X,Z)"]),
-                        )      
-
-
 
         domain2adaptive_constants = {
             d.name : ['__adaptive_%s_%d' % (d.name, i)
                     for i in range(num_adaptive_constants)]
             for d in fol.domains
-        }
+            }
 
         if args.grounder == 'full':
             engine = ns.grounding.PlaceholderGeneratorFullGrounder(
@@ -254,7 +235,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     end = time.time()
     # print('batch 0 from data_gen_train', data_gen_train[0][0])
     # print('batch 0 from data_gen_train',data_gen_train.__getitem__(0))
-    print("Time to create data generator train: ", np.round(end - start,2))
+    print("\n\n\n\n\n\n\n\nTime to create data generator train: ", np.round(end - start,2))
     # print(paco)
     start = time.time()
     data_gen_valid = ns.dataset.DataGenerator(
