@@ -134,17 +134,20 @@ def backward_chaining_grounding_one_rule_with_domains(
 
     # print('cont')
     cont = 0
+    lim=2000
     for q in queries:
       cont += 1 
-    #   print('q', q) if cont< 5 else None
+      print('***************q', q,'********************') if cont< lim else None
+    #   print(rule) if cont< lim else None
       if q[0] != head[0]:  # predicates must match.
+        # print('predicates of the rule and the query must match', q, head) if cont< lim else None
         continue
 
       # Get the variable assignments from the head.
       head_ground_vars = {v: a for v, a in zip(head[1:], q[1:])}
-
+    #   print('for every atom in the body') if cont< lim else None
       for i in range(len(rule.body)):
-        # print('\n\ni', i, 'body atom',  rule.body[i]) if cont< 5 else None
+        # print('\n\n- i', i) if cont< lim else None
         # Ground atom by replacing variables with constants.
         # The result is the partially ground atom A('Antonio',None)
         # with None indicating unground variables.
@@ -152,72 +155,76 @@ def backward_chaining_grounding_one_rule_with_domains(
         ground_body_atom = (body_atom[0], ) + tuple(
             [head_ground_vars.get(body_atom[j+1], None)
              for j in range(len(body_atom)-1)])
-
-        # print('ground_body_atom', ground_body_atom) if cont< 5 else None
+        # print('Substitution (by None) of the vars not present in head . ground_body_atom:', ground_body_atom) if cont< lim else None
         if all(ground_body_atom[1:]):
             groundings = (ground_body_atom,)
+            # print('groundings already done, #all vars are subtituted', groundings) if cont< lim else None
         else:
             # Tuple of atoms matching A(Antonio,None) in the facts.
             # This is the list of ground atoms for the i-th atom in the body.
             # groundings = fact_index.get_matching_atoms(ground_body_atom)
             groundings = fact_index._index.get(ground_body_atom, [])
+            # print('groundings found in facts', groundings) if cont< lim else None
 
         if len(rule.body) == 1:
             # Shortcut, we are done, the clause has no free variables.
             # Return the groundings.
+            # print('there are not more body atoms to ground') if cont< lim else None
             new_ground_atoms.add(((q,), groundings))
             continue
-        # print('groundings', groundings) if cont< 5 else None
+        # print('for every grounding of the body atom\n') if cont< lim else None
         for ground_atom in groundings:
-            # print('\nground_atom', ground_atom) if cont< 5 else None
+            # print('--grounded_atom', ground_atom, ' The other vars are (not present in head) left as free') if cont< lim else None
             head_body_ground_vars = copy.copy(head_ground_vars)
             head_body_ground_vars.update(
                 {v: a for v, a in zip(body_atom[1:], ground_atom[1:])})
     
-            # print('head_body_ground_vars', head_body_ground_vars) if cont< 5 else None
+            # print('head_body_ground_vars', head_body_ground_vars) if cont< lim else None
 
             free_var2domain = [(v,d) for v,d in rule.vars2domain.items()
                                if v not in head_body_ground_vars]
             free_vars = [vd[0] for vd in free_var2domain]
-            # print('free_var2domain', free_var2domain) if cont< 5 else None
-            # print('free_vars', free_vars) if cont< 5 else None
             for ground_vars in product(
                 *[domains[vd[1]].constants for vd in free_var2domain]):
                 var2ground = dict(zip(free_vars, ground_vars))
                 full_ground_vars = {**head_body_ground_vars,
                                     **var2ground}
-                # print('ground_vars', ground_vars) if cont< 5 else None
-                # print('var2ground', var2ground) if cont< 5 else None
-                # print('full_ground_vars', full_ground_vars) if cont< 5 else None
+                # print('for every possible grounding of the free vars',ground_vars) if cont< lim else None
 
                 accepted = True
                 body_grounding = []
-                # print('rule.body', rule.body) if cont< 5 else None
+                # print('for every atom in the body', rule.body) if cont< lim else None
                 for j in range(len(rule.body)):
-                    # print('j', j) if cont< 5 else None
+                    # print('---j', j, 'rule.body[j]',rule.body[j]) if cont< lim else None
                     if i == j:
                         body_grounding.append(ground_atom)
-                        # print('body_grounding,i=j', body_grounding) if cont< 5 else None
+                        # print('body_grounding,i=j', body_grounding) if cont< lim else None
                         continue
                     body_atom2 = rule.body[j]
-                    # print('body_atom2', body_atom2) if cont< 5 else None
                     new_ground_atom = (body_atom2[0], ) + tuple(
                         [full_ground_vars.get(body_atom2[k+1], None)
                          for k in range(len(body_atom2)-1)])
-                    # print('new_ground_atom', new_ground_atom) if cont< 5 else None
-
+                    # print('new_ground_atom', new_ground_atom) if cont< lim else None
+                    # print('#if there is empty var: all(new_ground_atom)== ', all(new_ground_atom)) if cont< lim else None
+                    # print('not known_body_only == ', not known_body_only ) if cont< lim else None
+                    # print('#if there is any fact: fact_index._index.get(new_ground_atom, []) ', fact_index._index.get(new_ground_atom, [])) if cont< lim else None
+                    # print('fact_index._index.get(new_ground_atom, [])==True?', fact_index._index.get(new_ground_atom, [])==True) if cont< lim else None
+                    # print('condition: (not known_body_only or fact_index._index.get(new_ground_atom, []))',( not known_body_only or  fact_index._index.get(new_ground_atom, []))) if cont< lim else None
                     if all(new_ground_atom) and (
                         not known_body_only or
                         fact_index._index.get(new_ground_atom, [])):
                         body_grounding.append(new_ground_atom)
-                        # print('body_grounding,i=!j,', body_grounding) if cont< 5 else None
+                        # print('body_grounding,i=!j,', body_grounding) if cont< lim else None
                     else:
                         accepted = False
+                        # print('body_grounding,i=!j, not accepted', body_grounding) if cont< lim else None
                         break
                 if accepted:
-                    # print('ADDED', q, '->', tuple(body_grounding))
+                    # print('ADDED', q, '->', tuple(body_grounding)) if cont< lim else None
                     new_ground_atoms.add(((q,), tuple(body_grounding)))
-    #   print('----------------new_ground_atoms', new_ground_atoms) if cont< 5 else None
+                    # print('\n') if cont< lim else None
+    #   print('----------------new_ground_atoms', new_ground_atoms) if cont< lim else None
+    #   print('----------------new_ground_atoms', new_ground_atoms)
 
     end = time.time()
     print('NUM_GROUNDINGS', len(new_ground_atoms), end - start)
@@ -262,17 +269,20 @@ class BackwardChainingGrounder(Engine):
                facts: List[Tuple],
                queries: List[Tuple],
                **kwargs) -> Dict[str, RuleGroundings]:
+        print('Starting to ground')
 
         if self.rules is None or len(self.rules) == 0:
             return []
-
+        print('quieres', len(queries), queries)
         self._init_internals(queries)
         for step in range(self.num_steps):
+            print('STEP NUMBER ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^', step,'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^' )
             if step == self.num_steps - 1:
                 known_body_only = True
             else:
                 known_body_only = False
             for rule in self.rules:
+                print('rule ', rule, ' """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" ')
                 queries = self.relation2queries.get(rule.head[0][0], [])
                 # print('queries', len(queries),queries)
                 if not queries:
@@ -282,8 +292,7 @@ class BackwardChainingGrounder(Engine):
                         self.domains, rule, queries, self._fact_index,
                         known_body_only,
                         # Output added here.
-                        self.rule2groundings[rule.name])
-
+                        self.rule2groundings[rule.name]) 
 
                 else:
                     backward_chaining_grounding_one_rule(

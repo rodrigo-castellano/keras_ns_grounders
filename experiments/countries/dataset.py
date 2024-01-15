@@ -170,7 +170,6 @@ class KGCTrainingDataset(Dataset):
             domain2constants=self.domain2constants,
             num_negatives=self.num_negatives,
             corrupt_mode=self.corrupt_mode)
-
         # Training corruptions are mixed head/tail corruptions
         Q = []
         L = []
@@ -419,14 +418,15 @@ class KGCDataHandler():
                 # Head corruptions
                 o_domain = constant2domain[o_idx]
                 n_constants = len(domain2constants[o_domain])
-                constants = domain2constants[o_domain]
+                constants = domain2constants[o_domain] 
                 while num_corruptions_head < num_negatives:
                     idx = random.randint(0, n_constants - 1)
                     entity = constants[idx]
                     a1 = (r_idx, s_idx, entity)
+                    # print('idx, entity, a1', idx, entity, a1, flush=True)
                     if a1 not in known_facts:
                         ret1.append(a1)
-                        num_corruptions_head += 1
+                        num_corruptions_head += 1 
 
             if corrupt_mode == 'HEAD_AND_TAIL' or corrupt_mode == 'TAIL':
                 # Tail corruptions
