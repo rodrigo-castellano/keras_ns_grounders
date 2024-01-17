@@ -656,7 +656,6 @@ class _GatedSBRReasoningLayerBase(SBRReasoningLayer):
                 params=input_atom_predictions, indices=A_in))
             # Shape [num_atoms, 1]
             head_predictions = self.logic.conj(atom_predictions, axis=-1)
-            print("head_predictions", head_predictions.shape, head_predictions)
             if self.per_grounding_gate:
                 # Shape [num_atoms, body_len]
                 atom_embeddings_shape = tf.shape(atom_embeddings)
