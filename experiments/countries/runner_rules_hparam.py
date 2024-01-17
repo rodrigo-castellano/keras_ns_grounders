@@ -30,7 +30,7 @@ if __name__ == '__main__':
     epochs: int = 10
     assert epochs > 0
 
-    DATASET_NAME = ['nations_AMIE','nations_NCRL','countries_s1','countries_s2','countries_s3']
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations_AMIE','nations_NCRL']
     SEED = [[0,1,2,3,4]]
     E = [100] 
     DROPOUT = [0.0]
