@@ -70,18 +70,22 @@ if __name__ == '__main__':
             task = dataset_name[-2:]
             args.train_file = 'train_'+task+'_p'+'.txt'
             args.rules_file = 'rules_'+task+'.txt'
-            if task == 's2' and (grounder != 'backward' or grounder != 'known' or grounder != 'domainbody'):
+            if task == 's2' and (grounder == 'full' or grounder == 'domainbody'):
+                print('skipping', run_vars)
                 continue
-            elif task == 's3' and (grounder != 'backward' or grounder != 'known'):
+            elif task == 's3' and (grounder == 'full' or grounder == 'domainbody'):
+                print('skipping', run_vars)
                 continue
 
         elif 'nations' in dataset_name:
             args.rules_file = 'rules.txt' 
-            if  (grounder != 'backward' or grounder != 'known'):
+            if  (grounder == 'full' or grounder == 'domainbody'):
+                print('skipping', run_vars)
                 continue
 
         elif 'kinship' in dataset_name:
-            if  (grounder != 'backward' or grounder != 'known'):
+            if  (grounder == 'full' or grounder == 'domainbody'):
+                print('skipping', run_vars)
                 continue
         # args.reasoner = "r2n"  # "latent_worlds"
         args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
@@ -142,6 +146,7 @@ if __name__ == '__main__':
         args.create_flat_rule_list = True
 
         all_args.append(args)
+        # print('all args:', all_args)
 
     def save_results(args, train_acc, valid_acc, test_acc, training_info, total_time, total_time_std, train_std, valid_std, test_std):
           
