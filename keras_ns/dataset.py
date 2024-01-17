@@ -33,6 +33,7 @@ AtomTuples = Union[List[List[AtomId]], Tensor] # a list of groundings (lists of 
 def _from_strings_to_tensors(fol, serializer,
                              queries, labels, engine, ragged,
                              constants_features=None, deterministic=True): 
+    # print('queries at the beginning', len(queries), queries)
     # Symbolic step
     facts = fol.facts
     if engine is not None:
@@ -40,18 +41,22 @@ def _from_strings_to_tensors(fol, serializer,
             tuple(facts),
             tuple(ns.utils.to_flat(queries)),
             deterministic=deterministic)
-        # print('ground_formulas', len(ground_formulas),ground_formulas)
         rules = engine.rules
         # print('rules', rules)
     else:
         ground_formulas = {}
         rules = []
+    # print('\n')
+    for k,v in ground_formulas.items():
+        print('rule1 ',k,v) 
+    # print('\n\n\n\n\n\nground_formulas', len(ground_formulas),ground_formulas)
+    # print('queries at the end', len(queries), queries)
     (domain_to_global, predicate_tuples, groundings, queries) = (
         serializer.serialize(queries=queries,
                              rule_groundings=ground_formulas))
     # print('domain_to_global', domain_to_global)
     # print('predicate_tuples', predicate_tuples)
-    # print('groundings', groundings)
+    print('\n\n\n\n\ngroundings', groundings)
     # print('queries', queries)
 
     # Creating numpy dictionaries for input
@@ -81,6 +86,9 @@ def _from_strings_to_tensors(fol, serializer,
         ao = len(rule.head)
         if rule.name in groundings and len(groundings[rule.name]) > 0:
             # adding batch dimension
+            print('rule.name', rule.name)
+            print('groundings[rule.name[0]', groundings[rule.name][0])
+            print('groundings[rule.name[1]', groundings[rule.name][1])
             input_formulas_tf[rule.name] = (
                 tf.constant(groundings[rule.name][0]),
                 tf.constant(groundings[rule.name][1]))
@@ -96,7 +104,10 @@ def _from_strings_to_tensors(fol, serializer,
     else:
         queries = tf.constant(queries, dtype=tf.int32)
         labels = tf.constant(labels, dtype=tf.float32)
-
+    # print('input_domains_tf', input_domains_tf)
+    # print('input_atoms_tuples_tf', input_atoms_tuples_tf)
+    # print('input_formulas_tf', input_formulas_tf)
+    # print('queries', queries)
     return (input_domains_tf, input_atoms_tuples_tf,
             input_formulas_tf, queries), labels
 
@@ -155,7 +166,7 @@ class DataGenerator(tf.keras.utils.Sequence):
             else:
                 self._num_batches = len(self.dataset) // self._batch_size + 1
         if self._num_batches == 1:
-            print('Building Full Batch Dataset', self.name)
+            # print('Building Full Batch Dataset', self.name)
             self._full_batch = self._get_batch(0, len(self.dataset))
 
 
@@ -212,7 +223,7 @@ class DataGeneratorTensor(tf.keras.utils.Sequence):
                 self._num_batches = len(self.dataset) // self._batch_size + 1
 
         if self._num_batches == 1:
-            print('Building Full Batch Dataset', self.name)
+            # print('Building Full Batch Dataset', self.name)
             self._full_batch = self._get_batch(0, len(self.dataset))
 
     def __getitem__(self, item):
@@ -285,7 +296,7 @@ class DataGeneratorTensorFast(tf.keras.utils.Sequence):
                 self._num_batches = len(self.dataset) // self._batch_size + 1
 
         if self._num_batches == 1:
-            print('Building Full Batch Dataset', self.name)
+            # print('Building Full Batch Dataset', self.name)
             self._full_batch = self._get_batch(0, len(self.dataset))
 
 

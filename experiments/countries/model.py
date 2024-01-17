@@ -249,6 +249,15 @@ class CollectiveModel(Model):
                     explanations = self.reasoning[i].explain(
                         [task_output, atom_embeddings, A_rules])
                     # tf.print('explanations', explanations.shape, explanations)
+                # tf.print('reasoning', i)
+                # tf.print('task_output', task_output.shape, task_output)
+                # tf.print('atom_embeddings', atom_embeddings.shape, atom_embeddings)
+                # tf.print('A_rules',  A_rules)
+                # tf.print('reasoning', i)
+                # tf.print('task_output', task_output.shape )
+                # tf.print('atom_embeddings', atom_embeddings.shape )
+                # tf.print('A_rules',  A_rules)
+
                 task_output, atom_embeddings = self.reasoning[i]([
                     task_output, atom_embeddings, A_rules])
                 # tf.print('task_output', task_output.shape, task_output)

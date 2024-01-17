@@ -50,49 +50,52 @@ def read_rules(path,args):
     #open file data/nations/rules.txt and real all the lines
     with open(path, 'r') as f:
         for line in f:
-            if len(rules) < 10:
-                print('len(rules)', len(rules))
-                # split by :
-                line = line.split(':')
-                # first element is the name of the rule
-                rule_name = line[0]
-                # second element is the weight of the rule
-                rule_weight = float(line[1].replace(',', '.'))
-                # third element is the rule itself. Split by ->
-                rule = line[2].split('->')
-                # second element is the head of the rule
-                rule_head = rule[1]
-                # remove the \n from the head and the space
-                rule_head = [rule_head[1:-1]]
-                # first element is the body of the rule
-                rule_body = rule[0]
-                # split the body by ,
-                rule_body = rule_body.split(', ')
-                # for every body element, if the last character is a " ", remove it
-                for i in range(len(rule_body)):
-                    if rule_body[i][-1] == " ":
-                        rule_body[i] = rule_body[i][:-1]
-                # Take the vars of the body and head and put them in a dictionary
-                all_vars = rule_body + rule_head
-                var_names = {}
-                for i in range(len(all_vars)):
-                    # split the element of the body by (
-                    open_parenthesis = all_vars[i].split('(')
-                    # Split the second element by )
-                    variables = open_parenthesis[1].split(')')
-                    # divide the variables by ,
-                    variables = variables[0].split(',')
-                    # Create a dictionary with the variables as keys and the value "countries" as values
-                    if args.dataset_name == 'nations':
-                        for var in variables:
-                            var_names[var] = "countries"
-                    elif ('countries' in args.dataset_name) or ('test_dataset' in args.dataset_name):
-                            var_names = {"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"}
-                        
-                # print all the info
+            # if len(rules) < 11:
+            # split by :
+            line = line.split(':')
+            # first element is the name of the rule
+            rule_name = line[0]
+            # second element is the weight of the rule
+            rule_weight = float(line[1].replace(',', '.'))
+            # third element is the rule itself. Split by ->
+            rule = line[2].split('->')
+            # second element is the head of the rule
+            rule_head = rule[1]
+            # remove the \n from the head and the space
+            rule_head = [rule_head[1:-1]]
+            # first element is the body of the rule
+            rule_body = rule[0]
+            # split the body by ,
+            rule_body = rule_body.split(', ')
+            # for every body element, if the last character is a " ", remove it
+            for i in range(len(rule_body)):
+                if rule_body[i][-1] == " ":
+                    rule_body[i] = rule_body[i][:-1]
+            # Take the vars of the body and head and put them in a dictionary
+            all_vars = rule_body + rule_head
+            var_names = {}
+            for i in range(len(all_vars)):
+                # split the element of the body by (
+                open_parenthesis = all_vars[i].split('(')
+                # Split the second element by )
+                variables = open_parenthesis[1].split(')')
+                # divide the variables by ,
+                variables = variables[0].split(',')
+                # Create a dictionary with the variables as keys and the value "countries" as values
+                if args.dataset_name == 'nations':
+                    for var in variables:
+                        var_names[var] = "countries"
+                elif ('countries' in args.dataset_name) or ('test_dataset' in args.dataset_name):
+                        var_names = {"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"}
+                elif 'kinship' in args.dataset_name:
+                    var_names = {"x": "people", "y": "people", "z": "people"}
+                    
+            # print all the info
+            print('number of rules: ', len(rules))
+            if len(rules) < 1001:
                 print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
-                        'rule body: ', rule_body, 'var_names: ', var_names)
-                rules.append(Rule(name=rule_name,var2domain=var_names,body=rule_body,head=rule_head))
+                    'rule body: ', rule_body, 'var_names: ', var_names)
+            rules.append(Rule(name=rule_name,var2domain=var_names,body=rule_body,head=rule_head))
     return rules
 
 def main(base_path, output_filename, kge_output_filename, log_filename, args):
@@ -132,8 +135,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     # print('DATASET_TRAIN num queries', len(dataset_train),dataset_train)
     # print('DATASET_TRAIN query', dataset_train[0][0])
     # print('DATASET_TRAIN label', len(dataset_train[0][1]), dataset_train[0][1]) 
-    dataset_valid = data_handler.get_dataset(
-       split="valid",number_negatives=args.valid_negatives, corrupt_mode='TAIL')
+    # dataset_valid = data_handler.get_dataset(
+    #    split="valid",number_negatives=args.valid_negatives, corrupt_mode='TAIL')
     dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL')
     # print('DATASET_test query', dataset_test[0][0])
     # print('DATASET_test label', dataset_test[0][1])
@@ -233,16 +236,17 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         dataset_train, fol, serializer, engine,
         batch_size=args.batch_size, ragged=ragged)
     end = time.time()
+    print("Time to create data generator train: ", np.round(end - start,2))
     # print('batch 0 from data_gen_train', data_gen_train[0][0])
     # print('batch 0 from data_gen_train',data_gen_train.__getitem__(0))
-    print("\n\n\n\n\n\n\n\nTime to create data generator train: ", np.round(end - start,2))
+    # print("\n\n\n\n\n\n\n\nTime to create data generator train: ", np.round(end - start,2))
     # print(paco)
-    start = time.time()
-    data_gen_valid = ns.dataset.DataGenerator(
-       dataset_valid, fol, serializer, engine,
-       batch_size=args.eval_batch_size, ragged=ragged)
-    end = time.time()
-    print("Time to create data generator valid: ",  np.round(end - start,2))
+    # start = time.time()
+    # data_gen_valid = ns.dataset.DataGenerator(
+    #    dataset_valid, fol, serializer, engine,
+    #    batch_size=args.eval_batch_size, ragged=ragged)
+    # end = time.time()
+    # print("Time to create data generator valid: ",  np.round(end - start,2))
     start = time.time()
     data_gen_test = ns.dataset.DataGenerator(
         dataset_test, fol, serializer, engine,
@@ -295,7 +299,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     print("\nEvaluation train", flush=True)
     train_accuracy = model.evaluate(data_gen_train) 
     print("\nEvaluation val", flush=True)
-    valid_accuracy =  model.evaluate(data_gen_valid) 
+    # valid_accuracy =  model.evaluate(data_gen_valid) 
+    valid_accuracy = 0.0
 
     # from DataGenerator, generate the next item in data_gen_train, and data_gen_test
     # print('DATASET_TRAIN query', data_gen_train[0][0])

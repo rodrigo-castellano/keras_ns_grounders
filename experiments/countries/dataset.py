@@ -225,10 +225,12 @@ class KGCEvalDataset(Dataset):
         Q = []
         L = []
         for q,l,c in zip(queries, labels, corruptions_per_query):
+            print('\nq',q,'l',l,'c',c, flush=True)
             Q.append(q + c.head)
             Q.append(q + c.tail)
             L.append(l + [0] * len(c.head))
             L.append(l + [0] * len(c.tail))
+            print('Q',Q,'L',L, flush=True)
         # tf.print('len Q', len(Q), 'len L', len(L))
         # tf.print('QUERY VAL/TEST', Q[0], 'LABEL', L[0])
         # tf.print('QUERY VAL/TEST', Q[1], 'LABEL', L[1])
@@ -352,12 +354,12 @@ class KGCDataHandler():
                            num_negatives: int=None,
                            corrupt_mode: str='HEAD_AND_TAIL') -> List[Corruption]:
         if num_negatives is None:
-            # print("creating all corruptions\n")
+            print("creating all corruptions\n")
             return KGCDataHandler.create_all_corruptions(
                 queries, known_facts, domain2constants, constant2domain,
                 corrupt_mode)
         else:
-            # print("creating sampled corruptions\n")
+            print("creating sampled corruptions\n")
             return KGCDataHandler.create_sampled_corruptions(
                 queries, known_facts, domain2constants, constant2domain,
                 num_negatives, corrupt_mode)
@@ -372,28 +374,37 @@ class KGCDataHandler():
         # print("Creating all the corruptions for batch...")
         # start = timeit.default_timer()
         Q=[]
-
         for i, q in enumerate(queries):
-            ret1=[]
-            ret2=[]
-            r_idx, s_idx, o_idx = q
+            if  len(q) > 2:
+                ret1=[]
+                ret2=[]
+                r_idx, s_idx, o_idx = q
 
-            if corrupt_mode == 'HEAD_AND_TAIL' or corrupt_mode == 'TAIL':
-                o_domain = constant2domain[o_idx]
-                for entity in domain2constants[o_domain]:
-                    a1 = (r_idx,s_idx,entity)
-                    if a1 not in known_facts:
-                        ret1.append(a1)
+                if corrupt_mode == 'HEAD_AND_TAIL' or corrupt_mode == 'TAIL':
+                    o_domain = constant2domain[o_idx]
+                    for entity in domain2constants[o_domain]:
+                        a1 = (r_idx,s_idx,entity)
+                        if a1 not in known_facts:
+                            ret1.append(a1)
 
-            if corrupt_mode == 'HEAD_AND_TAIL' or corrupt_mode == 'HEAD':
+                if corrupt_mode == 'HEAD_AND_TAIL' or corrupt_mode == 'HEAD':
+                    s_domain = constant2domain[s_idx]
+                    for entity in domain2constants[s_domain]:
+                        a2 = (r_idx, entity, o_idx)
+                        if a2 not in known_facts:
+                            ret2.append(a2)
+                Q.append(Corruption(head=ret1, tail=ret2)) 
+
+            elif len(q) == 2:
+                print('Exception: query not possible to corrupt in that way, only one var',q, flush=True)
+                ret = []
+                r_idx, s_idx = q 
                 s_domain = constant2domain[s_idx]
-                for entity in domain2constants[s_domain]:
-                    a2 = (r_idx, entity, o_idx)
-                    if a2 not in known_facts:
-                        ret2.append(a2)
-
-            Q.append(Corruption(head=ret1, tail=ret2))
-
+                for j,entity in enumerate(domain2constants[s_domain]):
+                    a2 = (r_idx, entity)
+                    if a2 not in known_facts and len(ret) < 3:
+                        ret.append(a2)
+                Q.append(Corruption(head=ret, tail=[]))
         return Q
 
 
@@ -440,9 +451,7 @@ class KGCDataHandler():
                     if a2 not in known_facts:
                         ret2.append(a2)
                         num_corruptions_tail += 1
-
             Q.append(Corruption(head=ret1, tail=ret2))
-
         return Q
 
     def get_dataset(self, split:str, number_negatives:int=None,
