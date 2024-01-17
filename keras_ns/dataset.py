@@ -47,8 +47,8 @@ def _from_strings_to_tensors(fol, serializer,
         ground_formulas = {}
         rules = []
     # print('\n')
-    for k,v in ground_formulas.items():
-        print('rule1 ',k,v) 
+    # for k,v in ground_formulas.items():
+    #     print('rule1 ',k,v) 
     # print('\n\n\n\n\n\nground_formulas', len(ground_formulas),ground_formulas)
     # print('queries at the end', len(queries), queries)
     (domain_to_global, predicate_tuples, groundings, queries) = (
@@ -56,7 +56,7 @@ def _from_strings_to_tensors(fol, serializer,
                              rule_groundings=ground_formulas))
     # print('domain_to_global', domain_to_global)
     # print('predicate_tuples', predicate_tuples)
-    print('\n\n\n\n\ngroundings', groundings)
+    # print('\n\n\n\n\ngroundings', groundings)
     # print('queries', queries)
 
     # Creating numpy dictionaries for input
@@ -85,10 +85,7 @@ def _from_strings_to_tensors(fol, serializer,
         ai = len(rule.body)
         ao = len(rule.head)
         if rule.name in groundings and len(groundings[rule.name]) > 0:
-            # adding batch dimension
-            print('rule.name', rule.name)
-            print('groundings[rule.name[0]', groundings[rule.name][0])
-            print('groundings[rule.name[1]', groundings[rule.name][1])
+            # adding batch dimension 
             input_formulas_tf[rule.name] = (
                 tf.constant(groundings[rule.name][0]),
                 tf.constant(groundings[rule.name][1]))

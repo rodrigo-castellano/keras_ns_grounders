@@ -165,13 +165,15 @@ def backward_chaining_grounding_one_rule_with_domains(
         if len(rule.body) == 1:
             # Shortcut, we are done, the clause has no free variables.
             # Return the groundings.
-            print('there are not more body atoms to ground', groundings,'. Query: ',q) if cont< lim else None
             if len(groundings) != 0:
-                new_ground_atoms.add(((q,), groundings))
+                print('there are not more body atoms to ground') if cont< lim else None
+                for grounding_ in groundings:
+                    print('ADDED', q, '->', (grounding_,)) if cont< lim else None
+                    new_ground_atoms.add(((q,), (grounding_,)))
             continue
-        # print('\nfor every grounding of the body atom') if cont< lim else None
+        print('\nfor every grounding of the body atom') if cont< lim else None
         for ground_atom in groundings:
-            # print('--grounded_atom', ground_atom, ' The other vars are (not present in head) left as free') if cont< lim else None
+            print('--grounded_atom', ground_atom, ' The other vars are (not present in head) left as free') if cont< lim else None
             head_body_ground_vars = copy.copy(head_ground_vars)
             head_body_ground_vars.update(
                 {v: a for v, a in zip(body_atom[1:], ground_atom[1:])})
@@ -184,14 +186,14 @@ def backward_chaining_grounding_one_rule_with_domains(
                 var2ground = dict(zip(free_vars, ground_vars))
                 full_ground_vars = {**head_body_ground_vars,
                                     **var2ground}
-                # print('for every possible grounding of the free vars',ground_vars) if cont< lim else None
+                print('for every possible grounding of the free vars',ground_vars) if cont< lim else None
 
                 accepted = True
                 body_grounding = []
                 for j in range(len(rule.body)):
                     if i == j:
                         body_grounding.append(ground_atom)
-                        # print('---j', j,'rule.body[j]',rule.body[j],'. body_grounding,i=j', body_grounding) if cont< lim else None
+                        print('---j', j,'rule.body[j]',rule.body[j],'. body_grounding,i=j', body_grounding) if cont< lim else None
                         continue
                     body_atom2 = rule.body[j]
                     new_ground_atom = (body_atom2[0], ) + tuple(
@@ -208,19 +210,19 @@ def backward_chaining_grounding_one_rule_with_domains(
                         not known_body_only or
                         fact_index._index.get(new_ground_atom, [])):
                         body_grounding.append(new_ground_atom)
-                        # print('body_grounding,i=!j,', body_grounding) if cont< lim else None
+                        print('body_grounding,i=!j,', body_grounding) if cont< lim else None
                     else:
                         accepted = False
-                        # print('body_grounding,i=!j, not accepted', body_grounding) if cont< lim else None
+                        print('body_grounding,i=!j, not accepted', body_grounding) if cont< lim else None
                         break
                 if accepted:
-                    # print('ADDED', q, '->', tuple(body_grounding)) if cont< lim else None
+                    print('ADDED', q, '->', tuple(body_grounding)) if cont< lim else None
                     new_ground_atoms.add(((q,), tuple(body_grounding)))
-                    # print('\n') if cont< lim else None
-    #   print('----------------new body_grounding', new_ground_atoms) if cont< lim else None
+                    print('\n') if cont< lim else None
+      print('----------------new body_grounding', new_ground_atoms) if cont< lim else None
 
     end = time.time()
-    # print('NUM_GROUNDINGS', len(new_ground_atoms), end - start)
+    print('NUM_GROUNDINGS', len(new_ground_atoms), end - start)
     if res is None:
         return new_ground_atoms
     else:
@@ -262,7 +264,7 @@ class BackwardChainingGrounder(Engine):
                facts: List[Tuple],
                queries: List[Tuple],
                **kwargs) -> Dict[str, RuleGroundings]:
-        print('Starting to ground')
+        # print('Starting to ground')
         # print('queries  :', len(queries),queries)
         if self.rules is None or len(self.rules) == 0:
             return []
