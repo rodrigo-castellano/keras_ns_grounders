@@ -235,8 +235,8 @@ class CollectiveModel(Model):
         #              e.g. mapping predicate_name -> tensor [num_groundings, arity]
         #                   with constant indices for each grounding.
         (X_domains, A_predicates, A_rules, Q) = inputs
-        tf.print('X_domains', X_domains)
-        tf.print('A_predicates', A_predicates)
+        # tf.print('X_domains', X_domains)
+        # tf.print('A_predicates', A_predicates)
         atom_embeddings = self.kge_model((X_domains, A_predicates))
         # tf.print('atom_embeddings', atom_embeddings.shape, atom_embeddings)
 
