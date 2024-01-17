@@ -22,7 +22,7 @@ class ReasoningLayer(Layer):
         grounding_indices = tf.expand_dims(grounding_indices, -1)
         if aggregation_type == 'max':
             base = tf.float32.min * tf.ones(
-                shape=[max_num_atoms, tf.shape(clique_data)[-1]])
+                shape=[max_num_atoms, tf.shape(clique_data)[-1]]) 
             return tf.tensor_scatter_nd_max(
                 base, grounding_indices, clique_data)
 
@@ -579,7 +579,8 @@ class SBRReasoningLayer(ReasoningLayer):
                 params=input_atom_predictions, indices=A_in))
             # Shape [num_atoms, 1]
             head_predictions = self.logic.conj(atom_predictions, axis=-1)
-
+            rule_weights = tf.zeros( shape=[tf.shape(atom_embeddings)[0],1])
+            head_predictions = rule_weights * head_predictions
             num_atoms_out = len(rule.head)
             # Shape [num_atoms, head_len, 1]
             head_predictions = tf.stack(tf.split(head_predictions,
@@ -655,7 +656,7 @@ class _GatedSBRReasoningLayerBase(SBRReasoningLayer):
                 params=input_atom_predictions, indices=A_in))
             # Shape [num_atoms, 1]
             head_predictions = self.logic.conj(atom_predictions, axis=-1)
-
+            print("head_predictions", head_predictions.shape, head_predictions)
             if self.per_grounding_gate:
                 # Shape [num_atoms, body_len]
                 atom_embeddings_shape = tf.shape(atom_embeddings)
@@ -663,7 +664,9 @@ class _GatedSBRReasoningLayerBase(SBRReasoningLayer):
                     atom_embeddings, (atom_embeddings_shape[0], -1))
                 rule_weights = self.rule_gates[rule.name](gate_inputs)
             else:
-                rule_weights = tf.nn.sigmoid(self.rule_gates[rule.name])
+                # CERATE A TF CONSTANT OF ZEROS OF SHAPE atom_embeddings_shape[0]
+                rule_weights = tf.zeros( shape=[tf.shape(atom_embeddings)[0],1])
+                # rule_weights = tf.nn.sigmoid(self.rule_gates[rule.name])
             head_predictions = rule_weights * head_predictions
             num_atoms_out = len(rule.head)
             head_predictions = tf.stack(tf.split(head_predictions,
