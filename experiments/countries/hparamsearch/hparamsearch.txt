@@ -1,1 +1,4 @@
 nations_backward_1_complex_100_0.5_0.0_0.0_1_0.01_1_False_1_None_0.0_rnm
+countries_s1_backward_1_complex_100_0.5_0.0_0.0_1_0.01_1_False_1_None_0.0_rnm
+countries_s1_backward_1_complex_100_0.5_0.0_0.0_1_0.01_1_False_1_None_0.0_dcr
+countries_s1_backward_1_complex_100_0.5_0.0_0.0_1_0.01_1_False_1_None_0.0_r2n
