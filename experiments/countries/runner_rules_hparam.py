@@ -30,7 +30,7 @@ if __name__ == '__main__':
     epochs: int = 10
     assert epochs > 0
 
-    DATASET_NAME = ['test_dataset']
+    DATASET_NAME = ['kinship_expressGNN_S1']
     SEED = [[0,1,2,3,4]]
     E = [100] 
     DROPOUT = [0.0]
@@ -44,8 +44,8 @@ if __name__ == '__main__':
     VALID_SIZE = [None]
     KGE = ['complex','distmult','transe']  # ["distmult", "transe","complex", "rotate"]
     WEIGHT_LOSS = [.5]  
-    GROUNDER = ['backward_2','known','backward_1','backward_2','backward_3']#['known','backward_1', 'domain', 'full', 'domainbody']
-    MODEL_NAME = ['dcr','r2n','sbr','rnm','gsbr','cdcr','no_reasoner',] 
+    GROUNDER = ['backward_1','known','backward_1','backward_2','backward_3']#['known','backward_1', 'domain', 'full', 'domainbody']
+    MODEL_NAME = ['sbr','rnm','dcr','r2n','sbr','rnm','gsbr','cdcr','no_reasoner']  
     all_args = []
 
     for dataset_name, grounder, kge, model_name, e, w_loss, seed, dropout, r, neg, lr, nr, h, dp, v, rr in product(
@@ -54,7 +54,6 @@ if __name__ == '__main__':
         
         run_vars = (dataset_name,grounder, kge, e,w_loss, dropout, r, 
                     neg, lr, nr, h, dp, v, rr,model_name)
-
         # Base parameters
         parser = NSParser()
         args = parser.parse_args()

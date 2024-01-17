@@ -1,0 +1,2 @@
+regions europe africa
+countries spain italy france germany denmark southafrica
