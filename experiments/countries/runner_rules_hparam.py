@@ -30,7 +30,7 @@ if __name__ == '__main__':
     epochs: int = 10
     assert epochs > 0
 
-    DATASET_NAME = ['kinship_expressGNN_S1']
+    DATASET_NAME = ['kinship_family','nations_AMIE','nations_NCRL','countries_s1','countries_s2','countries_s3']
     SEED = [[0,1,2,3,4]]
     E = [100] 
     DROPOUT = [0.0]
@@ -42,10 +42,10 @@ if __name__ == '__main__':
     HARD = [False]
     DEPTH = [1]
     VALID_SIZE = [None]
-    KGE = ['complex','distmult','transe']  # ["distmult", "transe","complex", "rotate"]
+    KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     WEIGHT_LOSS = [.5]  
-    GROUNDER = ['backward_1','known','backward_1','backward_2','backward_3']#['known','backward_1', 'domain', 'full', 'domainbody']
-    MODEL_NAME = ['sbr','rnm','dcr','r2n','sbr','rnm','gsbr','cdcr','no_reasoner']  
+    GROUNDER = ['backward_1','known','backward_2','backward_3','full','domainbody']#['known','backward_1', 'domain', 'full', 'domainbody']
+    MODEL_NAME = ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  
     all_args = []
 
     for dataset_name, grounder, kge, model_name, e, w_loss, seed, dropout, r, neg, lr, nr, h, dp, v, rr in product(
@@ -70,10 +70,19 @@ if __name__ == '__main__':
             task = dataset_name[-2:]
             args.train_file = 'train_'+task+'_p'+'.txt'
             args.rules_file = 'rules_'+task+'.txt'
-        elif 'nations' in dataset_name:
-            # args.rules_file = 'rules_nations_NCRL.txt'  
-            args.rules_file = 'rules_nations_amie.txt' 
+            if task == 's2' and (grounder != 'backward' or grounder != 'known' or grounder != 'domainbody'):
+                continue
+            elif task == 's3' and (grounder != 'backward' or grounder != 'known'):
+                continue
 
+        elif 'nations' in dataset_name:
+            args.rules_file = 'rules.txt' 
+            if  (grounder != 'backward' or grounder != 'known'):
+                continue
+
+        elif 'kinship' in dataset_name:
+            if  (grounder != 'backward' or grounder != 'known'):
+                continue
         # args.reasoner = "r2n"  # "latent_worlds"
         args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
         args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"

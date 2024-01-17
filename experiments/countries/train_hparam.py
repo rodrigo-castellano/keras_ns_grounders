@@ -47,7 +47,6 @@ def get_arg(args, name: str, default=None, assert_defined=False):
 def read_rules(path,args):
     print('Reading rules')
     rules = []
-    #open file data/nations/rules.txt and real all the lines
     with open(path, 'r') as f:
         for line in f:
             # if len(rules) < 11:
@@ -82,7 +81,7 @@ def read_rules(path,args):
                 # divide the variables by ,
                 variables = variables[0].split(',')
                 # Create a dictionary with the variables as keys and the value "countries" as values
-                if args.dataset_name == 'nations':
+                if 'nations' in args.dataset_name:
                     for var in variables:
                         var_names[var] = "countries"
                 elif ('countries' in args.dataset_name) or ('test_dataset' in args.dataset_name):
