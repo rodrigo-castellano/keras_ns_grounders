@@ -197,11 +197,11 @@ if __name__ == '__main__':
         hparam_folder = './hparamsearch/'
         if not os.path.exists(hparam_folder): os.mkdir(hparam_folder)
         hparam_filename = hparam_folder+'hparamsearch.txt'
-        # If the file does not exist, create it and write run_vars 
+        # If the file does not exist, create it, but do not write anything
         if not os.path.exists(hparam_filename):
             with open(hparam_filename, 'w') as f:
-                f.write(args.run_signature)
-                f.write('\n')
+                pass
+
         # If the file exists, check if the run_vars are already in the file, if not, write them
         else:
             with open(hparam_filename, 'r') as f:
