@@ -48,7 +48,8 @@ def _from_strings_to_tensors(fol, serializer,
         rules = []
     # print('\n')
     # for k,v in ground_formulas.items():
-    #     print('rule1 ',k,v) 
+    #     print('rulee ',k,v)
+    #     print('\n') 
     # print('\n\n\n\n\n\nground_formulas', len(ground_formulas),ground_formulas)
     # print('queries at the end', len(queries), queries)
     (domain_to_global, predicate_tuples, groundings, queries) = (
