@@ -88,13 +88,15 @@ def read_rules(path,args):
                         var_names = {"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"}
                 elif 'kinship' in args.dataset_name:
                     var_names = {"x": "people", "y": "people", "z": "people"}
+                elif 'pharmkg' in args.dataset_name:
+                    var_names = {"a": "cte", "b": "cte", "h": "cte", "g": "cte"}
                     
             # print all the info
-            print('number of rules: ', len(rules))
             # if len(rules) < 1001:
             #     print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
             #         'rule body: ', rule_body, 'var_names: ', var_names)
             rules.append(Rule(name=rule_name,var2domain=var_names,body=rule_body,head=rule_head))
+    print('number of rules: ', len(rules))
     return rules
 
 def main(base_path, output_filename, kge_output_filename, log_filename, args):

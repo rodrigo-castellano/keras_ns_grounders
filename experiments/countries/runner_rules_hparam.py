@@ -30,7 +30,7 @@ if __name__ == '__main__':
     epochs: int = 10
     assert epochs > 0
 
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations_AMIE','nations_NCRL']
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations_AMIE','nations_NCRL']
     SEED = [[0,1,2,3,4]]
     E = [100] 
     DROPOUT = [0.0]
@@ -84,9 +84,15 @@ if __name__ == '__main__':
                 continue
 
         elif 'kinship' in dataset_name:
-            if  (grounder == 'full' or grounder == 'domainbody'):
+            if  (grounder == 'full' or grounder == 'domainbody' or grounder == 'backward_2' or grounder == 'backward_3'):
                 print('skipping', run_vars)
                 continue
+
+        elif 'pharm' in dataset_name:
+            if  (grounder == 'full' or grounder == 'domainbody' or grounder == 'backward_2' or grounder == 'backward_3'):
+                print('skipping', run_vars)
+                continue
+
         # args.reasoner = "r2n"  # "latent_worlds"
         args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
         args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
