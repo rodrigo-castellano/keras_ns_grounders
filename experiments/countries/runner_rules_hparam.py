@@ -18,45 +18,41 @@ NUM_CPUS :int = 1  # set to a larger num to enable parallel processing
 
 if __name__ == '__main__':
 
-    # Results for the hparam search 
-    save_hparam_results = True 
-
-    # Results for every epoch will be saved in a folder named log_folder
-    log_folder :str = "results_002"
-    if not os.path.exists(log_folder): os.mkdir(log_folder)
-
     base_path :str = "data"
     parallel :bool = False
-    epochs: int = 10
-    assert epochs > 0
 
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations_AMIE','nations_NCRL']
-    SEED = [[0,1,2,3,4]]
+    RUNS_PER_CONFIG = [5]
+    epochs: int = 120
+    assert epochs > 0
+    DATASET_NAME = ['kinship_family','pharmkg_small','nations_AMIE','nations_NCRL','countries_s1','countries_s2','countries_s3']
+    GROUNDER = ['backward_1','known','backward_2','backward_3','full','domainbody']#['known','backward_1', 'domain', 'full', 'domainbody']
+    KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
+    MODEL_NAME = ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  
     E = [100] 
-    DROPOUT = [0.0]
+    DEPTH = [1]
+    SEED = [[0,1,2,3,4]]
     NEG_PER_SIDE = [1]
+    WEIGHT_LOSS = [.5]  
+    DROPOUT = [0.0]
     R = [0.0]
     RR = [0.0]
     LR = [0.01]
     NUM_RULES = [1] 
     HARD = [False]
-    DEPTH = [1]
     VALID_SIZE = [None]
-    KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    WEIGHT_LOSS = [.5]  
-    GROUNDER = ['backward_1','known','backward_2','backward_3','full','domainbody']#['known','backward_1', 'domain', 'full', 'domainbody']
-    MODEL_NAME = ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  
+
+
     all_args = []
 
-    for dataset_name, grounder, kge, model_name, e, w_loss, seed, dropout, r, neg, lr, nr, h, dp, v, rr in product(
-            DATASET_NAME, GROUNDER, KGE, MODEL_NAME, E, WEIGHT_LOSS, SEED, DROPOUT, R,
-            NEG_PER_SIDE, LR, NUM_RULES, HARD, DEPTH, VALID_SIZE, RR ):  
+    for dataset_name, grounder, kge, model_name, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, h,  v, rr, runs in product(
+            DATASET_NAME, GROUNDER, KGE, MODEL_NAME, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
+            LR, NUM_RULES, HARD,  VALID_SIZE, RR, RUNS_PER_CONFIG ):  
         
-        run_vars = (dataset_name,grounder, kge, e,w_loss, dropout, r, 
-                    neg, lr, nr, h, dp, v, rr,model_name)
+        run_vars = (dataset_name,grounder, kge, model_name, e, dp, seed, neg, w_loss, dropout)
         # Base parameters
         parser = NSParser()
         args = parser.parse_args()
+        args.runs = runs
         args.run_signature = '_'.join(f'{v}' for v in run_vars) 
 
         args.train_file = 'train.txt'  
@@ -65,6 +61,7 @@ if __name__ == '__main__':
         args.facts_file = 'facts.txt'
         args.domain_file = 'domain2constants.txt'
         args.rules_file = 'rules.txt'
+
         if 'countries' in dataset_name:
             # task is the last two letters of the dataset name
             task = dataset_name[-2:]
@@ -83,15 +80,11 @@ if __name__ == '__main__':
                 print('skipping', run_vars)
                 continue
 
-        elif 'kinship' in dataset_name:
+        elif ('kinship' in dataset_name) or ('pharm' in dataset_name):
             if  (grounder == 'full' or grounder == 'domainbody' or grounder == 'backward_2' or grounder == 'backward_3'):
                 print('skipping', run_vars)
                 continue
-
-        elif 'pharm' in dataset_name:
-            if  (grounder == 'full' or grounder == 'domainbody' or grounder == 'backward_2' or grounder == 'backward_3'):
-                print('skipping', run_vars)
-                continue
+ 
 
         # args.reasoner = "r2n"  # "latent_worlds"
         args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
@@ -99,7 +92,6 @@ if __name__ == '__main__':
         args.learning_rate = lr
         args.ragged = True
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
-        
         args.relation_entity_grounder_max_elements = 20
         args.debug = False
         args.stop_gradient_on_kge_embeddings = False
@@ -124,9 +116,7 @@ if __name__ == '__main__':
         args.filter_activity_regularization = 0.0
         args.epochs = epochs 
         args.weight_loss = w_loss
-        args.model = None
         args.model_name = model_name  
-        
         args.batch_size = -1
         # Full batch only for explain.
         args.eval_batch_size = -1
@@ -152,7 +142,6 @@ if __name__ == '__main__':
         args.create_flat_rule_list = True
 
         all_args.append(args)
-        # print('all args:', all_args)
 
     def save_results(args, train_acc, valid_acc, test_acc, training_info, total_time, total_time_std, train_std, valid_std, test_std):
           
@@ -197,6 +186,8 @@ if __name__ == '__main__':
             f.write(combined_results)
 
     def main_wrapper(args): 
+        # HPARAM SEARCH
+        save_hparam_results = True
         # Check if the experiment has already been run.
         #create a string for the run_vars, each substring separated by a '_'
         print("\nRun vars:", args.run_signature+'\n')
@@ -207,34 +198,42 @@ if __name__ == '__main__':
         if not os.path.exists(hparam_filename):
             with open(hparam_filename, 'w') as f:
                 pass
-
         # If the file exists, check if the run_vars are already in the file, if not, write them
         else:
             with open(hparam_filename, 'r') as f:
                 lines = f.readlines() 
                 if args.run_signature+'\n' in lines:
                     print("Run vars already in file")
-                    return           
+                    # return           
+        
+        # LOGGER
+        # Results for every epoch will be saved in a folder named log_folder
+        log_folder :str = "results"
+        if not os.path.exists(log_folder): os.mkdir(log_folder)
+
         # Check if the logger exists, if so, skip the experiment, otherwise run it.
         logger = ns.utils.FileLogger(log_folder)
         if logger.exists(args.__dict__):
-            print("Skipping", args)
-            # return
+            print("\n\n\nSkipping training, it has been already done for", args.run_signature, "\n")
+            return
         else:
             date = str(datetime.datetime.now()).replace(":","-")
-            log_filename_tmp = os.path.join(log_folder, '_tmp_log%s.csv' % date)
+            date = str(datetime.datetime.now()).replace(":","-").replace(" ","-")
+            date = date[:date.index('.')]
+            log_filename_tmp = os.path.join(log_folder, '_tmp_log_{}_{}.csv'.format(date,args.run_signature))
             log_filename = os.path.join(
                 log_folder, 'log%s_%s.csv' % (args.run_signature, date))
 
+
+
         # Create a dict with the keys coming from a list
-        keys = ['loss', 'concept_loss', 'task_loss', 'concept_mrr', 'concept_hits@1@1', 'concept_hits@3@3', 'concept_hits@5@5', 'concept_hits@10@10', 'task_mrr', 'task_hits@1@1', 'task_hits@3@3', 'task_hits@5@5', 'task_hits@10@10']
+        keys = ['loss', 'concept_loss', 'task_loss', 'concept_mrr', 'concept_hits@1@1', 'concept_hits@3@3', 'task_mrr', 'task_hits@1@1', 'task_hits@3@3']
         # create a dict with the keys and empty lists as values
-        runs = 5
         test_acc_avg = np.zeros((len(keys),runs))
         valid_acc_avg = np.zeros((len(keys),runs))
         train_acc_avg = np.zeros((len(keys),runs))
         time_arr = np.zeros((runs))
-        for i in range(runs):
+        for i in range(args.runs):
             print("Run number ", i, " out of ", runs)
             start = time.time()
             args.seed_run_i = args.seed[i]
@@ -262,11 +261,15 @@ if __name__ == '__main__':
         valid_std = np.std(valid_acc_avg, axis=1)
         train_std = np.std(train_acc_avg, axis=1)
 
-        # Split the args used for trainig from the logged data.
-        if hasattr(args, 'model'):
-            delattr(args, 'model')
+
+        # SAVE RESULTS FROM TRAINING IN LOG
+        # # Split the args used for trainig from the logged data.
+        # if hasattr(args, 'model'):
+        #     delattr(args, 'model')
+        if hasattr(args, 'seed_run_i'):
+            delattr(args, 'seed_run_i')
         logged_data = copy.deepcopy(args)
-        # Add some extra info to log.
+        # # Add some extra info to log.
         logged_data.valid_acc = valid_acc
         logged_data.best_val = best_val
         logged_data.test_acc = test_acc
@@ -276,6 +279,9 @@ if __name__ == '__main__':
         if os.path.exists(log_filename):
             os.remove(log_filename)
         os.rename(log_filename_tmp, log_filename)
+
+
+        # SAVE RESULTS FROM HPARAMSEARCH
         # Write the run_vars to the file
         with open(hparam_filename, 'a') as f:
             f.write(args.run_signature)
