@@ -331,7 +331,7 @@ class FileLogger():
     def _read_last_line(self, filename):
         with open(filename) as f:
             lines = f.readlines()
-            return lines[-1]
+            return lines[-2],lines[-1]
 
     def log(self, args:dict, filename):
         """Append`the results as last line of a filename"""
@@ -346,12 +346,22 @@ class FileLogger():
 
     def exists(self, args:dict):
         values = [str(a) for a in list(args.values())]
+        string_values = ",".join(['%s:%s' % (str(k), str(v)) for k,v in list(args.items())])
         for filename in os.listdir(self.folder):
             if filename.startswith("log"):
-                last_line = self._read_last_line(os.path.join(self.folder,filename))
-                current_values = [str(a) for a in last_line.split(",")]
-                if current_values[:len(values)] == values:
+                last_lines = self._read_last_line(os.path.join(self.folder,filename))
+                last_line = "".join(last_lines)
+
+                last_line = last_line.replace(' ', '')
+                last_line = last_line.replace('\n', '')
+                string_values = string_values.replace(' ', '')
+                string_values = string_values.replace('\n', '')
+
+                if string_values in last_line:
                     return True
+                # current_values = [str(a) for a in last_line.split(",")]
+                # if current_values[:len(values)] == values:
+                #     return True
         return False
 
     def write_to_csv(self, to_write):
