@@ -269,8 +269,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
                 ns.utils.MRRMetric(),
                 ns.utils.HitsMetric(n=1),
                 ns.utils.HitsMetric(n=3),
-                ns.utils.HitsMetric(n=5),
-                ns.utils.HitsMetric(n=10)
+                # ns.utils.HitsMetric(n=5),
+                # ns.utils.HitsMetric(n=10)
                ]
     model.compile(optimizer=optimizer,
                     loss=loss,
