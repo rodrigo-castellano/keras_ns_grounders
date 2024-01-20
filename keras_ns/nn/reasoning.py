@@ -6,6 +6,7 @@ from typing import List,Tuple
 from keras_ns.logic.commons import Rule
 from keras_ns.logic.semantics import *
 from keras_ns.nn.concepts import ConceptReasoningLayer
+import numpy as np
 
 
 ##################################################
@@ -579,8 +580,8 @@ class SBRReasoningLayer(ReasoningLayer):
                 params=input_atom_predictions, indices=A_in))
             # Shape [num_atoms, 1]
             head_predictions = self.logic.conj(atom_predictions, axis=-1)
-            rule_weights = tf.zeros( shape=[tf.shape(atom_embeddings)[0],1])
-            head_predictions = rule_weights * head_predictions
+            # rule_weights = tf.zeros( shape=[tf.shape(atom_embeddings)[0],1])
+            # head_predictions = rule_weights * head_predictions
             num_atoms_out = len(rule.head)
             # Shape [num_atoms, head_len, 1]
             head_predictions = tf.stack(tf.split(head_predictions,
@@ -664,8 +665,12 @@ class _GatedSBRReasoningLayerBase(SBRReasoningLayer):
                 rule_weights = self.rule_gates[rule.name](gate_inputs)
             else:
                 # CERATE A TF CONSTANT OF ZEROS OF SHAPE atom_embeddings_shape[0]
-                rule_weights = tf.zeros( shape=[tf.shape(atom_embeddings)[0],1])
-                # rule_weights = tf.nn.sigmoid(self.rule_gates[rule.name])
+                # rule_weights = tf.zeros( shape=[tf.shape(atom_embeddings)[0],1])
+                # tf.print("self.rule_gates[rule.name]",rule.name,self.rule_gates[rule.name].shape, self.rule_gates[rule.name])
+                # tiled_tensor = tf.tile(self.rule_gates[rule.name], multiples=[tf.shape(atom_embeddings)[0], 1])
+                # rule_weights = tf.nn.sigmoid(tiled_tensor)
+                rule_weights = tf.nn.sigmoid(self.rule_gates[rule.name])
+
             head_predictions = rule_weights * head_predictions
             num_atoms_out = len(rule.head)
             head_predictions = tf.stack(tf.split(head_predictions,
