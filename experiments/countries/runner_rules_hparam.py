@@ -24,10 +24,10 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    DATASET_NAME = ['kinship_expressGNN_S1','pharmkg_supersmall','kinship_family','nations_AMIE','nations_NCRL'] #,'countries_s1','countries_s2','countries_s3']
+    DATASET_NAME = ['pharmkg_supersmall','kinship_family','nations_AMIE','nations_NCRL'] #,'countries_s1','countries_s2','countries_s3']
     GROUNDER = ['backward_1','known','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['dcr','rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  
+    MODEL_NAME = ['dcr','r2n','gsbr','cdcr','no_reasoner']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  
     E = [100] 
     DEPTH = [1]
     SEED = [[0,1,2,3,4]]
@@ -80,10 +80,11 @@ if __name__ == '__main__':
                 print('skipping', run_vars)
                 continue
 
-        # elif  ('pharm' in dataset_name):
-        #     if  (grounder == 'full' or grounder == 'domainbody' or grounder == 'backward_2' or grounder == 'backward_3'):
-        #         print('skipping', run_vars)
-        #         continue
+        elif  ('pharm' in dataset_name):
+            args.rules_file = 'rules_pca.txt' 
+            # if  (grounder == 'full' or grounder == 'domainbody' or grounder == 'backward_2' or grounder == 'backward_3'):
+            #     print('skipping', run_vars)
+            #     continue
             
         elif ('kinship' in dataset_name):
             if  (grounder == 'known' or grounder == 'backward_1' ):# if  (grounder == 'full' or grounder == 'domainbody'):
