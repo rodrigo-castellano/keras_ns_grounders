@@ -155,8 +155,8 @@ if __name__ == '__main__':
             )  
         
         combined_results = ';'.join(
-            [args.dataset_name, args.grounder, str(args.kge),
-                str(args.kge_atom_embedding_size),str(args.weight_loss),str(args.reasoner_depth),args.model_name]+
+            [args.dataset_name, args.grounder, str(args.kge),str(args.kge_atom_embedding_size),
+                str(args.weight_loss),str(args.reasoner_depth),args.model_name]+
             [str([total_time,total_time_std])] +
             [str([round(acc, 4), round(std, 4)]) for acc, std in zip(train_acc, train_std)] +
             [str([round(acc, 4), round(std, 4)]) for acc, std in zip(valid_acc, valid_std)] +
