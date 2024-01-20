@@ -1,18 +1,3 @@
-<<<<<<< HEAD
-kinship_family_backward_1_complex_rnm_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_backward_1_complex_dcr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_backward_1_complex_r2n_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_backward_1_complex_sbr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_backward_1_complex_gsbr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_backward_1_complex_cdcr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_backward_1_complex_no_reasoner_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_known_complex_rnm_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_known_complex_dcr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_known_complex_r2n_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_known_complex_sbr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_known_complex_gsbr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_known_complex_cdcr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
-kinship_family_known_complex_no_reasoner_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0 
 nations_AMIE_backward_1_complex_rnm_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
 nations_AMIE_backward_1_complex_dcr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
 nations_AMIE_backward_1_complex_r2n_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
@@ -167,3 +152,9 @@ countries_s3_backward_3_complex_sbr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
 countries_s3_backward_3_complex_gsbr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
 countries_s3_backward_3_complex_cdcr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
 countries_s3_backward_3_complex_no_reasoner_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
+nations_AMIE_full_complex_rnm_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
+nations_AMIE_full_complex_dcr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
+nations_AMIE_full_complex_r2n_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
+nations_AMIE_full_complex_sbr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
+nations_AMIE_full_complex_gsbr_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
+nations_AMIE_domainbody_complex_rnm_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
