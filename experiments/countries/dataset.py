@@ -302,7 +302,9 @@ class KGCDataHandler():
         if domain_file is not None:
             self.constant2domain, self.domain2constants = read_domains(
                 join(base_path, domain_file))
+            # print('self.constant2domain', len(self.constant2domain), self.constant2domain)
             constants_set = set(self.constants)
+            # print('constants_set', len(constants_set), constants_set)
             for c in self.constant2domain.keys():
                 assert c in constants_set, (
                     '%s constant missing in the ontology constraits' % c)
