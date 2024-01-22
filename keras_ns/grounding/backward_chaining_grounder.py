@@ -133,7 +133,7 @@ def backward_chaining_grounding_one_rule_with_domains(
     new_ground_atoms = set()
  
     cont = 0
-    lim=3
+    lim=3000000
     for q in queries:
       cont += 1 
     #   print('\n\n***************q', q,'********************') if cont< lim else None
@@ -159,10 +159,12 @@ def backward_chaining_grounding_one_rule_with_domains(
             # Tuple of atoms matching A(Antonio,None) in the facts.
             # This is the list of ground atoms for the i-th atom in the body.
             # groundings = fact_index.get_matching_atoms(ground_body_atom)
-            groundings = fact_index._index.get(ground_body_atom, [])
+            # print('looking for facts')
+            groundings = fact_index._index.get(ground_body_atom, []) if cont< lim else None
             # print('groundings found in facts', groundings) if cont< lim else None
 
         if len(rule.body) == 1:
+            # print('length one in the body, one predicate') if cont< lim else None
             # Shortcut, we are done, the clause has no free variables.
             # Return the groundings.
             if len(groundings) != 0:
@@ -278,7 +280,7 @@ class BackwardChainingGrounder(Engine):
             else:
                 known_body_only = False
             for rule in self.rules:
-                # print('\nrule ', rule, ' """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" ')
+                print('\nrule ', rule, ' """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" ')
                 queries = self.relation2queries.get(rule.head[0][0], [])
                 # print('queries for this rule:', len(queries),queries)
                 # print('queries', len(queries),queries)
