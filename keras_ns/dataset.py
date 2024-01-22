@@ -35,6 +35,7 @@ def _from_strings_to_tensors(fol, serializer,
                              constants_features=None, deterministic=True): 
     # print('queries at the beginning', len(queries), queries)
     # Symbolic step
+    print('grounding...')
     facts = fol.facts
     if engine is not None:
         ground_formulas: Dict[str, RuleGroundings] = engine.ground(
@@ -52,9 +53,11 @@ def _from_strings_to_tensors(fol, serializer,
     #     print('\n') 
     # print('\n\n\n\n\n\nground_formulas', len(ground_formulas),ground_formulas)
     # print('queries at the end', len(queries), queries)
+    print('serializing...')
     (domain_to_global, predicate_tuples, groundings, queries) = (
         serializer.serialize(queries=queries,
                              rule_groundings=ground_formulas))
+    print('serializing finished')
     # print('domain_to_global', domain_to_global)
     # print('predicate_tuples', predicate_tuples)
     # print('\n\n\n\n\ngroundings', groundings)
