@@ -6,8 +6,6 @@ from keras_ns.logic.commons import Atom, Domain, Rule, RuleGroundings
 from keras_ns.grounding.engine import Engine
 from itertools import chain, product
 
-kNThreads = 1
-
 
 class AtomIndex():
     def __init__(self, facts: List[Tuple[str, str, str]]):
@@ -133,125 +131,171 @@ def backward_chaining_grounding_one_rule_with_domains(
     fact_index: AtomIndex,
     # Max number of unknown facts to expand:
     # 0 implements the known_body_grounder
-    # -1 or body_size implements pure unrestricted backward_chaining
+    # -1 or body_size implements pure unrestricted backward_chaining (
     max_unknown_fact_count: int,
-    res: Set[Tuple[Tuple, Tuple]]=None) -> Union[None,
-                                                 Set[Tuple[Tuple, Tuple]]]:
+    res: Set[Tuple[Tuple, Tuple]]=None,
+    # proof is a dictionary:
+    # atom -> list of atoms needed to be proved in the application of the rule.
+    proofs: Dict[Tuple[Tuple, Tuple], List[Tuple[Tuple, Tuple]]]=None) -> Union[
+        None, Set[Tuple[Tuple, Tuple]]]:
     start = time.time()
     # We have a rule like A(x,y) B(y,z) => C(x,z)
     assert len(rule.head) == 1, (
         'Rule is not a Horn clause %s' % str(rule))
     head = rule.head[0]
+    build_proofs: bool = (proofs is not None)
 
     new_ground_atoms = set()
 
-    cont = 0
-    lim=300000
     for q in queries:
-      cont += 1 
-      print('\n\n***************q', q,'********************') if cont< lim else None
+      #print('Q', q)
       if q[0] != head[0]:  # predicates must match.
         continue
 
       # Get the variable assignments from the head.
       head_ground_vars = {v: a for v, a in zip(head[1:], q[1:])}
-      #print('head_ground_vars', head_ground_vars) if cont< lim else None  
 
       for i in range(len(rule.body)):
         # Ground atom by replacing variables with constants.
         # The result is the partially ground atom A('Antonio',None)
         # with None indicating unground variables.
         body_atom = rule.body[i]
+        #print('BODY_ATOM', body_atom)
         ground_body_atom = (body_atom[0], ) + tuple(
             [head_ground_vars.get(body_atom[j+1], None)
              for j in range(len(body_atom)-1)])
-        print('\n- i', i,'. ground_body_atom:', ground_body_atom, '. Substitution (by None) of the vars not present in head.') if cont< lim else None
         if all(ground_body_atom[1:]):
-            print('groundings already done, #all vars are subtituted', groundings) if cont< lim else None
             groundings = (ground_body_atom,)
         else:
             # Tuple of atoms matching A(Antonio,None) in the facts.
             # This is the list of ground atoms for the i-th atom in the body.
             # groundings = fact_index.get_matching_atoms(ground_body_atom)
             groundings = fact_index._index.get(ground_body_atom, [])
-            print('groundings found in facts', groundings) if cont< lim else None
 
         if len(rule.body) == 1:
-            print('length one in the body, one predicate') if cont< lim else None
             # Shortcut, we are done, the clause has no free variables.
             # Return the groundings.
             new_ground_atoms.add(((q,), groundings))
-            print('ADDED', q, '->', (groundings,)) if cont< lim else None
             continue
-        # print('\nfor every grounding of the body atom') if cont< lim else None
+
         for ground_atom in groundings:
-            # print('--grounded_atom', ground_atom, ' The other vars (not present in head) are left as free') if cont< lim else None
-            # This loop is only needed to ground at least one atom in the body of the formula.
-            # Otherwise it would be enough to start with the loop for ground_vars in product(...)
-            # but it would often expand into many nodes.
-            # The current solution does not allow to fully recover a classical backward_chaining, though.
+            #print('GROUND ATOM', ground_atom)
+            # This loop is only needed to ground at least one atom in the body
+            # of the formula. Otherwise it would be enough to start with the
+            # loop for ground_vars in product(...) but it would often expand
+            # into many nodes. The current solution does not allow to fully
+            # recover a classical backward_chaining, though.
             head_body_ground_vars = copy.copy(head_ground_vars)
             head_body_ground_vars.update(
                 {v: a for v, a in zip(body_atom[1:], ground_atom[1:])})
 
             free_var2domain = [(v,d) for v,d in rule.vars2domain.items()
                                if v not in head_body_ground_vars]
-            free_vars = [vd[0] for vd in free_var2domain] 
+            free_vars = [vd[0] for vd in free_var2domain]
             # Iterate over the groundings of the free vars.
-            # If no free vars are available, itertools.product returns a single empty tuple, meaning
-            # that we still correctly enter in the following for loop for a single round.
-            ################## A SHORCUT: if the body atom is already in the facts, we can skip the rest of the loop.
-            ################### if len(rule.body) == max_unknown_fact_count +1, and free vars is empty, then add it to new groundings
-            ################### if len(rule.body) == 2, and max unknown fact count is 1, AND THE LEFT VARS ARE FILLED, then acceptadd it to new groundings
+            # If no free vars are available, product returns a single empty
+            # tuple, meaning that we still correctly enter in the following
+            # for loop for a single round.
+            #print('FREE VARS_SPAN', list(product(*[domains[vd[1]].constants for vd in free_var2domain])))
             for ground_vars in product(
                 *[domains[vd[1]].constants for vd in free_var2domain]):
                 var2ground = dict(zip(free_vars, ground_vars))
-                full_ground_vars = {**head_body_ground_vars,
-                                    **var2ground}
-                # print('for every possible grounding of the free vars',ground_vars) if cont< lim else None
-                accepted = True
+                full_ground_vars = {**head_body_ground_vars, **var2ground}
+                #print('FULL_VARS', full_ground_vars)
+
+                accepted: bool = True
                 body_grounding = []
-                unknown_fact_count = 0
+                if build_proofs:
+                    body_grounding_to_prove = []
+                unknown_fact_count: int = 0
                 for j in range(len(rule.body)):
-                    # print('     ---j', j) if cont< lim else None
                     if i == j:
-                        # print('      body_grounding,i=j', ground_atom, 'it is already in facts') if cont< lim else None
                         new_ground_atom = ground_atom
-                        is_known_fact = True  # by definition as it is coming from the groundings.
+                        # by definition as it is coming from the groundings.
+                        is_known_fact = True
                     else:
                         body_atom2 = rule.body[j]
                         new_ground_atom = (body_atom2[0], ) + tuple(
                             [full_ground_vars.get(body_atom2[k+1], None)
                              for k in range(len(body_atom2)-1)])
-                        is_known_fact = (len(fact_index._index.get(new_ground_atom, [])) > 0)
+                        is_known_fact = (fact_index._index.get(
+                            new_ground_atom, None) is not None)
+                    #print('NEW GROUND ATOM', new_ground_atom, is_known_fact)
 
-                    assert all(new_ground_atom), 'Some unexpected free variables in %s' % str(new_ground_atom)
+                    assert all(new_ground_atom), (
+                        'Unexpected free variables in %s' %
+                        str(new_ground_atom))
 
                     if not is_known_fact and (
-                            max_unknown_fact_count < 0 or unknown_fact_count < max_unknown_fact_count):
-                        body_grounding.append(ground_atom)
+                            max_unknown_fact_count < 0 or
+                            unknown_fact_count < max_unknown_fact_count):
+                        body_grounding.append(new_ground_atom)
+                        if build_proofs:
+                            body_grounding_to_prove.append(new_ground_atom)
                         unknown_fact_count += 1
-                        # print('      ', new_ground_atom, 'it is not in facts. Unknown count=',unknown_fact_count,'/',max_unknown_fact_count ) if cont< lim else None
+                        #print('ACCEPTED UNKNOWN', unknown_fact_count)
                     elif is_known_fact:
                         body_grounding.append(new_ground_atom)
-                        # print('      ', new_ground_atom, 'it is in facts') if cont< lim else None
+                        #print('ACCEPTED KNOWN')
                     else:
-                        # print('      ', new_ground_atom, 'it is not in facts. Unknown count=',unknown_fact_count,'/',max_unknown_fact_count,'.Not accepted') if cont< lim else None
+                        #print('DISCARD', unknown_fact_count, max_unknown_fact_count)
                         accepted = False
                         break
+                #print('BODY GROUNDING', body_grounding)
 
                 if accepted:
-                    print('ADDED', q, '->', tuple(body_grounding),'. Number of missing atoms:', unknown_fact_count) if cont< lim else None
+                    #print('ADDED', q, '->', tuple(body_grounding), 'TO_PROVE',          str(body_grounding_to_prove) if build_proofs else '')
                     new_ground_atoms.add(((q,), tuple(body_grounding)))
-                    # print('------UPDATED NEW GROUNDINGS', new_ground_atoms) if cont< lim else None
+                    if build_proofs:
+                        proofs.append((q, body_grounding_to_prove))
 
     end = time.time()
-    print('NUM_GROUNDINGS', len(new_ground_atoms), end - start)
-    print('NEW GROUNDINGS: ', new_ground_atoms)  
+    #print('NUM_GROUNDINGS', len(new_ground_atoms), 'TIME', end - start)
     if res is None:
         return new_ground_atoms
     else:
         res.update(new_ground_atoms)
+
+
+
+def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
+                          rule2proofs:Dict[str, List[Tuple[Tuple, List[Tuple]]]],
+                          fact_index: AtomIndex,
+                          num_steps: int) ->  Dict[str, Set[Tuple[Tuple, Tuple]]]:
+    #for rn,g in rule2groundings.items():
+    #    print('RIN', rn, g)
+    atom2proved: Dist[Tuple[str, str, str], bool] = {}
+    for rule_name,proofs in rule2proofs.items():
+        for query_proof in proofs:
+            query, proof = query_proof[0], query_proof[1]
+            if query not in atom2proved or not atom2proved[query]:
+                atom2proved[query] = all(
+                    [(fact_index._index.get(a, None) is not None)
+                     for a in proof])
+                #print('TO PROVE', atom2proved[query])
+    for i in range(num_steps - 1):
+        for rule_name,query2proofs in rule2proofs.items():
+            for query_proof in proofs:
+                query, proof = query_proof[0], query_proof[1]
+                if not atom2proved[query]:
+                    atom2proved[query] = all(
+                        [(query2proved[a] or
+                          fact_index._index.get(a, None) is not None)
+                         for a in proof])
+
+    # Now atom2proved has all proved atoms. Scan the groundings and keep only
+    # the ones that have been proved within num_steps:
+    pruned_rule2groundings = {}
+    for rule_name,groundings in rule2groundings.items():
+        pruned_groundings = []
+        for g in groundings:
+            head_atoms = g[0]
+            if all([atom2proved[a] for a in head_atoms]):
+                pruned_groundings.append(g)
+        pruned_rule2groundings[rule_name] = set(pruned_groundings)
+    #for rn,g in pruned_rule2groundings.items():
+    #    print('ROUT', rn, g)
+    return pruned_rule2groundings
 
 
 class BackwardChainingGrounder(Engine):
@@ -259,38 +303,40 @@ class BackwardChainingGrounder(Engine):
     def __init__(self, rules: List[Rule], facts: List[Union[Atom, str, Tuple]],
                  domains: Dict[str, Domain],
                  max_unknown_fact_count: int=1,
+                 max_unknown_fact_count_last_step: int=1,
                  num_steps: int=1,
-                 # Unused.
-                 n_threads: int=kNThreads):
+                 prune_incomplete_proofs: bool=True):
         self.max_unknown_fact_count = max_unknown_fact_count
+        self.max_unknown_fact_count_last_step = max_unknown_fact_count_last_step
         self.num_steps = num_steps
+        self.prune_incomplete_proofs = prune_incomplete_proofs
         self.rules = rules
         self.domains = domains
-        self.facts = [a if isinstance(a,Tuple) else a.toTuple() if isinstance(a,Atom) else Atom(s=a).toTuple() for a in facts]
+        self.facts = [a if isinstance(a,Tuple) else a.toTuple()
+                      if isinstance(a,Atom) else Atom(s=a).toTuple()
+                      for a in facts]
         # self.facts = facts
         for rule in self.rules:
             assert len(rule.head) == 1, (
                 '%s is not a Horn clause' % str(rule))
         self._fact_index = AtomIndex(self.facts)
-
+        self.relation2queries = {}
+        self.rule2groundings = {}
+        self.rule2proofs = {}
 
     def _init_internals(self, queries: List[Tuple]):
-        print('initiating internals')
-        print('queries', len(queries),queries)
-        # Reset relation2queries and rule2groundings
-        # Relation to queries is: {predicate: queries for that predicate}
-        self.relation2queries = {}
+        self.relation2queries = {}  # reset
         for q in queries:
             if q[0] not in self.relation2queries:
-                self.relation2queries[q[0]] = []
-            self.relation2queries[q[0]].append(q)
-        # rule2groundings is: {rule: groundings for that rule}
-        self.rule2groundings = {}
+                self.relation2queries[q[0]] = set()
+            self.relation2queries[q[0]].add(q)
+
+        # the other are not reset as they are incrementally added.
         for rule in self.rules:
             if rule.name not in self.rule2groundings:
                 self.rule2groundings[rule.name] = set()
-        print('relation2queries\n', self.relation2queries)
-        print('\nrule2groundings\n', self.rule2groundings)
+            if rule.name not in self.rule2proofs:
+                self.rule2proofs[rule.name] = []
 
     # Ground a batch of queries, the result is cached for speed.
     def ground(self,
@@ -300,55 +346,60 @@ class BackwardChainingGrounder(Engine):
 
         if self.rules is None or len(self.rules) == 0:
             return []
-        print('queries', len(queries), queries)
+
         self._init_internals(queries)
         # Keeps track of the queris already processed for this rul.
         self._rule2processed_queries = {rule.name: set() for rule in self.rules}
         for step in range(self.num_steps):
-            print('STEP NUMBER ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^', step,'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^','step ',step+1,'/', self.num_steps, 'known body',step == self.num_steps - 1, )
+            #print('STEP', step)
             for rule in self.rules:
-                print('\nrule ', rule, ' """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" ')
-                queries_per_rule = self.relation2queries.get(rule.head[0][0], [])
-                print('queries_per_rule\n', len(queries_per_rule),queries_per_rule)
-                print('rule2groundings before\n', self.rule2groundings)
+                # Here we assume to have a Horn clause, fix it.
+                queries_per_rule = list(
+                    self.relation2queries.get(rule.head[0][0], set()))
                 if not queries_per_rule:
                     continue
                 backward_chaining_grounding_one_rule_with_domains(
                     self.domains, rule, queries_per_rule, self._fact_index,
                     # max_unknown_fact_count
-                    (self.max_unknown_fact_count if step < self.num_steps - 1 else 0),
+                    (self.max_unknown_fact_count if step < self.num_steps - 1
+                     else self.max_unknown_fact_count_last_step),
                     # Output added here.
-                    self.rule2groundings[rule.name])
-                print('\nrule2groundings after\n', self.rule2groundings)
+                    res=self.rule2groundings[rule.name],
+                    # Proofs added here.
+                    proofs=(self.rule2proofs[rule.name]
+                            if self.prune_incomplete_proofs else None))
+                # Update the list of processed rules.
+                self._rule2processed_queries[rule.name].update(queries_per_rule)
+                # print(step, 'PROCESSED', len(queries_per_rule), len(self._rule2processed_queries[rule.name]))
 
-            if self.num_steps > 1:  # expand the queries and iterate.
-                rule2new_queries = {}
-                for rule in self.rules:
-                    # These are the just processed queries.
-                    queries_per_rule = self.relation2queries.get(rule.head[0][0], [])
-                    # Update the list of processed rules by appending the new queries.
-                    self._rule2processed_queries[rule.name] = ( self._rule2processed_queries[rule.name] | set(queries_per_rule) )
-                    print('\nFinished. self._rule2processed_queries for: ',rule,'\n', self._rule2processed_queries[rule.name])
-                    print('\nAtoms in the groundings for rule ', rule.name, '\n', get_atoms_on_groundings(self.rule2groundings[rule.name]))
-                    # Calculate the atoms left to prove as the difference between the atoms in the groundings and the processed queries.
-                    ################
-                    # The new queries that are left to prove.
-                    # We get the new groundings if they are not already in the processed queries.
-                    rule2new_queries[rule.name] = [a for a in get_atoms_on_groundings(self.rule2groundings[rule.name])
-                                                   if a not in self._rule2processed_queries[rule.name]]
-                    print('\nrule2new_queries[rule.name]\n', rule2new_queries[rule.name])
-                # Merge all new queries in a single list.
-                new_queries = list(set(chain.from_iterable(rule2new_queries.values())))
-                self._init_internals(new_queries)
+            if step == self.num_steps - 1:
+                break
 
+            # Get the queries for the next iteration.
+            new_queries = set()
+            for rule in self.rules:
+                groundings = self.rule2groundings[rule.name]
+                # Get the new queries left to prove, these facts that are not
+                # been processed already and that are not known facts.
+                new_queries.update(
+                    [a for a in get_atoms_on_groundings(groundings)
+                     if a not in self._rule2processed_queries[rule.name] and
+                     self._fact_index._index.get(a, None) is None])
+            # print(step, 'NEW Q', list(new_queries)[:10], 'FROM', len(groundings))
+            self._init_internals(list(new_queries))
+
+        if self.prune_incomplete_proofs:
+            self.rule2groundings = PruneIncompleteProofs(self.rule2groundings,
+                                                         self.rule2proofs,
+                                                         self._fact_index,
+                                                         self.num_steps)
+        #print('R', self.rule2groundings)
         if 'deterministic' in kwargs and kwargs['deterministic']:
-            ret = {rule.name:
-                   RuleGroundings(rule_name,
-                                  sorted(list(groundings), key=lambda x : x.__repr__()))
+            ret = {rule_name: RuleGroundings(
+                rule_name, sorted(list(groundings), key=lambda x : x.__repr__()))
                    for rule_name,groundings in self.rule2groundings.items()}
         else:
-            ret = {rule.name:
-                   RuleGroundings(rule_name, list(groundings))
+            ret = {rule_name: RuleGroundings(rule_name, list(groundings))
                    for rule_name,groundings in self.rule2groundings.items()}
 
         return ret
