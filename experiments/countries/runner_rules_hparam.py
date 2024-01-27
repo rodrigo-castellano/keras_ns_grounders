@@ -27,7 +27,8 @@ if __name__ == '__main__':
     DATASET_NAME = ['test_dataset'] #,'pharmkg_supersmall','nations_AMIE','nations_NCRL',] #,'countries_s1','countries_s2','countries_s3']
     GROUNDER = ['backward_2','known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['dcr','r2n','gsbr','cdcr','no_reasoner']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  
+    MODEL_NAME = ['dcr','r2n','gsbr','cdcr','no_reasoner']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner'] 
+    RULE_MINER = ['None','amie'] #['amie','ncrl'] 
     E = [100] 
     DEPTH = [1]
     SEED = [[0,1,2,3,4]]
@@ -44,11 +45,11 @@ if __name__ == '__main__':
 
     all_args = []
 
-    for dataset_name, grounder, kge, model_name, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, h,  v, rr, runs in product(
+    for dataset_name, grounder, kge, model_name,rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, h,  v, rr, runs in product(
             DATASET_NAME, GROUNDER, KGE, MODEL_NAME, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
             LR, NUM_RULES, HARD,  VALID_SIZE, RR, RUNS_PER_CONFIG ):  
         
-        run_vars = (dataset_name,grounder, kge, model_name, e, dp, seed, neg, w_loss, dropout)
+        run_vars = (dataset_name,grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss, dropout)
         # Base parameters
         parser = NSParser()
         args = parser.parse_args()
@@ -62,11 +63,22 @@ if __name__ == '__main__':
         args.domain_file = 'domain2constants.txt'
         args.rules_file = 'rules.txt'
 
+        if rule_miner == 'amie':
+            args.rules_file = 'rules_amie.txt'
+        elif rule_miner == 'ncrl':
+            args.rules_file = 'rules_ncrl.txt'
+        elif rule_miner == 'None':
+            args.rules_file = 'rules.txt'
+        else: # raise an error if the rule miner is not recognized
+            raise ValueError('Rule miner not recognized for ', dataset_name)
+        # Make sure that the text file exists for that dataset
+        if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
+            print('skipping', run_vars)
+            continue
+
         if 'countries' in dataset_name:
             # task is the last two letters of the dataset name
             task = dataset_name[-2:]
-            args.train_file = 'train_'+task+'_p'+'.txt'
-            args.rules_file = 'rules_'+task+'.txt'
             if task == 's2' and (grounder == 'full' or grounder == 'domainbody'):
                 print('skipping', run_vars)
                 continue
@@ -75,19 +87,16 @@ if __name__ == '__main__':
                 continue
 
         elif 'nations' in dataset_name:
-            args.rules_file = 'rules.txt' 
             if  (grounder == 'known' or grounder == 'backward_1' or grounder == 'backward_2' or grounder == 'backward_3'):# if  (grounder == 'full' or grounder == 'domainbody'):
                 print('skipping', run_vars)
                 continue
 
         elif  ('pharm' in dataset_name):
-            args.rules_file = 'rules.txt' 
             if  ( grounder == 'known' or grounder == 'backward_1' or grounder == 'backward_2' or grounder == 'backward_3'):
                 print('skipping', run_vars)
                 continue
             
         elif ('kinship' in dataset_name):
-            args.rules_file = 'rules.txt' 
             if  (grounder == 'known'):# if  (grounder == 'full' or grounder == 'domainbody'):
                 print('skipping', run_vars)
                 continue
