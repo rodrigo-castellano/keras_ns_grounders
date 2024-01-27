@@ -258,44 +258,44 @@ def backward_chaining_grounding_one_rule_with_domains(
 
 
 
-def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
-                          rule2proofs:Dict[str, List[Tuple[Tuple, List[Tuple]]]],
-                          fact_index: AtomIndex,
-                          num_steps: int) ->  Dict[str, Set[Tuple[Tuple, Tuple]]]:
-    #for rn,g in rule2groundings.items():
-    #    print('RIN', rn, g)
-    atom2proved: Dist[Tuple[str, str, str], bool] = {}
-    for rule_name,proofs in rule2proofs.items():
-        for query_proof in proofs:
-            query, proof = query_proof[0], query_proof[1]
-            if query not in atom2proved or not atom2proved[query]:
-                atom2proved[query] = all(
-                    [(fact_index._index.get(a, None) is not None)
-                     for a in proof])
-                #print('TO PROVE', atom2proved[query])
-    for i in range(num_steps - 1):
-        for rule_name,query2proofs in rule2proofs.items():
-            for query_proof in proofs:
-                query, proof = query_proof[0], query_proof[1]
-                if not atom2proved[query]:
-                    atom2proved[query] = all(
-                        [(query2proved[a] or
-                          fact_index._index.get(a, None) is not None)
-                         for a in proof])
+# def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
+#                           rule2proofs:Dict[str, List[Tuple[Tuple, List[Tuple]]]],
+#                           fact_index: AtomIndex,
+#                           num_steps: int) ->  Dict[str, Set[Tuple[Tuple, Tuple]]]:
+#     #for rn,g in rule2groundings.items():
+#     #    print('RIN', rn, g)
+#     atom2proved: Dist[Tuple[str, str, str], bool] = {}
+#     for rule_name,proofs in rule2proofs.items():
+#         for query_proof in proofs:
+#             query, proof = query_proof[0], query_proof[1]
+#             if query not in atom2proved or not atom2proved[query]:
+#                 atom2proved[query] = all(
+#                     [(fact_index._index.get(a, None) is not None)
+#                      for a in proof])
+#                 #print('TO PROVE', atom2proved[query])
+#     for i in range(num_steps - 1):
+#         for rule_name,query2proofs in rule2proofs.items():
+#             for query_proof in proofs:
+#                 query, proof = query_proof[0], query_proof[1]
+#                 if not atom2proved[query]:
+#                     atom2proved[query] = all(
+#                         [(query2proved[a] or
+#                           fact_index._index.get(a, None) is not None)
+#                          for a in proof])
 
-    # Now atom2proved has all proved atoms. Scan the groundings and keep only
-    # the ones that have been proved within num_steps:
-    pruned_rule2groundings = {}
-    for rule_name,groundings in rule2groundings.items():
-        pruned_groundings = []
-        for g in groundings:
-            head_atoms = g[0]
-            if all([atom2proved[a] for a in head_atoms]):
-                pruned_groundings.append(g)
-        pruned_rule2groundings[rule_name] = set(pruned_groundings)
-    #for rn,g in pruned_rule2groundings.items():
-    #    print('ROUT', rn, g)
-    return pruned_rule2groundings
+#     # Now atom2proved has all proved atoms. Scan the groundings and keep only
+#     # the ones that have been proved within num_steps:
+#     pruned_rule2groundings = {}
+#     for rule_name,groundings in rule2groundings.items():
+#         pruned_groundings = []
+#         for g in groundings:
+#             head_atoms = g[0]
+#             if all([atom2proved[a] for a in head_atoms]):
+#                 pruned_groundings.append(g)
+#         pruned_rule2groundings[rule_name] = set(pruned_groundings)
+#     #for rn,g in pruned_rule2groundings.items():
+#     #    print('ROUT', rn, g)
+    # return pruned_rule2groundings
 
 
 class BackwardChainingGrounder(Engine):
@@ -346,12 +346,12 @@ class BackwardChainingGrounder(Engine):
 
         if self.rules is None or len(self.rules) == 0:
             return []
-
+        # Given the queries, set the atoms per predicate and num of groundings
         self._init_internals(queries)
         # Keeps track of the queris already processed for this rul.
         self._rule2processed_queries = {rule.name: set() for rule in self.rules}
         for step in range(self.num_steps):
-            #print('STEP', step)
+            # print('STEP', step)
             for rule in self.rules:
                 # Here we assume to have a Horn clause, fix it.
                 queries_per_rule = list(
@@ -388,11 +388,11 @@ class BackwardChainingGrounder(Engine):
             # print(step, 'NEW Q', list(new_queries)[:10], 'FROM', len(groundings))
             self._init_internals(list(new_queries))
 
-        if self.prune_incomplete_proofs:
-            self.rule2groundings = PruneIncompleteProofs(self.rule2groundings,
-                                                         self.rule2proofs,
-                                                         self._fact_index,
-                                                         self.num_steps)
+        # if self.prune_incomplete_proofs:
+        #     self.rule2groundings = PruneIncompleteProofs(self.rule2groundings,
+        #                                                  self.rule2proofs,
+        #                                                  self._fact_index,
+        #                                                  self.num_steps)
         #print('R', self.rule2groundings)
         if 'deterministic' in kwargs and kwargs['deterministic']:
             ret = {rule_name: RuleGroundings(

@@ -186,7 +186,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
             print('Using backward chaining with %d steps' % num_steps)
             engine = ns.grounding.BackwardChainingGrounder(rules, facts=list(data_handler.train_known_facts_set),
                                                         domains={d.name:d for d in fol.domains},
-                                                        num_steps=num_steps)
+                                                        num_steps=num_steps, prune_incomplete_proofs=False)
         elif args.grounder == 'domainbody':
             engine = ns.grounding.DomainBodyGrounder(domains={d.name:d for d in fol.domains},
                                                     rules=rules,
