@@ -2,12 +2,10 @@ neighborOf(italy,spain).
 neighborOf(spain,italy).
 neighborOf(spain,france).
 neighborOf(france,spain).
+neighborOf(france,italy).
+neighborOf(italy,france).
 neighborOf(france,germany).
 neighborOf(germany,france).
-neighborOf(denmark,germany).
-neighborOf(germany,denmark).
 locatedInCR(germany,europe).
-locatedInCR(italy,europe).
-locatedInCR(spain,europe).
-locatedInCR(denmark,europe). 
 locatedInCR(southafrica,africa).
+locatedInCR(italy,europe).

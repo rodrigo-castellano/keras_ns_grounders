@@ -1,0 +1,8 @@
+.classpath
+*/target/
+*~
+.project
+.settings/
+.vscode/
+bin/
+kb/nb-configuration.xml
