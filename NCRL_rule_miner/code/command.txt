@@ -1,0 +1,1 @@
+python main.py --train --test --data kinship_family --max_path_len 4 --learned_path_len 3 --model kinship_family --output_file kinship_family --gpu 0 --get_rule --topk 5
