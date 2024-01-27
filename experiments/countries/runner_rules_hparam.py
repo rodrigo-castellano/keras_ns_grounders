@@ -45,8 +45,8 @@ if __name__ == '__main__':
 
     all_args = []
 
-    for dataset_name, grounder, kge, model_name,rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, h,  v, rr, runs in product(
-            DATASET_NAME, GROUNDER, KGE, MODEL_NAME, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
+    for dataset_name, grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, h,  v, rr, runs in product(
+            DATASET_NAME, GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
             LR, NUM_RULES, HARD,  VALID_SIZE, RR, RUNS_PER_CONFIG ):  
         
         run_vars = (dataset_name,grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss, dropout)
