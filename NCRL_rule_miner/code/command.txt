@@ -6,3 +6,5 @@ python main.py --train --test --data pharmkg_supersmall --max_path_len 4 --learn
 
 
 python main.py --test --data nations --max_path_len 4 --learned_path_len 3 --model nations --output_file nations --gpu 0 --get_rule --topk 5
+
+python main.py --test --data pharmkg_supersmall --max_path_len 4 --learned_path_len 2 --model pharmkg_supersmall --output_file pharmkg_supersmall --gpu 0 --get_rule --topk 5
