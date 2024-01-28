@@ -24,11 +24,11 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    DATASET_NAME = ['test_dataset'] #,'pharmkg_supersmall','nations_AMIE','nations_NCRL',] #,'countries_s1','countries_s2','countries_s3']
-    GROUNDER = ['backward_2','known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
+    DATASET_NAME = ['pharmkg_supersmall'] # 'kinship_family','pharmkg_supersmall','nations_AMIE','nations_NCRL','countries_s1','countries_s2','countries_s3', test_dataset
+    GROUNDER = ['known','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['dcr','r2n','gsbr','cdcr','no_reasoner']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner'] 
-    RULE_MINER = ['None','amie'] #['amie','ncrl'] 
+    RULE_MINER = ['None','amie','ncrl'] #['amie','ncrl'] 
     E = [100] 
     DEPTH = [1]
     SEED = [[0,1,2,3,4]]
