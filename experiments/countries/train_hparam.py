@@ -87,10 +87,13 @@ def read_rules(path,args):
                 elif ('countries' in args.dataset_name) or ('test_dataset' in args.dataset_name):
                         var_names = {"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"}
                 elif 'kinship' in args.dataset_name:
-                    var_names = {"x": "people", "y": "people", "z": "people"}
+                    # var_names = {"x": "people", "y": "people", "z": "people","a": "people", "b": "people","c": "people","d": "people"}
+                    for var in variables:
+                        var_names[var] = "people"      
                 elif 'pharmkg' in args.dataset_name:
-                    var_names = {"a": "cte", "b": "cte", "h": "cte", "g": "cte"}
-                    
+                    # var_names = {"a": "cte", "b": "cte","c": "cte","d": "cte", "h": "cte", "g": "cte"}
+                    for var in variables:
+                        var_names[var] = "cte" 
             # print all the info
             # if len(rules) < 1001:
             #     print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
