@@ -9,8 +9,9 @@ import sys
 
 confidence_threshold = 0.1
 
-dataset = 'nations'
+# dataset = 'nations'
 # dataset = 'kinship_family'
+dataset = 'pharmkg_supersmall'
 paths = ['./rules/'+dataset+'_5_2','./rules/'+dataset+'_5_3']
 save_path = './rules/'+dataset
 
