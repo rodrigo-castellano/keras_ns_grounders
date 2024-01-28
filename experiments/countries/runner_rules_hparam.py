@@ -24,11 +24,11 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    DATASET_NAME = ['pharmkg_supersmall'] # 'kinship_family','pharmkg_supersmall','nations_AMIE','nations_NCRL','countries_s1','countries_s2','countries_s3', test_dataset
+    DATASET_NAME = ['pharmkg_supersmall','kinship_family','nations'] # 'kinship_family','pharmkg_supersmall','nations_AMIE','nations_NCRL','countries_s1','countries_s2','countries_s3', test_dataset
     GROUNDER = ['known','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['dcr','r2n','gsbr','cdcr','no_reasoner']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner'] 
-    RULE_MINER = ['None','amie','ncrl'] #['amie','ncrl'] 
+    RULE_MINER = ['ncrl','amie','None'] #['amie','ncrl'] 
     E = [100] 
     DEPTH = [1]
     SEED = [[0,1,2,3,4]]
@@ -73,33 +73,33 @@ if __name__ == '__main__':
             raise ValueError('Rule miner not recognized for ', dataset_name)
         # Make sure that the text file exists for that dataset
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
-            print('skipping', run_vars)
+            print('skipping, rules not existing', run_vars)
             continue
 
         if 'countries' in dataset_name:
             # task is the last two letters of the dataset name
             task = dataset_name[-2:]
             if task == 's2' and (grounder == 'full' or grounder == 'domainbody'):
-                print('skipping', run_vars)
+                print('skipping, grounder too heavy', run_vars)
                 continue
             elif task == 's3' and (grounder == 'full' or grounder == 'domainbody'):
-                print('skipping', run_vars)
+                print('skipping, grounder too heavy', run_vars)
                 continue
 
-        elif 'nations' in dataset_name:
-            if  (grounder == 'known' or grounder == 'backward_1' or grounder == 'backward_2' or grounder == 'backward_3'):# if  (grounder == 'full' or grounder == 'domainbody'):
-                print('skipping', run_vars)
-                continue
+        # elif 'nations' in dataset_name:
+        #     if  (grounder == 'known' or grounder == 'backward_1' or grounder == 'backward_2' or grounder == 'backward_3'):# if  (grounder == 'full' or grounder == 'domainbody'):
+        #         print('skipping, grounder too heavy', run_vars)
+        #         continue
 
-        elif  ('pharm' in dataset_name):
-            if  ( grounder == 'known' or grounder == 'backward_1' or grounder == 'backward_2' or grounder == 'backward_3'):
-                print('skipping', run_vars)
-                continue
+        # elif  ('pharm' in dataset_name):
+        #     if  ( grounder == 'known' or grounder == 'backward_1' or grounder == 'backward_2' or grounder == 'backward_3'):
+        #         print('skipping, grounder too heavy', run_vars)
+        #         continue
             
-        elif ('kinship' in dataset_name):
-            if  (grounder == 'known'):# if  (grounder == 'full' or grounder == 'domainbody'):
-                print('skipping', run_vars)
-                continue
+        # elif ('kinship' in dataset_name):
+        #     if  (grounder == 'full' or grounder == 'domainbody'):
+        #         print('skipping, grounder too heavy', run_vars)
+        #         continue
 
         # args.reasoner = "r2n"  # "latent_worlds"
         args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
