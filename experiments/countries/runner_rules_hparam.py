@@ -165,12 +165,12 @@ if __name__ == '__main__':
 
         # Combine all values into a single comma-separated string
         combined_names = ';'.join(
-            ['Task', 'Grounder', 'KGE', 'EmbedSize', 'WeightLoss_Task','Reasoner_depth','Model_name','Time'] + 
+            ['Task', 'Grounder', 'KGE','Rule_Miner', 'EmbedSize', 'WeightLoss_Task','Reasoner_depth','Model_name','Time'] + 
             [str(metric) for metric in metrics]
             )  
         
         combined_results = ';'.join(
-            [args.dataset_name, args.grounder, str(args.kge),str(args.kge_atom_embedding_size),
+            [args.dataset_name, args.grounder, str(args.kge),args.rule_miner,str(args.kge_atom_embedding_size),
                 str(args.weight_loss),str(args.reasoner_depth),args.model_name]+
             [str([total_time,total_time_std])] +
             [str([round(acc, 4), round(std, 4)]) for acc, std in zip(train_acc, train_std)] +
