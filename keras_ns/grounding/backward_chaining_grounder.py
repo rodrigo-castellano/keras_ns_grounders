@@ -303,7 +303,7 @@ class BackwardChainingGrounder(Engine):
     def __init__(self, rules: List[Rule], facts: List[Union[Atom, str, Tuple]],
                  domains: Dict[str, Domain],
                  max_unknown_fact_count: int=1,
-                 max_unknown_fact_count_last_step: int=1,
+                 max_unknown_fact_count_last_step: int=0,
                  num_steps: int=1,
                  prune_incomplete_proofs: bool=True):
         self.max_unknown_fact_count = max_unknown_fact_count
