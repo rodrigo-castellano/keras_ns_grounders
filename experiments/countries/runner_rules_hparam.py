@@ -1,8 +1,10 @@
 import sys
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\keras_ns_grounders')
-sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\keras_ns_grounders\\experiments\\countries')
-sys.path.append('/home/castellanoontiv/keras_ns_grounders/experiments/countries')
 sys.path.append('/home/castellanoontiv/keras_ns_grounders')
+sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
+# get current directory
+import os
+directory = os.getcwd()
 import copy
 import datetime  
 import os
@@ -24,7 +26,9 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    DATASET_NAME = ['pharmkg_supersmall','kinship_family','nations'] # 'kinship_family','pharmkg_supersmall','nations_AMIE','nations_NCRL','countries_s1','countries_s2','countries_s3', test_dataset
+    DATASET_NAME = ['pharmkg_supersmall','kinship_family','nations'] 
+    DATASET_NAME = ['kinship_family','pharmkg_supersmall','nations'] 
+    DATASET_NAME = ['nations','pharmkg_supersmall','kinship_family'] 
     GROUNDER = ['known','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['dcr','r2n','gsbr','cdcr','no_reasoner']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner'] 
@@ -62,6 +66,7 @@ if __name__ == '__main__':
         args.facts_file = 'facts.txt'
         args.domain_file = 'domain2constants.txt'
         args.rules_file = 'rules.txt'
+        args.rule_miner = rule_miner
 
         if rule_miner == 'amie':
             args.rules_file = 'rules_amie.txt'
