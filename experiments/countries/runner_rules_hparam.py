@@ -27,9 +27,9 @@ if __name__ == '__main__':
     epochs: int = 120
     assert epochs > 0
     DATASET_NAME = ['pharmkg_supersmall','kinship_family','nations'] 
-    DATASET_NAME = ['kinship_family','pharmkg_supersmall','nations'] 
-    DATASET_NAME = ['nations','pharmkg_supersmall','kinship_family'] 
-    GROUNDER = ['known','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
+    # DATASET_NAME = ['kinship_family','pharmkg_supersmall','nations'] 
+    # DATASET_NAME = ['nations','pharmkg_supersmall','kinship_family'] 
+    GROUNDER = ['backward_1','backward_2','backward_3','known','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['dcr','r2n','gsbr','cdcr','no_reasoner']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner'] 
     RULE_MINER = ['ncrl','amie','None'] #['amie','ncrl'] 
@@ -96,8 +96,8 @@ if __name__ == '__main__':
         #         print('skipping, grounder too heavy', run_vars)
         #         continue
 
-        # elif  ('pharm' in dataset_name):
-        #     if  ( grounder == 'known' or grounder == 'backward_1' or grounder == 'backward_2' or grounder == 'backward_3'):
+        # #########elif  ('pharm' in dataset_name):
+        #     if  ( grounder == 'full'):
         #         print('skipping, grounder too heavy', run_vars)
         #         continue
             
