@@ -1,0 +1,2 @@
+epoch;concept_hits@1@1;concept_hits@3@3;concept_loss;concept_mrr;loss;task_hits@1@1;task_hits@3@3;task_loss;task_mrr;val_concept_hits@1@1;val_concept_hits@3@3;val_concept_loss;val_concept_mrr;val_loss;val_task_hits@1@1;val_task_hits@3@3;val_task_loss;val_task_mrr
+0;0.31808942556381226;1.0;0.7428311705589294;0.5995935201644897;0.8966704607009888;0.3221544623374939;1.0;0.7445098161697388;0.6016260385513306;NA;NA;NA;NA;NA;NA;NA;NA;NA
