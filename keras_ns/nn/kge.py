@@ -58,7 +58,6 @@ class AtomEmbeddingLayer(Layer):
         # constants embeddings.
         tuple_features = {}
         for predicate in self.predicates:
-            print('predicate', predicate.name, flush=True)
             if predicate.name not in predicate_to_constant_tuples:
                 continue
 
@@ -99,7 +98,6 @@ class AtomEmbeddingLayer(Layer):
         # Put all the atoms of all the predicates in a unique dense tensor (instead of having it per predicate, we have it all together)
         # shape (n_atoms for all predicates, n_domains, embedd size)
         embeddings = tf.concat(predicate_atoms2embeddings, axis=0)
-        print('embeddings', tf.shape(embeddings), embeddings, flush=True)
 
         # Specify the last dimension size for the following layers
         embeddings = tf.reshape(embeddings, [-1, self.atom_embedding_size])
