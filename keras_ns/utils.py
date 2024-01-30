@@ -365,10 +365,10 @@ class FileLogger():
                 file_values[0] = file_values[0].replace('log', '')
                 # remove the date
                 file_values = file_values[:-1]
-                # print('file_values', file_values)
-                # print(all ([v in signature for v in file_values]))
+                print('file_values', file_values)
+                print(all ([v in signature for v in file_values]))
                 if all ([v in signature for v in file_values]):
-                    # print('all ([v in file_values for v in values])!!!!!!!!!!!!!!!!!!!!!!\n\n\n')
+                    print('all ([v in file_values for v in values])!!!!!!!!!!!!!!!!!!!!!!\n\n\n')
                     return True
 
                 # # check if all the file_values are in string_args

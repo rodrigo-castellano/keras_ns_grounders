@@ -28,10 +28,10 @@ if __name__ == '__main__':
     assert epochs > 0
     # DATASET_NAME = ['test_dataset']
     # DATASET_NAME = ['pharmkg_supersmall','kinship_family','nations'] 
-    DATASET_NAME = ['kinship_family_small','nations'] 
+    # DATASET_NAME = ['kinship_family_small','nations'] 
     DATASET_NAME = ['countries_s1','countries_s2','countries_s3'] 
     # DATASET_NAME = ['nations','pharmkg_supersmall','kinship_family'] 
-    GROUNDER = ['known','backward_1','backward_2','backward_3','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
+    GROUNDER = ['backward_3','known','backward_1','backward_2','backward_3','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['dcr','r2n','gsbr','cdcr','no_reasoner']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner'] 
     RULE_MINER = ['ncrl','amie','None'] #['amie','ncrl'] 
