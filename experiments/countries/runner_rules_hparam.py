@@ -77,7 +77,6 @@ if __name__ == '__main__':
             args.rules_file = 'rules.txt'
         else: # raise an error if the rule miner is not recognized
             raise ValueError('Rule miner not recognized for ', dataset_name)
-        # Make sure that the text file exists for that dataset
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
             print('skipping, rules not existing', run_vars)
             continue
