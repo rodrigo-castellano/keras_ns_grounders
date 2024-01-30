@@ -26,8 +26,9 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
+    DATASET_NAME = ['test_dataset']
     # DATASET_NAME = ['pharmkg_supersmall','kinship_family','nations'] 
-    DATASET_NAME = ['kinship_family_small','pharmkg_supersmall','nations'] 
+    # DATASET_NAME = ['kinship_family_small','pharmkg_supersmall','nations'] 
     # DATASET_NAME = ['nations','pharmkg_supersmall','kinship_family'] 
     GROUNDER = ['known','backward_1','backward_2','backward_3','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
