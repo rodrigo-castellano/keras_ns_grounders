@@ -26,9 +26,9 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    DATASET_NAME = ['test_dataset']
+    # DATASET_NAME = ['test_dataset']
     # DATASET_NAME = ['pharmkg_supersmall','kinship_family','nations'] 
-    # DATASET_NAME = ['kinship_family_small','pharmkg_supersmall','nations'] 
+    DATASET_NAME = ['kinship_family_small','pharmkg_supersmall','nations'] 
     # DATASET_NAME = ['nations','pharmkg_supersmall','kinship_family'] 
     GROUNDER = ['known','backward_1','backward_2','backward_3','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
@@ -92,15 +92,15 @@ if __name__ == '__main__':
                 print('skipping, grounder too heavy', run_vars)
                 continue
 
-        # elif 'nations' in dataset_name:
-        #     if  (grounder == 'known' or grounder == 'backward_1' or grounder == 'backward_2' or grounder == 'backward_3'):# if  (grounder == 'full' or grounder == 'domainbody'):
-        #         print('skipping, grounder too heavy', run_vars)
-        #         continue
+        elif 'nations' in dataset_name:
+            if  (grounder == 'full'):
+                print('skipping, grounder too heavy', run_vars)
+                continue
 
-        # #########elif  ('pharm' in dataset_name):
-        #     if  ( grounder == 'full'):
-        #         print('skipping, grounder too heavy', run_vars)
-        #         continue
+        elif  ('pharm' in dataset_name):
+            if  ( grounder == 'full'):
+                print('skipping, grounder too heavy', run_vars)
+                continue
             
         # elif ('kinship' in dataset_name):
         #     if  (grounder == 'full' or grounder == 'domainbody'):
