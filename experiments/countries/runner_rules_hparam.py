@@ -61,7 +61,7 @@ if __name__ == '__main__':
         args.run_signature = '_'.join(f'{v}' for v in run_vars) 
 
         args.train_file = 'train.txt'  
-        args.valid_file = 'valid.txt'
+        args.valid_file = 'None.txt'
         args.test_file = 'test.txt'
         args.facts_file = 'facts.txt'
         args.domain_file = 'domain2constants.txt'

@@ -23,7 +23,6 @@ with open(path, 'r') as f:
 
 # if the constants are numbers, order them by value
 # if they are strings, order them alphabetically
-print(constants)
 constants = sorted(constants, key=lambda x: int(x) if x.isdigit() else x)
 predicates = sorted(predicates, key=lambda x: int(x) if x.isdigit() else x)
 print(constants)
@@ -35,3 +34,40 @@ with open(ctes_path, 'w') as f:
 with open(predicates_path, 'w') as f:
     for pred in predicates:
         f.write(pred + '\n')
+
+# for valid and test, cerate new files with the lines that have the predicates and constants in the train set
+path = './'+dataset+'/valid.txt'
+lines_valid = []
+with open(path, 'r') as f:  
+    for line in open(path, 'r'):
+        predicate = line.split('(')[0]
+        consant1 = line.split('(')[1].split(',')[0]
+        consant2 = line.split('(')[1].split(',')[1].split(')')[0]
+        # if the predicate and the constants are in the train set, add the line to the lines
+        if predicate in predicates and consant1 in constants and consant2 in constants:
+            lines_valid.append(line)
+
+# create a file called valid_new.txt with the lines
+with open('./'+dataset+'/valid_new.txt', 'w') as f:
+    for line in lines_valid:
+        f.write(line)
+
+
+path = './'+dataset+'/test.txt'
+lines_valid = []
+with open(path, 'r') as f:  
+    for line in open(path, 'r'):
+        predicate = line.split('(')[0]
+        consant1 = line.split('(')[1].split(',')[0]
+        consant2 = line.split('(')[1].split(',')[1].split(')')[0]
+        # if the predicate and the constants are in the train set, add the line to the lines
+        if predicate in predicates and consant1 in constants and consant2 in constants:
+            lines_valid.append(line)
+
+# create a file called test_new.txt with the lines
+with open('./'+dataset+'/test_new.txt', 'w') as f:
+    for line in lines_valid:
+        f.write(line)
+            
+
+
