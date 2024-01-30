@@ -39,6 +39,8 @@ class AtomEmbeddingLayer(Layer):
                       tuples_tensor, predicate_domains):
         tuple_features_per_predicate = []
         for i,domain in enumerate(predicate_domains):
+            # for each domain, take all the atoms in that predicate, where the constants are represented by indeces, 
+            # and substute the indeces of each cte by its embedding
             constants = tf.gather(constants_embeddings[domain.name],
                                   tf.cast(tuples_tensor[..., i], tf.int32),
                                   axis=0)
@@ -56,6 +58,7 @@ class AtomEmbeddingLayer(Layer):
         # constants embeddings.
         tuple_features = {}
         for predicate in self.predicates:
+            print('predicate', predicate.name, flush=True)
             if predicate.name not in predicate_to_constant_tuples:
                 continue
 
@@ -69,6 +72,7 @@ class AtomEmbeddingLayer(Layer):
                     constants_embeddings=constants_embeddings,
                     tuples_tensor=predicate_to_constant_tuples[predicate.name],
                     predicate_domains=predicate.domains)
+            # for the predicate, substitute the indeces of constants by their embeddings (getTuples), unless the embedds are 0 (getZeros)
             tuple_features[predicate.name] = tf.cond(
                 tf.size(predicate_to_constant_tuples[predicate.name]) == 0,
                 GetZeros(self.embedders[predicate.name].input_size()),
@@ -90,9 +94,12 @@ class AtomEmbeddingLayer(Layer):
         for predicate in self.predicates:
             embeddings = self.embedders[predicate.name](
                 tuple_features[predicate.name])
+            # shape (n_atoms for that predicate, n_domains, embedd size)
             predicate_atoms2embeddings.append(embeddings)
-        # Put all the atoms of all the predicates in a unique dense tensor
+        # Put all the atoms of all the predicates in a unique dense tensor (instead of having it per predicate, we have it all together)
+        # shape (n_atoms for all predicates, n_domains, embedd size)
         embeddings = tf.concat(predicate_atoms2embeddings, axis=0)
+        print('embeddings', tf.shape(embeddings), embeddings, flush=True)
 
         # Specify the last dimension size for the following layers
         embeddings = tf.reshape(embeddings, [-1, self.atom_embedding_size])
