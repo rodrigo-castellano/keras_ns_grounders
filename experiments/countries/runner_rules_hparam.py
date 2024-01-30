@@ -28,7 +28,8 @@ if __name__ == '__main__':
     assert epochs > 0
     # DATASET_NAME = ['test_dataset']
     # DATASET_NAME = ['pharmkg_supersmall','kinship_family','nations'] 
-    DATASET_NAME = ['kinship_family_small','pharmkg_supersmall','nations'] 
+    DATASET_NAME = ['kinship_family_small','nations'] 
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3'] 
     # DATASET_NAME = ['nations','pharmkg_supersmall','kinship_family'] 
     GROUNDER = ['known','backward_1','backward_2','backward_3','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
@@ -233,7 +234,7 @@ if __name__ == '__main__':
 
         # Check if the logger exists, if so, skip the experiment, otherwise run it.
         logger = ns.utils.FileLogger(log_folder)
-        if logger.exists(args.__dict__):
+        if logger.exists(args.__dict__,signature=args.run_signature):
             print("\n\n\nSkipping training, it has been already done for", args.run_signature, "\n")
             return
         else:

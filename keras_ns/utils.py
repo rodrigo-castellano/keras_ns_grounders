@@ -344,21 +344,43 @@ class FileLogger():
             f.write("\n")
             f.write(",".join(['%s:%s' % (str(k), str(v)) for k,v in list(args.items())]))
 
-    def exists(self, args:dict):
+    def exists(self, args:dict,signature=None):
         values = [str(a) for a in list(args.values())]
-        string_values = ",".join(['%s:%s' % (str(k), str(v)) for k,v in list(args.items())])
+        keys = [str(a) for a in list(args.keys())]
+        string_args = ",".join(['%s:%s' % (str(k), str(v)) for k,v in list(args.items())])
         for filename in os.listdir(self.folder):
             if filename.startswith("log"):
-                last_lines = self._read_last_line(os.path.join(self.folder,filename))
-                last_line = "".join(last_lines)
+                # last_lines = self._read_last_line(os.path.join(self.folder,filename))
+                # last_line = "".join(last_lines)
 
-                last_line = last_line.replace(' ', '')
-                last_line = last_line.replace('\n', '')
-                string_values = string_values.replace(' ', '')
-                string_values = string_values.replace('\n', '')
+                # last_line = last_line.replace(' ', '')
+                # last_line = last_line.replace('\n', '')
 
-                if string_values in last_line:
+                # string_args = string_args.replace(' ', '')
+                # string_args = string_args.replace('\n', '')
+                # if string_args in last_line:
+                #     return True 
+                
+                file_values = [str(a) for a in filename.split("_")]
+                file_values[0] = file_values[0].replace('log', '')
+                # remove the date
+                file_values = file_values[:-1]
+                # print('file_values', file_values)
+                # print(all ([v in signature for v in file_values]))
+                if all ([v in signature for v in file_values]):
+                    # print('all ([v in file_values for v in values])!!!!!!!!!!!!!!!!!!!!!!\n\n\n')
                     return True
+
+                # # check if all the file_values are in string_args
+                # file_values = [str(a) for a in last_line.split(",")]
+                # print('file_values', file_values)
+                # print('string_args\n', string_args)
+                # print([v in string_args for v in file_values])
+                # if all([v in string_args for v in file_values]):
+                #     print('all([v in string_args for v in file_values])')
+                #     print('last_line\n', last_line)
+                #     print('string_args\n', string_args)
+
                 # current_values = [str(a) for a in last_line.split(",")]
                 # if current_values[:len(values)] == values:
                 #     return True
