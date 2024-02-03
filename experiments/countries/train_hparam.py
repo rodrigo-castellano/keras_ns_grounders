@@ -141,7 +141,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     # print('DATASET_TRAIN label', len(dataset_train[0][1]), dataset_train[0][1]) 
     # dataset_valid = data_handler.get_dataset(
     #    split="valid",number_negatives=args.valid_negatives, corrupt_mode='TAIL')
-    dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL',number_negatives=70)
+    dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL')#,number_negatives=70)
     # print('DATASET_test query', dataset_test[0][0])
     # print('DATASET_test label', dataset_test[0][1])
     # dataset_test_positive_only = data_handler.get_dataset(
