@@ -26,7 +26,7 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations'] 
+    DATASET_NAME = ['pharmkg_supersmall'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations'] 
     GROUNDER = ['known','backward_1','backward_2','backward_3','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['no_reasoner','dcr','r2n','gsbr','cdcr']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner'] 
@@ -88,15 +88,15 @@ if __name__ == '__main__':
                 print('skipping, grounder too heavy', run_vars)
                 continue
 
-        elif 'nations' in dataset_name:
-            if  (grounder == 'full'):
-                print('skipping, grounder too heavy', run_vars)
-                continue
+        # elif 'nations' in dataset_name:
+        #     if  (grounder == 'full'):
+        #         print('skipping, grounder too heavy', run_vars)
+        #         continue
 
-        elif  ('pharm' in dataset_name):
-            if  ( grounder == 'full'):
-                print('skipping, grounder too heavy', run_vars)
-                continue
+        # elif  ('pharm' in dataset_name):
+        #     if  ( grounder == 'full'):
+        #         print('skipping, grounder too heavy', run_vars)
+        #         continue
             
         # elif ('kinship' in dataset_name):
         #     if  (grounder == 'full' or grounder == 'domainbody'):
@@ -221,7 +221,7 @@ if __name__ == '__main__':
                 lines = f.readlines() 
                 if args.run_signature+'\n' in lines:
                     print("Run vars already in file")
-                    # return           
+                    return           
         
         # LOGGER
         # Results for every epoch will be saved in a folder named log_folder
@@ -250,23 +250,27 @@ if __name__ == '__main__':
         valid_acc_avg = np.zeros((len(keys),runs))
         train_acc_avg = np.zeros((len(keys),runs))
         time_arr = np.zeros((runs))
-        for i in range(args.runs):
-            print("Run number ", i, " out of ", runs)
-            start = time.time()
-            args.seed_run_i = args.seed[i]
-            best_val, _, valid_acc, test_acc, _, train_acc, training_info = main(
-                base_path,
-                None,
-                None,
-                log_filename_tmp,
-                args)
-            test_acc_avg[:,i] = np.array(test_acc)
-            valid_acc_avg[:,i] = np.array(valid_acc)
-            train_acc_avg[:,i] = np.array(train_acc) 
-            print('test acc avg', test_acc_avg) 
-            print('train acc avg', train_acc_avg)
-            end = time.time()
-            time_arr[i] = end - start
+        try:
+            for i in range(args.runs):
+                print("Run number ", i, " out of ", runs)
+                start = time.time()
+                args.seed_run_i = args.seed[i]
+                best_val, _, valid_acc, test_acc, _, train_acc, training_info = main(
+                    base_path,
+                    None,
+                    None,
+                    log_filename_tmp,
+                    args)
+                test_acc_avg[:,i] = np.array(test_acc)
+                valid_acc_avg[:,i] = np.array(valid_acc)
+                train_acc_avg[:,i] = np.array(train_acc) 
+                print('test acc avg', test_acc_avg) 
+                print('train acc avg', train_acc_avg)
+                end = time.time()
+                time_arr[i] = end - start
+        except Exception as e:
+            print('Error in experiment', args.run_signature, e)
+            return
         total_time =  np.mean(time_arr)
         total_time_std = np.std(time_arr)
         # Take the average across cols
