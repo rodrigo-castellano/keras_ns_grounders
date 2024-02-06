@@ -24,6 +24,7 @@ class ReasoningLayer(Layer):
         if aggregation_type == 'max':
             base = tf.float32.min * tf.ones(
                 shape=[max_num_atoms, tf.shape(clique_data)[-1]]) 
+            # print('base: ',base.shape, 'grounding_indices: ',grounding_indices.shape, 'clique_data: ',clique_data.shape)
             return tf.tensor_scatter_nd_max(
                 base, grounding_indices, clique_data)
 
@@ -628,12 +629,14 @@ class _GatedSBRReasoningLayerBase(SBRReasoningLayer):
                                        kernel_regularizer=self.regularizer,
                                        activation='sigmoid')])
                                for rule in rules}
+            # print("self.rule_gates",self.rule_gates)
         else:
             self.rule_gates = {rule.name:
                                tf.Variable(tf.zeros([1]),
                                            name='rule_weight(%s)' % rule.name,
                                            dtype=tf.float32)
                                for rule in rules}
+            # print("self.rule_gates",self.rule_gates)
 
 
     # TODO: add explain mode.
@@ -657,12 +660,14 @@ class _GatedSBRReasoningLayerBase(SBRReasoningLayer):
                 params=input_atom_predictions, indices=A_in))
             # Shape [num_atoms, 1]
             head_predictions = self.logic.conj(atom_predictions, axis=-1)
+            # print(rule.name,'self.rule_gates[rule.name]',self.rule_gates[rule.name])
             if self.per_grounding_gate:
                 # Shape [num_atoms, body_len]
                 atom_embeddings_shape = tf.shape(atom_embeddings)
                 gate_inputs = tf.reshape(
                     atom_embeddings, (atom_embeddings_shape[0], -1))
                 rule_weights = self.rule_gates[rule.name](gate_inputs)
+                # print("rule_weights",rule_weights.shape,rule_weights)
             else:
                 # CERATE A TF CONSTANT OF ZEROS OF SHAPE atom_embeddings_shape[0]
                 # rule_weights = tf.zeros( shape=[tf.shape(atom_embeddings)[0],1])
@@ -670,6 +675,7 @@ class _GatedSBRReasoningLayerBase(SBRReasoningLayer):
                 # tiled_tensor = tf.tile(self.rule_gates[rule.name], multiples=[tf.shape(atom_embeddings)[0], 1])
                 # rule_weights = tf.nn.sigmoid(tiled_tensor)
                 rule_weights = tf.nn.sigmoid(self.rule_gates[rule.name])
+                # tf.print("rule_weights",rule_weights.shape,rule_weights)
 
             head_predictions = rule_weights * head_predictions
             num_atoms_out = len(rule.head)
