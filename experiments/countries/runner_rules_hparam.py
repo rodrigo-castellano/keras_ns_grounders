@@ -26,10 +26,10 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','pharmkg_supersmall','kinship_family_small'] # ['pharmkg_supersmall'] # #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['test_dataset_s2']# ['kinship_family_small','pharmkg_supersmall',] #['countries_s1','countries_s2','countries_s3','nations','pharmkg_supersmall','kinship_family_small'] # ['pharmkg_supersmall'] # #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['test_dataset_s2']# ['kinship_family_small','pharmkg_supersmall',] #['countries_s1','countries_s2','countries_s3','nations','pharmkg_supersmall','kinship_family_small'] # ['pharmkg_supersmall'] # #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','sbr','rnm','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
+    MODEL_NAME = ['dcr','no_reasoner','sbr','rnm','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
     RULE_MINER = ['amie','None'] #['amie','ncrl'] 
     E = [100] 
     DEPTH = [1]
@@ -87,7 +87,10 @@ if __name__ == '__main__':
             elif task == 's3' and (grounder == 'full' or grounder == 'domainbody'):
                 print('skipping, grounder too heavy', run_vars)
                 continue
-
+        if dataset_name == 'kinship_family':
+            if model_name == 'sbr':
+                print('skipping, sbr doesnt work for kinship', run_vars)
+                continue
         # elif 'nations' in dataset_name:
         #     if  (grounder == 'full'):
         #         print('skipping, grounder too heavy', run_vars)
@@ -200,8 +203,8 @@ if __name__ == '__main__':
             empty = os.stat(results_filename).st_size == 0
             print("Empty file:", empty)
             if empty:
+                f.write('\n')
                 f.write(combined_names)
-            f.write('\n')
             f.write(combined_results)
 
     def main_wrapper(args): 
@@ -245,15 +248,6 @@ if __name__ == '__main__':
             log_filename = os.path.join(
                 log_folder, 'log%s_%s.csv' % (args.run_signature, date))
 
-
-
-        # Create a dict with the keys coming from a list
-        keys = ['loss', 'concept_loss', 'task_loss', 'concept_mrr', 'concept_hits@1@1', 'concept_hits@3@3', 'task_mrr', 'task_hits@1@1', 'task_hits@3@3']
-        # create a dict with the keys and empty lists as values
-        test_acc_avg = np.zeros((len(keys),runs))
-        valid_acc_avg = np.zeros((len(keys),runs))
-        train_acc_avg = np.zeros((len(keys),runs))
-        time_arr = np.zeros((runs))
         # try:
         for i in range(args.runs):
             print("Run number ", i, " out of ", runs)
@@ -265,6 +259,13 @@ if __name__ == '__main__':
                 None,
                 log_filename_tmp,
                 args)
+            if i == 0:
+                # initialize the arrays with the number of keys in training_info
+                keys = list(training_info.keys())
+                test_acc_avg = np.zeros((len(keys),runs))
+                valid_acc_avg = np.zeros((len(keys),runs))
+                train_acc_avg = np.zeros((len(keys),runs))
+                time_arr = np.zeros((runs))
             test_acc_avg[:,i] = np.array(test_acc)
             valid_acc_avg[:,i] = np.array(valid_acc)
             train_acc_avg[:,i] = np.array(train_acc) 
@@ -289,8 +290,6 @@ if __name__ == '__main__':
 
         # SAVE RESULTS FROM TRAINING IN LOG
         # # Split the args used for trainig from the logged data.
-        # if hasattr(args, 'test_negatives') and args.test_negatives == None:
-        #     delattr(args, 'test_negatives')
         if hasattr(args, 'seed_run_i'):
             delattr(args, 'seed_run_i')
         logged_data = copy.deepcopy(args)
