@@ -38,15 +38,14 @@ class KnownBodyGrounder(Engine):
             return []
         # print('queries', len(queries), queries)
         self._init_internals(queries)
-        # print('facts', len(facts),facts[:50])
-        # print('queries', len(queries),queries[:50])
+        print('queries', len(queries),queries[:50])
         # print('relation2queries')
         # for k,v in self.relation2queries.items():
         #     print(k, len(v))
         # print('rule2groundings', self.rule2groundings)
         
         for rule in self.rules:
-            # print('\nrule ', rule, ' """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" ')
+            print('\nrule ', rule, ' """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" ')
             # print('rule', rule)
             # print('rule.body', rule.body)
             # print('rule.head[0][0]', rule.head[0][0])
@@ -157,7 +156,7 @@ class KnownBodyGrounder(Engine):
       lim=300000
       for q in queries:
         cont += 1 
-        # print('\n\n***************q', q,'********************') if cont< lim else None
+        print('\n\n***************q', q,'********************') if cont< lim else None
         if q[0] != head[0]:  # predicates must match.
           continue
 
@@ -171,12 +170,13 @@ class KnownBodyGrounder(Engine):
             ground_body_atom = (body_atom[0], ) + tuple(
                 [head_ground_vars.get(body_atom[j], None)
                  for j in range(1, len(body_atom))])
-            # print('\n- i', i,'. ground_body_atom:', ground_body_atom, '. Substitution (by None) of the vars not present in head.') if cont< lim else None
+            print('\n- i', i,'. ground_body_atom:', ground_body_atom, '. Substitution (by None) of the vars not present in head.') if cont< lim else None
             # optimization to avoid one extra function call.
             atom_candidates = self._fact_index._index.get(ground_body_atom, [])
-            # print('groundings found in facts', atom_candidates) if cont< lim else None
+            print('groundings found in facts', atom_candidates) if cont< lim else None
             for j in range(1, len(body_atom)):
                 if ground_body_atom[j] is not None:
+                    print('     -j= ',j,'. var', body_atom[j], 'is already grounded') if cont< lim else None
                     continue
                 constant_candidates = [a[j] for a in atom_candidates]
                 var = body_atom[j]
@@ -185,19 +185,24 @@ class KnownBodyGrounder(Engine):
                                               set(constant_candidates))
                 else:
                     var2constants[var] = list(set(constant_candidates))
+                print('     -j= ',j,'. var', var, 'is not grounded yet. Candidates:', var2constants[var]) if cont< lim else None
                 if len(var2constants[var]) == 0:
                     break
 
         vars = var2constants.keys()
         for ground_vars in product(*[c for c in var2constants.values()]):
-            # print('for every possible grounding of the free vars',ground_vars) if cont< lim else None
+            print('for every possible grounding of the free vars',ground_vars) if cont< lim else None
             full_ground_vars = dict(zip(vars, ground_vars))
             ground_body_atoms = []
             for body_atom in rule.body:
                 ground_body_atom = (body_atom[0], ) + tuple(
                     [full_ground_vars.get(body_atom[j+1], None)
                      for j in range(len(body_atom)-1)])
+                print('     -ground_body_atom:', ground_body_atom, '. Substitution (by None) of the vars not present in head.') if cont< lim else None
                 ground_body_atoms.append(ground_body_atom)
             new_groundings.add(((q,), tuple(ground_body_atoms)))
-            # print('ADDED', q, '->', tuple(ground_body_atoms)) if cont< lim else None
+            print('ADDED', q, '->', tuple(ground_body_atoms)) if cont< lim else None
+            print('------UPDATED NEW GROUNDINGS', new_groundings) if cont< lim else None
       self.rule2groundings[rule.name].update(new_groundings)
+      print('NUM_GROUNDINGS', len(new_groundings))
+      print('NEW GROUNDINGS', new_groundings)

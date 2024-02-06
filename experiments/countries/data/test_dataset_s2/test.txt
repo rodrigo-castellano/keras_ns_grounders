@@ -1,1 +1,1 @@
-locatedInCR(france,europe).
+locatedInCR(spain,europe). 

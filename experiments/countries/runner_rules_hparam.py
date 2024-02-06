@@ -26,10 +26,10 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    DATASET_NAME = ['pharmkg_full','kinship_family',] #['kinship_family_small','pharmkg_supersmall',] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME = ['pharmkg_supersmall','test_dataset_s2'] #['kinship_family_small','pharmkg_supersmall',] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     GROUNDER = ['backward_1','backward_2','backward_3','known','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
+    MODEL_NAME = ['rnm','no_reasoner','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
     RULE_MINER = ['amie','None'] #['amie','ncrl'] 
     E = [100] 
     DEPTH = [1]
