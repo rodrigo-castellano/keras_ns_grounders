@@ -26,7 +26,7 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','pharmkg_supersmall','kinship_family_small'] # ['pharmkg_supersmall'] #['kinship_family_small','pharmkg_supersmall',] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','pharmkg_supersmall','kinship_family_small'] # ['pharmkg_supersmall'] # #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['test_dataset_s2']# ['kinship_family_small','pharmkg_supersmall',] #['countries_s1','countries_s2','countries_s3','nations','pharmkg_supersmall','kinship_family_small'] # ['pharmkg_supersmall'] # #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['no_reasoner','sbr','rnm','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
@@ -309,8 +309,8 @@ if __name__ == '__main__':
         # SAVE RESULTS FROM HPARAMSEARCH
         # Write the run_vars to the file
         with open(hparam_filename, 'a') as f:
-            f.write(args.run_signature)
-            f.write('\n')   
+            f.write('\n')
+            f.write(args.run_signature)   
         if save_hparam_results: 
             save_results(args, train_acc, valid_acc, test_acc, training_info, total_time, total_time_std, train_std, valid_std, test_std)
                 

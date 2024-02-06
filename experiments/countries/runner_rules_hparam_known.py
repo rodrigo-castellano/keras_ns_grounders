@@ -26,10 +26,10 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    DATASET_NAME = ['test_dataset_s2'] #['kinship_family_small','pharmkg_supersmall',] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
-    GROUNDER = ['known','backward_1','backward_2','backward_3','known','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
+    DATASET_NAME = ['test_dataset_s2']# ['kinship_family_small','pharmkg_supersmall',] #['countries_s1','countries_s2','countries_s3','nations','pharmkg_supersmall','kinship_family_small'] # ['pharmkg_supersmall'] # #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    GROUNDER = ['known','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
+    MODEL_NAME = ['r2n','no_reasoner','sbr','rnm','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
     RULE_MINER = ['amie','None'] #['amie','ncrl'] 
     E = [100] 
     DEPTH = [1]
@@ -221,6 +221,8 @@ if __name__ == '__main__':
         else:
             with open(hparam_filename, 'r') as f:
                 lines = f.readlines() 
+                # print("Lines in file:\n", lines)
+                # print("Run vars:\n", args.run_signature+'\n')
                 if args.run_signature+'\n' in lines:
                     print("Run vars already in file")
                     return           
@@ -287,8 +289,8 @@ if __name__ == '__main__':
 
         # SAVE RESULTS FROM TRAINING IN LOG
         # # Split the args used for trainig from the logged data.
-        # if hasattr(args, 'model'):
-        #     delattr(args, 'model')
+        # if hasattr(args, 'test_negatives') and args.test_negatives == None:
+        #     delattr(args, 'test_negatives')
         if hasattr(args, 'seed_run_i'):
             delattr(args, 'seed_run_i')
         logged_data = copy.deepcopy(args)
