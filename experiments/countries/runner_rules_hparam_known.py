@@ -1,4 +1,4 @@
-dimport sys
+import sys
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\keras_ns_grounders')
 sys.path.append('/home/castellanoontiv/keras_ns_grounders')
 sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
@@ -26,13 +26,11 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    #DATASET_NAME = ['pharmkg_supersmall','kinship_family','nations'] 
-    #DATASET_NAME = ['kinship_family','pharmkg_supersmall','nations'] 
-    DATASET_NAME = ['nations','pharmkg_supersmall','kinship_family'] 
-    GROUNDER = ['known','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full']#['known','backward_1', 'domain', 'full', 'domainbody']
+    DATASET_NAME = ['test_dataset_s2'] #['kinship_family_small','pharmkg_supersmall',] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    GROUNDER = ['known','backward_1','backward_2','backward_3','known','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['dcr','r2n','gsbr','cdcr','no_reasoner']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner'] 
-    RULE_MINER = ['ncrl','amie','None'] #['amie','ncrl'] 
+    MODEL_NAME = ['no_reasoner','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
+    RULE_MINER = ['amie','None'] #['amie','ncrl'] 
     E = [100] 
     DEPTH = [1]
     SEED = [[0,1,2,3,4]]
@@ -61,7 +59,7 @@ if __name__ == '__main__':
         args.run_signature = '_'.join(f'{v}' for v in run_vars) 
 
         args.train_file = 'train.txt'  
-        args.valid_file = 'valid.txt'
+        args.valid_file = 'None.txt'
         args.test_file = 'test.txt'
         args.facts_file = 'facts.txt'
         args.domain_file = 'domain2constants.txt'
@@ -76,7 +74,6 @@ if __name__ == '__main__':
             args.rules_file = 'rules.txt'
         else: # raise an error if the rule miner is not recognized
             raise ValueError('Rule miner not recognized for ', dataset_name)
-        # Make sure that the text file exists for that dataset
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
             print('skipping, rules not existing', run_vars)
             continue
@@ -84,7 +81,7 @@ if __name__ == '__main__':
         if 'countries' in dataset_name:
             # task is the last two letters of the dataset name
             task = dataset_name[-2:]
-            if task == 's2' and (grounder == 'full' or grounder == 'domainbody'):
+            if task == 's2' and (grounder == 'full'): # or grounder == 'domainbody'): domainbody sometimes gives problems
                 print('skipping, grounder too heavy', run_vars)
                 continue
             elif task == 's3' and (grounder == 'full' or grounder == 'domainbody'):
@@ -92,12 +89,12 @@ if __name__ == '__main__':
                 continue
 
         # elif 'nations' in dataset_name:
-        #     if  (grounder == 'known' or grounder == 'backward_1' or grounder == 'backward_2' or grounder == 'backward_3'):# if  (grounder == 'full' or grounder == 'domainbody'):
+        #     if  (grounder == 'full'):
         #         print('skipping, grounder too heavy', run_vars)
         #         continue
 
         # elif  ('pharm' in dataset_name):
-        #     if  ( grounder == 'known' or grounder == 'backward_1' or grounder == 'backward_2' or grounder == 'backward_3'):
+        #     if  ( grounder == 'full'):
         #         print('skipping, grounder too heavy', run_vars)
         #         continue
             
@@ -105,7 +102,9 @@ if __name__ == '__main__':
         #     if  (grounder == 'full' or grounder == 'domainbody'):
         #         print('skipping, grounder too heavy', run_vars)
         #         continue
-
+        args.test_negatives = None  # all possible negatives
+        if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family':
+            args.test_negatives = 1000
         # args.reasoner = "r2n"  # "latent_worlds"
         args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
         args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
@@ -224,7 +223,7 @@ if __name__ == '__main__':
                 lines = f.readlines() 
                 if args.run_signature+'\n' in lines:
                     print("Run vars already in file")
-                    # return           
+                    return           
         
         # LOGGER
         # Results for every epoch will be saved in a folder named log_folder
@@ -233,7 +232,7 @@ if __name__ == '__main__':
 
         # Check if the logger exists, if so, skip the experiment, otherwise run it.
         logger = ns.utils.FileLogger(log_folder)
-        if logger.exists(args.__dict__):
+        if logger.exists(args.__dict__,signature=args.run_signature):
             print("\n\n\nSkipping training, it has been already done for", args.run_signature, "\n")
             return
         else:
@@ -253,6 +252,7 @@ if __name__ == '__main__':
         valid_acc_avg = np.zeros((len(keys),runs))
         train_acc_avg = np.zeros((len(keys),runs))
         time_arr = np.zeros((runs))
+        # try:
         for i in range(args.runs):
             print("Run number ", i, " out of ", runs)
             start = time.time()
@@ -270,6 +270,9 @@ if __name__ == '__main__':
             print('train acc avg', train_acc_avg)
             end = time.time()
             time_arr[i] = end - start
+        # except Exception as e:
+        #     print('Error in experiment', args.run_signature, e)
+        #     return
         total_time =  np.mean(time_arr)
         total_time_std = np.std(time_arr)
         # Take the average across cols
