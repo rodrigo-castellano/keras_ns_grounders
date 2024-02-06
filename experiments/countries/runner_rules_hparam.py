@@ -221,6 +221,8 @@ if __name__ == '__main__':
         else:
             with open(hparam_filename, 'r') as f:
                 lines = f.readlines() 
+                # print("Lines in file:\n", lines)
+                # print("Run vars:\n", args.run_signature+'\n')
                 if args.run_signature+'\n' in lines:
                     print("Run vars already in file")
                     return           
