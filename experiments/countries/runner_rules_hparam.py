@@ -29,7 +29,7 @@ if __name__ == '__main__':
     DATASET_NAME = ['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['test_dataset_s2']# ['kinship_family_small','pharmkg_supersmall',] #['countries_s1','countries_s2','countries_s3','nations','pharmkg_supersmall','kinship_family_small'] # ['pharmkg_supersmall'] # #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['dcr','no_reasoner','sbr','rnm','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
+    MODEL_NAME = ['no_reasoner','sbr','rnm','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
     RULE_MINER = ['amie','None'] #['amie','ncrl'] 
     E = [100] 
     DEPTH = [1]
