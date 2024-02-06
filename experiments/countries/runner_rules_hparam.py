@@ -103,7 +103,7 @@ if __name__ == '__main__':
         #         print('skipping, grounder too heavy', run_vars)
         #         continue
         args.test_negatives = None  # all possible negatives
-        if dataset_name == 'pharmkg' or dataset_name == 'kinship_family':
+        if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family':
             args.test_negatives = 1000
         # args.reasoner = "r2n"  # "latent_worlds"
         args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
