@@ -26,10 +26,10 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 120
     assert epochs > 0
-    DATASET_NAME = ['pharmkg_supersmall'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations'] 
-    GROUNDER = ['known','backward_1','backward_2','backward_3','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
+    DATASET_NAME = ['pharmkg_full','kinship_family',] #['kinship_family_small','pharmkg_supersmall',] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    GROUNDER = ['backward_1','backward_2','backward_3','known','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','dcr','r2n','gsbr','cdcr']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner'] 
+    MODEL_NAME = ['no_reasoner','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
     RULE_MINER = ['amie','None'] #['amie','ncrl'] 
     E = [100] 
     DEPTH = [1]
@@ -81,7 +81,7 @@ if __name__ == '__main__':
         if 'countries' in dataset_name:
             # task is the last two letters of the dataset name
             task = dataset_name[-2:]
-            if task == 's2' and (grounder == 'full' or grounder == 'domainbody'):
+            if task == 's2' and (grounder == 'full'): # or grounder == 'domainbody'): domainbody sometimes gives problems
                 print('skipping, grounder too heavy', run_vars)
                 continue
             elif task == 's3' and (grounder == 'full' or grounder == 'domainbody'):
@@ -102,7 +102,9 @@ if __name__ == '__main__':
         #     if  (grounder == 'full' or grounder == 'domainbody'):
         #         print('skipping, grounder too heavy', run_vars)
         #         continue
-
+        args.test_negatives = None  # all possible negatives
+        if dataset_name == 'pharmkg' or dataset_name == 'kinship_family':
+            args.test_negatives = 1000
         # args.reasoner = "r2n"  # "latent_worlds"
         args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
         args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
@@ -250,27 +252,27 @@ if __name__ == '__main__':
         valid_acc_avg = np.zeros((len(keys),runs))
         train_acc_avg = np.zeros((len(keys),runs))
         time_arr = np.zeros((runs))
-        try:
-            for i in range(args.runs):
-                print("Run number ", i, " out of ", runs)
-                start = time.time()
-                args.seed_run_i = args.seed[i]
-                best_val, _, valid_acc, test_acc, _, train_acc, training_info = main(
-                    base_path,
-                    None,
-                    None,
-                    log_filename_tmp,
-                    args)
-                test_acc_avg[:,i] = np.array(test_acc)
-                valid_acc_avg[:,i] = np.array(valid_acc)
-                train_acc_avg[:,i] = np.array(train_acc) 
-                print('test acc avg', test_acc_avg) 
-                print('train acc avg', train_acc_avg)
-                end = time.time()
-                time_arr[i] = end - start
-        except Exception as e:
-            print('Error in experiment', args.run_signature, e)
-            return
+        # try:
+        for i in range(args.runs):
+            print("Run number ", i, " out of ", runs)
+            start = time.time()
+            args.seed_run_i = args.seed[i]
+            best_val, _, valid_acc, test_acc, _, train_acc, training_info = main(
+                base_path,
+                None,
+                None,
+                log_filename_tmp,
+                args)
+            test_acc_avg[:,i] = np.array(test_acc)
+            valid_acc_avg[:,i] = np.array(valid_acc)
+            train_acc_avg[:,i] = np.array(train_acc) 
+            print('test acc avg', test_acc_avg) 
+            print('train acc avg', train_acc_avg)
+            end = time.time()
+            time_arr[i] = end - start
+        # except Exception as e:
+        #     print('Error in experiment', args.run_signature, e)
+        #     return
         total_time =  np.mean(time_arr)
         total_time_std = np.std(time_arr)
         # Take the average across cols

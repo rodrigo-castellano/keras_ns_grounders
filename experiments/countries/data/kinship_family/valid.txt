@@ -700,12 +700,10 @@ daughter(1092,1090).
 daughter(1029,410).
 daughter(24,10).
 daughter(2834,2832).
-daughter(1017,2884).
 daughter(2935,2953).
 daughter(1103,1114).
 daughter(470,426).
 daughter(1506,1874).
-daughter(1461,1825).
 daughter(248,496).
 daughter(2216,2218).
 daughter(974,468).
@@ -733,7 +731,6 @@ daughter(1164,761).
 daughter(1392,1511).
 daughter(326,322).
 daughter(1097,96).
-daughter(157,2682).
 daughter(555,553).
 daughter(2220,2221).
 daughter(168,169).
@@ -756,7 +753,6 @@ daughter(74,20).
 daughter(342,2140).
 daughter(1303,1301).
 daughter(2474,2453).
-daughter(453,2705).
 daughter(2449,2450).
 daughter(1703,1425).
 daughter(397,401).
@@ -806,7 +802,6 @@ father(162,414).
 father(1995,1991).
 father(2599,2601).
 father(611,613).
-father(2956,2955).
 father(655,1678).
 father(1746,1749).
 father(1837,1842).
@@ -829,7 +824,6 @@ father(1261,286).
 father(1792,1803).
 father(2942,2943).
 father(2985,2991).
-father(2428,2429).
 father(1613,1027).
 father(1966,1971).
 father(792,389).
@@ -841,13 +835,11 @@ father(1913,1959).
 father(689,1185).
 father(2781,2807).
 father(130,218).
-father(2705,453).
 father(2952,2951).
 father(828,852).
 father(2212,2211).
 father(522,541).
 father(465,2848).
-father(1825,1461).
 father(20,74).
 father(1480,1482).
 father(1408,1409).
@@ -856,13 +848,11 @@ father(104,147).
 father(124,1059).
 father(552,470).
 father(2101,1434).
-father(2968,62).
 father(758,2124).
 father(309,1097).
 father(854,853).
 father(1575,1576).
 father(291,297).
-father(2200,2199).
 father(2261,2260).
 father(916,917).
 father(1952,1955).
@@ -872,7 +862,6 @@ father(761,1169).
 father(1792,1794).
 father(1349,2284).
 father(9,123).
-father(2884,1017).
 father(1138,1143).
 father(2423,2507).
 father(692,694).
@@ -913,7 +902,6 @@ father(2104,2334).
 father(1966,1969).
 father(655,1680).
 father(21,423).
-father(2682,157).
 father(828,844).
 father(2,8).
 father(966,968).
@@ -962,9 +950,7 @@ father(1944,1948).
 father(977,978).
 father(1219,1217).
 father(1511,1516).
-father(1826,1467).
 husband(678,679).
-husband(1879,1365).
 husband(1291,1292).
 husband(2791,2785).
 husband(1731,1732).
@@ -988,7 +974,6 @@ husband(2397,2401).
 husband(2940,2941).
 husband(2286,2284).
 husband(585,584).
-husband(1773,1762).
 husband(42,43).
 husband(757,709).
 husband(984,985).
@@ -998,7 +983,6 @@ husband(521,537).
 husband(758,736).
 husband(158,97).
 husband(386,387).
-husband(211,210).
 husband(405,76).
 husband(2904,2903).
 husband(834,776).
@@ -1023,8 +1007,6 @@ husband(750,744).
 husband(2104,1428).
 husband(2560,2566).
 husband(1769,1759).
-husband(2428,2427).
-husband(415,2653).
 husband(1109,1113).
 husband(921,936).
 husband(2369,2370).
@@ -1037,7 +1019,6 @@ husband(990,1331).
 husband(2383,2382).
 husband(1518,1864).
 husband(2293,1502).
-husband(802,319).
 husband(2244,2245).
 husband(1320,1319).
 husband(1041,1049).
@@ -2297,7 +2278,6 @@ son(1256,286).
 son(1470,1467).
 son(1486,1485).
 son(1124,600).
-son(394,797).
 son(2532,2530).
 son(1554,1526).
 son(2011,2012).
@@ -2332,7 +2312,6 @@ son(169,812).
 son(2372,2371).
 son(282,281).
 son(723,719).
-son(2067,2068).
 son(1146,1144).
 son(2878,2881).
 son(1837,2228).
@@ -2718,7 +2697,6 @@ uncle(1514,2228).
 wife(575,574).
 wife(868,869).
 wife(501,507).
-wife(2628,497).
 wife(2390,2108).
 wife(1670,1671).
 wife(1092,1094).
@@ -2738,7 +2716,6 @@ wife(2148,2147).
 wife(1392,1391).
 wife(2121,768).
 wife(43,42).
-wife(1365,1879).
 wife(245,1696).
 wife(2331,2315).
 wife(1395,1404).
@@ -2754,7 +2731,6 @@ wife(2330,2315).
 wife(2389,2108).
 wife(489,486).
 wife(2969,112).
-wife(2640,430).
 wife(1414,1412).
 wife(2619,2464).
 wife(2325,2314).
@@ -2774,23 +2750,18 @@ wife(2746,2755).
 wife(365,364).
 wife(1954,1952).
 wife(1485,1459).
-wife(2849,2848).
 wife(2858,2859).
-wife(2493,1743).
-wife(1284,1586).
 wife(1836,1835).
 wife(1506,1876).
 wife(407,129).
 wife(1283,1585).
 wife(2625,498).
 wife(2879,2878).
-wife(2427,2428).
 wife(1074,1070).
 wife(2962,242).
 wife(2621,493).
 wife(97,83).
 wife(547,421).
-wife(2325,2326).
 wife(2529,2725).
 wife(1119,1118).
 wife(2587,2588).
@@ -2803,7 +2774,6 @@ wife(2089,2097).
 wife(138,133).
 wife(52,57).
 wife(1633,1632).
-wife(1123,1125).
 wife(2321,2313).
 wife(2910,205).
 wife(1078,1070).
@@ -2825,6 +2795,5 @@ wife(1356,152).
 wife(1833,1832).
 wife(2243,2242).
 wife(1410,2058).
-wife(2739,2738).
 wife(395,394).
 wife(983,297).
