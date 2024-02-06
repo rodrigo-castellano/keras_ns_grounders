@@ -359,7 +359,19 @@ class FileLogger():
 
                 string_args = string_args.replace(' ', '')
                 string_args = string_args.replace('\n', '')
+                print('\nlast_line\n', last_line)
+                print('string_args\n', string_args)
+                # look for all the keys in the last line 
+                # for k in keys:
+                #     if k not in last_line:
+                #         # take them out of the signature, as well as the next word splited by "_"
+                #         string_args_split = string_args.split("_")
+                #         pos = string_args_split.index(k)
+                #         # join all except for pos and pos+1
+                #         string_args = "_".join(string_args_split[:pos] + string_args_split[pos+2:])
+                # print('2string_args\n', string_args)
                 if string_args in last_line:
+                    print('string_args in last_line')
                     return True 
 
                 # file_values = [str(a) for a in filename.split("_")]

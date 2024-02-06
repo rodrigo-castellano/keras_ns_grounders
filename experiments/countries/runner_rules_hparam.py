@@ -287,8 +287,8 @@ if __name__ == '__main__':
 
         # SAVE RESULTS FROM TRAINING IN LOG
         # # Split the args used for trainig from the logged data.
-        # if hasattr(args, 'model'):
-        #     delattr(args, 'model')
+        # if hasattr(args, 'test_negatives') and args.test_negatives == None:
+        #     delattr(args, 'test_negatives')
         if hasattr(args, 'seed_run_i'):
             delattr(args, 'seed_run_i')
         logged_data = copy.deepcopy(args)
