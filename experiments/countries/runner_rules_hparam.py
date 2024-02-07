@@ -271,7 +271,7 @@ if __name__ == '__main__':
                 time_arr = np.zeros((runs))
             print('test_acc',test_acc)
             print('test acc avg', test_acc_avg) 
-            print('train acc avg', train_acc_avg)
+            # print('train acc avg', train_acc_avg)
             test_acc_avg[:,i] = np.array(test_acc)
             valid_acc_avg[:,i] = np.array(valid_acc)
             train_acc_avg[:,i] = np.array(train_acc) 
