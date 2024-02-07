@@ -26,7 +26,7 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [1]
     epochs: int = 10
     assert epochs > 0
-    DATASET_NAME = ['countries_s2','countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['rnm','no_reasoner','sbr','rnm','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
