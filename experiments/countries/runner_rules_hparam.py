@@ -23,10 +23,10 @@ if __name__ == '__main__':
     base_path :str = "data"
     parallel :bool = False
 
-    RUNS_PER_CONFIG = [5]
-    epochs: int = 120
+    RUNS_PER_CONFIG = [1]
+    epochs: int = 10
     assert epochs > 0
-    DATASET_NAME = ['test_dataset','countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME = ['countries_s2','countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['rnm','no_reasoner','sbr','rnm','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
@@ -168,6 +168,9 @@ if __name__ == '__main__':
     def save_results(args, train_acc, valid_acc, test_acc, training_info, total_time, total_time_std, train_std, valid_std, test_std):
           
         # Select as metrics a list containing the keys of the dict training_info 
+        # if the key constrastive_loss is in the dict, remove it
+        if 'contrastive_loss' in training_info:
+            del training_info['contrastive_loss']
         metrics = [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in list(training_info.keys())]
 
         # Combine all values into a single comma-separated string
@@ -266,11 +269,12 @@ if __name__ == '__main__':
                 valid_acc_avg = np.zeros((len(keys),runs))
                 train_acc_avg = np.zeros((len(keys),runs))
                 time_arr = np.zeros((runs))
+            print('test_acc',test_acc)
+            print('test acc avg', test_acc_avg) 
+            print('train acc avg', train_acc_avg)
             test_acc_avg[:,i] = np.array(test_acc)
             valid_acc_avg[:,i] = np.array(valid_acc)
             train_acc_avg[:,i] = np.array(train_acc) 
-            print('test acc avg', test_acc_avg) 
-            print('train acc avg', train_acc_avg)
             end = time.time()
             time_arr[i] = end - start
         # except Exception as e:
