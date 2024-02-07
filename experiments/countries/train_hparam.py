@@ -317,11 +317,11 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     test_accuracy  =  model.evaluate(data_gen_test)
     # test_accuracy  =  model.evaluate(data_gen_train)
  
-    print('\nResults',
-          '\nTrain', train_accuracy,
-          '\nVal', valid_accuracy,
-          '\nTest', test_accuracy,
-          flush=True)
+    # print('\nResults',
+    #       '\nTrain', train_accuracy,
+    #       '\nVal', valid_accuracy,
+    #       '\nTest', test_accuracy,
+    #       flush=True)
     print('history:',history.history.keys()) 
     
 
