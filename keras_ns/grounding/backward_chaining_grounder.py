@@ -311,7 +311,7 @@ class BackwardChainingGrounder(Engine):
                  max_unknown_fact_count: int=1,
                  max_unknown_fact_count_last_step: int=0,
                  num_steps: int=1,
-                 prune_incomplete_proofs: bool=True):
+                 prune_incomplete_proofs: bool=False):
         self.max_unknown_fact_count = max_unknown_fact_count
         self.max_unknown_fact_count_last_step = max_unknown_fact_count_last_step
         self.num_steps = num_steps
