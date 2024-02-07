@@ -132,7 +132,7 @@ class ConceptReasoningLayer(Layer):
             # in a more standard way? Or should we just use mse here?
                         # tf.where(baseline_preds_contr > 0.5, 1.0, 0.0)))))  # crispify the baseline.
             self.add_loss(loss)
-            self.add_metric(loss, name='constrastive_loss')
+            # self.add_metric(loss, name='constrastive_loss')
 
         if return_explain_info:
             return {'x': x, 'c': c, 'preds': preds, 'sign_attn': sign_attn, 'filter_attn': filter_attn}
