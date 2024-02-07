@@ -315,8 +315,9 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     print("\nEvaluation test", flush=True)
     test_accuracy  =  model.evaluate(data_gen_test)
-    # test_accuracy  =  model.evaluate(data_gen_train)
- 
+    # shorten the output up to the len of train_accuracy
+    test_accuracy = test_accuracy[:len(train_accuracy)]
+
     # print('\nResults',
     #       '\nTrain', train_accuracy,
     #       '\nVal', valid_accuracy,
