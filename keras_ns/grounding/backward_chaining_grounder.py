@@ -275,32 +275,43 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
     # Here we will keep all the proves that are complete, i.e. all the atoms
     atom2proved: Dist[Tuple[str, str, str], bool] = {}
     # go through every atom to prove from all queries
-    for rule_name,proofs in rule2proofs.items():
-        # print('\nRULE', rule_name, 'PROOFS', proofs)
-        for query_proof in proofs: 
-            query, proof = query_proof[0], query_proof[1]
-            # proof is the atoms that are not in the facts.
-            # print('\nQUERY', query, 'PROOF', proof) 
-            # if the atom is proved, set atom2proved[query]=true, otherwise, set atom2proved[query]=False and add it to the queries to prove.
-            if query not in atom2proved or not atom2proved[query]:  
-                # print('for every atom in the proof, check if it is proved or in the facts.')
 
-                # for a in proof:
-                    # print('     ATOM', a, '. PROVED', atom2proved.get(a, False), '. IN_FACTS', fact_index._index.get(a, None) is not None)
+    # for rule_name,proofs in rule2proofs.items():
+    #     # print('\nRULE', rule_name, 'PROOFS', proofs)
+    #     for query_proof in proofs: 
+    #         query, proof = query_proof[0], query_proof[1]
+    #         # proof is the atoms that are not in the facts.
+    #         # print('\nQUERY', query, 'PROOF', proof) 
+    #         # if the atom is proved, set atom2proved[query]=true, otherwise, set atom2proved[query]=False and add it to the queries to prove.
+    #         if query not in atom2proved or not atom2proved[query]:  
+    #             # print('for every atom in the proof, check if it is proved or in the facts.')
 
-                # if all([(fact_index._index.get(a, None) is not None) for a in proof]):
-                    # print('      all([(fact_index._index.get(a, None) is not None) for a in proof])+++++++++++++++++++++++++++++++++++++++++++++++++++++++++',all([(fact_index._index.get(a, None) is not None) for a in proof]))
+    #             # for a in proof:
+    #                 # print('     ATOM', a, '. PROVED', atom2proved.get(a, False), '. IN_FACTS', fact_index._index.get(a, None) is not None)
 
-                atom2proved[query] = all(
-                    [(fact_index._index.get(a, None) is not None)
-                     for a in proof])
-                # print('     atom2proved[query]', atom2proved[query])
-    # do the same for the rest of the steps
-    for i in range(num_steps - 1):
-        for rule_name,query2proofs in rule2proofs.items():
-            for query_proof in proofs:
-                query, proof = query_proof[0], query_proof[1]
-                if not atom2proved[query]:
+    #             # if all([(fact_index._index.get(a, None) is not None) for a in proof]):
+    #                 # print('      all([(fact_index._index.get(a, None) is not None) for a in proof])+++++++++++++++++++++++++++++++++++++++++++++++++++++++++',all([(fact_index._index.get(a, None) is not None) for a in proof]))
+
+    #             atom2proved[query] = all(
+    #                 [(fact_index._index.get(a, None) is not None)
+    #                  for a in proof])
+    #             # print('     atom2proved[query]', atom2proved[query])
+    # # do the same for the rest of the steps
+    # for i in range(num_steps - 1):
+    #     for rule_name,query2proofs in rule2proofs.items():
+    #         for query_proof in proofs:
+    #             query, proof = query_proof[0], query_proof[1]
+    #             if not atom2proved[query]:
+    #                 atom2proved[query] = all(
+    #                     [(atom2proved.get(a, False) or
+    #                       fact_index._index.get(a, None) is not None)
+    #                      for a in proof])
+
+    for i in range(num_steps ):
+        for rule_name,proofs in rule2proofs.items():
+            for query_and_proof in proofs:
+                query, proof = query_and_proof[0], query_and_proof[1]
+                if query not in atom2proved or not atom2proved[query]:
                     atom2proved[query] = all(
                         [(atom2proved.get(a, False) or
                           fact_index._index.get(a, None) is not None)
