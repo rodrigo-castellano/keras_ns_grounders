@@ -186,11 +186,12 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
             engine = ns.grounding.KnownBodyGrounder(rules, facts=list(data_handler.train_known_facts_set))
         
         elif 'backward' in args.grounder:
-            num_steps = int(args.grounder.split('_')[1])
-            print('Using backward chaining with %d steps' % num_steps)
+            num_steps = int(args.grounder.split('_')[-1])
+            prune_backward = True if ( ('backward' in args.grounder) and ('prune'in args.grounder) ) else False
+            print('Grounder: ',args.grounder,'Number of steps:', num_steps, 'Prune:', prune_backward)
             engine = ns.grounding.BackwardChainingGrounder(rules, facts=list(data_handler.train_known_facts_set),
                                                         domains={d.name:d for d in fol.domains},
-                                                        num_steps=num_steps)
+                                                        num_steps=num_steps, prune_incomplete_proofs=prune_backward)
         elif args.grounder == 'domainbody':
             engine = ns.grounding.DomainBodyGrounder(domains={d.name:d for d in fol.domains},
                                                     rules=rules,
