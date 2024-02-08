@@ -281,12 +281,15 @@ def backward_chaining_grounding_one_rule_with_domains(
     end = time.time()
     # print('NUM_GROUNDINGS', len(new_ground_atoms), 'TIME', end - start)
     # print('NEW GROUND ATOMS', new_ground_atoms) if cont< lim else None
+
+    # if step != (n_steps-1) and step!= 0 :
+    #     print('step',step,', adding new_ground_atoms')
+    #     # update atoms_to_remove with new_ground_atoms
     print('step number',step,'/',n_steps)
-    if step != (n_steps-1) and step!= 0 :
-        print('step',step,', adding new_ground_atoms')
-        # update atoms_to_remove with new_ground_atoms
-        atoms_to_remove.update(new_ground_atoms) 
-        print('atoms_to_remove',atoms_to_remove)
+    atoms_to_remove.append(set(new_ground_atoms))
+    for i,atom_set in enumerate(atoms_to_remove):
+        print('step',i,'atoms to remove',atom_set)
+
     if res is None:
         return new_ground_atoms,atoms_to_remove
     else:
@@ -339,7 +342,7 @@ class BackwardChainingGrounder(Engine):
                facts: List[Tuple],
                queries: List[Tuple],
                **kwargs) -> Dict[str, RuleGroundings]:
-        atoms_to_remove = set()
+        atoms_to_remove = []
         if self.rules is None or len(self.rules) == 0:
             return []
         # To debug: order the queries by the head, and then by body.if the len of the queries is less than 100
@@ -411,7 +414,7 @@ class BackwardChainingGrounder(Engine):
             ret = {rule_name: RuleGroundings(rule_name, list(groundings))
                    for rule_name,groundings in self.rule2groundings.items()}
 
-        return ret
+        return ret,atoms_to_remove
 
 
 
@@ -553,12 +556,27 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         domain2adaptive_constants=domain2adaptive_constants)
 
   
-    print('starting the gruonding')
-
-    queries, labels = dataset_train[0:len(dataset_train)]
+    queries, labels = dataset_test[0:len(dataset_test)]
     facts = fol.facts
-    ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
+    ground_formulas,atoms_remove  = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
     rules = engine.rules
+    # print all the atoms to remove 
+    print() 
+    atoms = []
+    for atom_set in atoms_remove:
+        atom_set_level = set()
+        for grounding in atom_set:
+            for atom in grounding[0]:  # head
+                atom_set_level.add(atom)
+            for atom in grounding[1]:  # tail
+                atom_set_level.add(atom)
+        atoms.append(atom_set_level)
+    # # order the atoms set:
+    # atoms = sorted(atoms, key=lambda x: (x[0], x[1:]))
+    for i,atom_level in enumerate(atoms):
+        for atom in atom_level:
+            print('level ',i,'. Atom to remove', atom)
+
 
     # print('Generating train data')
     # start = time.time()
