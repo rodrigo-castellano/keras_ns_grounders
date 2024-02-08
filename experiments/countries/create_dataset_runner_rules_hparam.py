@@ -26,14 +26,14 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['test_dataset_s2','countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
-    GROUNDER = ['backward_2','backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
+    DATASET_NAME = ['test_dataset_s2'] #,'countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    GROUNDER = ['backward_3'] #,'backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['dcr','sbr','rnm','dcr','r2n','no_reasoner',]# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
+    MODEL_NAME = ['dcr'] #,'sbr','rnm','dcr','r2n','no_reasoner',]# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
     RULE_MINER = ['amie','None'] #['amie','ncrl'] 
     E = [100] 
     DEPTH = [1]
-    SEED = [[0,1,2,3,4]]
+    SEED = [[0]]
     NEG_PER_SIDE = [1]
     WEIGHT_LOSS = [.5]  
     DROPOUT = [0.0]
@@ -75,6 +75,7 @@ if __name__ == '__main__':
         args.learning_rate = lr
         args.ragged = True
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
+        print('NUM RULES', args.num_rules)
         args.relation_entity_grounder_max_elements = 20
         args.debug = False
         args.stop_gradient_on_kge_embeddings = False
