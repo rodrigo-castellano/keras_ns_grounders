@@ -1,10 +1,31 @@
-#! /bin/python3
 import copy
 import time
 from typing import List, Set, Tuple, Dict, Union
 from keras_ns.logic.commons import Atom, Domain, Rule, RuleGroundings
 from keras_ns.grounding.engine import Engine
 from itertools import chain, product
+
+
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+import tensorflow as tf
+from typing import Dict, List
+from keras_ns.logic.commons import Atom, FOL, RuleGroundings
+import time
+import argparse
+import keras_ns as ns
+from itertools import product
+import numpy as np
+from os.path import join
+import random
+import pickle
+
+from dataset import KGCDataHandler, build_domains
+from model import CollectiveModel
+from keras.callbacks import CSVLogger
+from keras_ns.logic.commons import Atom, Domain, Rule, RuleLoader
+from keras_ns.nn.kge import KGEFactory
+from keras_ns.utils import MMapModelCheckpoint, KgeLossFactory, read_file_as_lines
 
 
 class AtomIndex():
@@ -136,7 +157,8 @@ def backward_chaining_grounding_one_rule_with_domains(
     res: Set[Tuple[Tuple, Tuple]]=None,
     # proof is a dictionary:
     # atom -> list of atoms needed to be proved in the application of the rule.
-    proofs: Dict[Tuple[Tuple, Tuple], List[Tuple[Tuple, Tuple]]]=None) -> Union[
+    proofs: Dict[Tuple[Tuple, Tuple], List[Tuple[Tuple, Tuple]]]=None,
+    atoms_to_remove=set(), step=-1, n_steps=-1) -> Union[
         None, Set[Tuple[Tuple, Tuple]]]:
     
     start = time.time()
@@ -151,7 +173,7 @@ def backward_chaining_grounding_one_rule_with_domains(
     lim=10
     for q in queries:
       cont += 1 
-      print('\n\n***************q', q,'********************') if cont< lim else None
+    #   print('\n\n***************q', q,'********************') if cont< lim else None
       if q[0] != head[0]:  # predicates must match.
         continue
 
@@ -259,67 +281,15 @@ def backward_chaining_grounding_one_rule_with_domains(
     end = time.time()
     # print('NUM_GROUNDINGS', len(new_ground_atoms), 'TIME', end - start)
     # print('NEW GROUND ATOMS', new_ground_atoms) if cont< lim else None
+    if step != (n_steps-1) and step!= 0 :
+        print('step',step,', adding new_ground_atoms')
+        # update atoms_to_remove with new_ground_atoms
+        atoms_to_remove.update(new_ground_atoms) 
+        print('atoms_to_remove',atoms_to_remove)
     if res is None:
-        return new_ground_atoms
+        return new_ground_atoms,atoms_to_remove
     else:
-        res.update(new_ground_atoms)
-
-
-
-def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
-                          rule2proofs:Dict[str, List[Tuple[Tuple, List[Tuple]]]],
-                          fact_index: AtomIndex,
-                          num_steps: int) ->  Dict[str, Set[Tuple[Tuple, Tuple]]]:
-    #for rn,g in rule2groundings.items():
-    #    print('RIN', rn, g)
-    # Here we will keep all the proves that are complete, i.e. all the atoms
-    atom2proved: Dist[Tuple[str, str, str], bool] = {}
-    # go through every atom to prove from all queries
-    for rule_name,proofs in rule2proofs.items():
-        # print('\nRULE', rule_name, 'PROOFS', proofs)
-        for query_proof in proofs: 
-            query, proof = query_proof[0], query_proof[1]
-            # proof is the atoms that are not in the facts.
-            # print('\nQUERY', query, 'PROOF', proof) 
-            # if the atom is proved, set atom2proved[query]=true, otherwise, set atom2proved[query]=False and add it to the queries to prove.
-            if query not in atom2proved or not atom2proved[query]:  
-                # print('for every atom in the proof, check if it is proved or in the facts.')
-
-                # for a in proof:
-                    # print('     ATOM', a, '. PROVED', atom2proved.get(a, False), '. IN_FACTS', fact_index._index.get(a, None) is not None)
-
-                # if all([(fact_index._index.get(a, None) is not None) for a in proof]):
-                    # print('      all([(fact_index._index.get(a, None) is not None) for a in proof])+++++++++++++++++++++++++++++++++++++++++++++++++++++++++',all([(fact_index._index.get(a, None) is not None) for a in proof]))
-
-                atom2proved[query] = all(
-                    [(fact_index._index.get(a, None) is not None)
-                     for a in proof])
-                # print('     atom2proved[query]', atom2proved[query])
-    # do the same for the rest of the steps
-    for i in range(num_steps - 1):
-        for rule_name,query2proofs in rule2proofs.items():
-            for query_proof in proofs:
-                query, proof = query_proof[0], query_proof[1]
-                if not atom2proved[query]:
-                    atom2proved[query] = all(
-                        [(atom2proved.get(a, False) or
-                          fact_index._index.get(a, None) is not None)
-                         for a in proof])
-
-    # Now atom2proved has all proved atoms. Scan the groundings and keep only
-    # the ones that have been proved within num_steps:
-    pruned_rule2groundings = {}
-    for rule_name,groundings in rule2groundings.items():
-        pruned_groundings = []
-        for g in groundings:
-            head_atoms = g[0]
-            # WE CHECK IF ALL THE ATOMS IN THE HEAD ARE PROVED
-            if all([atom2proved.get(a, False) for a in head_atoms]):
-                pruned_groundings.append(g)
-        pruned_rule2groundings[rule_name] = set(pruned_groundings)
-    #for rn,g in pruned_rule2groundings.items():
-    #    print('ROUT', rn, g)
-    return pruned_rule2groundings
+        res.update(new_ground_atoms),atoms_to_remove
 
 
 class BackwardChainingGrounder(Engine):
@@ -368,23 +338,23 @@ class BackwardChainingGrounder(Engine):
                facts: List[Tuple],
                queries: List[Tuple],
                **kwargs) -> Dict[str, RuleGroundings]:
-
+        atoms_to_remove = set()
         if self.rules is None or len(self.rules) == 0:
             return []
-        # # To debug: order the queries by the head, and then by body.if the len of the queries is less than 100
-        # queries = sorted(queries, key=lambda x: (x[0], x[1:])) if len(queries) < 50 else queries
+        # To debug: order the queries by the head, and then by body.if the len of the queries is less than 100
+        queries = sorted(queries, key=lambda x: (x[0], x[1:])) if len(queries) < 50 else queries
         # print('\nQUERIES\n', queries, '\n')
         self._init_internals(queries)
         # order also the relation2queries
-        # for k,v in self.relation2queries.items():
-        #     self.relation2queries[k] = sorted(list(v), key=lambda x: (x[0], x[1:])) if len(v) < 50 else v
+        for k,v in self.relation2queries.items():
+            self.relation2queries[k] = sorted(list(v), key=lambda x: (x[0], x[1:])) if len(v) < 50 else v
         # print('\nAtoms to process per query. self.relation2queries\n',self.relation2queries)
         # Keeps track of the queris already processed for this rule.
         self._rule2processed_queries = {rule.name: set() for rule in self.rules}
         for step in range(self.num_steps):
-            # print('STEP NUMBER ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^', step,'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^','step ',step,'/', self.num_steps, 'known body',step == self.num_steps - 1, )
+            print('STEP NUMBER ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^', step,'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^','step ',step,'/', self.num_steps, 'known body',step == self.num_steps - 1, )
             for rule in self.rules:
-                # print('\nrule ', rule, ' """"""""""""""""""""""""""""""""""""""""" """""""""""""""""""""""""" ')
+                print('\nrule ', rule, ' """"""""""""""""""""""""""""""""""""""""" """""""""""""""""""""""""" ')
                 # Here we assume to have a Horn clause, fix it.
                 queries_per_rule = list(
                     self.relation2queries.get(rule.head[0][0], set()))
@@ -400,14 +370,15 @@ class BackwardChainingGrounder(Engine):
                     res=self.rule2groundings[rule.name],
                     # Proofs added here.
                     proofs=(self.rule2proofs[rule.name]
-                            if self.prune_incomplete_proofs else None))
+                            if self.prune_incomplete_proofs else None),
+                    atoms_to_remove = atoms_to_remove, step=step, n_steps =self.num_steps)
                 # Update the list of processed rules.
                 self._rule2processed_queries[rule.name].update(queries_per_rule)
                 # print('\nqueries processed:, _rule2processed_queries\n', len(self._rule2processed_queries[rule.name]),self._rule2processed_queries[rule.name])
                 # print()
                 # for k,v in self.rule2groundings.items():
-                    # print('rule2groundings', k, len(v),v)
- 
+                #     print('rule2groundings', k, len(v),v)
+
             if step == self.num_steps - 1:
                 break
 
@@ -425,13 +396,6 @@ class BackwardChainingGrounder(Engine):
             # Here we update the queries to process in the next iteration, we only keep the new ones.
             self._init_internals(list(new_queries))
 
-        if self.prune_incomplete_proofs:
-            # check all the groundings with at least 1 atom missing, to see if they are proved (all atoms present in the facts)
-            # print('\nstarting PruneIncompleteProofs')
-            self.rule2groundings = PruneIncompleteProofs(self.rule2groundings,
-                                                         self.rule2proofs,
-                                                         self._fact_index,
-                                                         self.num_steps)
         # print('\nFinal groundings\n')
         # for k,v in self.rule2groundings.items():
             # print('rule2groundings', k, len(v),v)
@@ -444,3 +408,166 @@ class BackwardChainingGrounder(Engine):
                    for rule_name,groundings in self.rule2groundings.items()}
 
         return ret
+
+
+
+
+
+
+
+
+
+
+
+def get_arg(args, name: str, default=None, assert_defined=False):
+    value = getattr(args, name) if hasattr(args, name) else default
+    if assert_defined:
+        assert value is not None, 'Arg %s is not defined: %s' % (name, str(args))
+    return value
+
+def read_rules(path,args):
+    print('Reading rules')
+    rules = []
+    with open(path, 'r') as f:
+        for line in f:
+            # if len(rules) < 11:
+            # split by :
+            line = line.split(':')
+            # first element is the name of the rule
+            rule_name = line[0]
+            # second element is the weight of the rule
+            rule_weight = float(line[1].replace(',', '.'))
+            # third element is the rule itself. Split by ->
+            rule = line[2].split('->')
+            # second element is the head of the rule
+            rule_head = rule[1]
+            # remove the \n from the head and the space
+            rule_head = [rule_head[1:-1]]
+            # first element is the body of the rule
+            rule_body = rule[0]
+            # split the body by ,
+            rule_body = rule_body.split(', ')
+            # for every body element, if the last character is a " ", remove it
+            for i in range(len(rule_body)):
+                if rule_body[i][-1] == " ":
+                    rule_body[i] = rule_body[i][:-1]
+            # Take the vars of the body and head and put them in a dictionary
+            all_vars = rule_body + rule_head
+            var_names = {}
+            for i in range(len(all_vars)):
+                # split the element of the body by (
+                open_parenthesis = all_vars[i].split('(')
+                # Split the second element by )
+                variables = open_parenthesis[1].split(')')
+                # divide the variables by ,
+                variables = variables[0].split(',')
+                # Create a dictionary with the variables as keys and the value "countries" as values
+                if 'nations' in args.dataset_name:
+                    for var in variables:
+                        var_names[var] = "countries"
+                elif ('countries' in args.dataset_name) or ('test_dataset' in args.dataset_name):
+                        var_names = {"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"}
+                elif 'kinship' in args.dataset_name:
+                    # var_names = {"x": "people", "y": "people", "z": "people","a": "people", "b": "people","c": "people","d": "people"}
+                    for var in variables:
+                        var_names[var] = "people"      
+                elif 'pharmkg' in args.dataset_name:
+                    # var_names = {"a": "cte", "b": "cte","c": "cte","d": "cte", "h": "cte", "g": "cte"}
+                    for var in variables:
+                        var_names[var] = "cte" 
+            # print all the info
+            # if len(rules) < 1001:
+            #     print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
+            #         'rule body: ', rule_body, 'var_names: ', var_names)
+            rules.append(Rule(name=rule_name,var2domain=var_names,body=rule_body,head=rule_head))
+    print('number of rules: ', len(rules))
+    return rules
+
+def main(base_path, output_filename, kge_output_filename, log_filename, args):
+
+    csv_logger = CSVLogger(log_filename, append=True, separator=';')
+    print('\nARGS', args,'\n')
+
+    seed = get_arg(args, 'seed_run_i', 0)
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+
+    # Params
+    ragged = get_arg(args, 'ragged', None, True)
+    valid_frequency = get_arg(args, 'valid_frequency', None, True)
+
+    # Data Loading
+    data_handler = KGCDataHandler(
+        dataset_name=args.dataset_name,
+        base_path=base_path,
+        format=get_arg(args, 'format', None, True),
+        domain_file= args.domain_file,
+        train_file= args.train_file,
+        valid_file=args.valid_file,
+        test_file= args.test_file,
+        fact_file= args.facts_file)
+    
+    dataset_train = data_handler.get_dataset(
+        split="train",
+        number_negatives=args.num_negatives)
+
+    dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL',number_negatives=args.test_negatives)
+    
+    fol = data_handler.fol
+    domain2adaptive_constants: Dict[str, List[str]] = None
+    num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
+
+    enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
+    print('ENABLE RULES',enable_rules)
+    if enable_rules: 
+        rules = read_rules(join(base_path, args.dataset_name, args.rules_file),args)
+        # For KGEs with no domains.
+        # domains = {Rule.default_domain(): fol.domains[0]}
+
+        domain2adaptive_constants = {
+            d.name : ['__adaptive_%s_%d' % (d.name, i)
+                    for i in range(num_adaptive_constants)]
+            for d in fol.domains
+            }
+        
+        if 'backward' in args.grounder:
+            num_steps = int(args.grounder.split('_')[1])
+            print('Using backward chaining with %d steps' % num_steps)
+            print('CHOOSING BACKWARD AS GROUNDER')
+            engine = BackwardChainingGrounder(rules, facts=list(data_handler.train_known_facts_set),
+                                                        domains={d.name:d for d in fol.domains},
+                                                        num_steps=num_steps)
+
+    else:
+        rules = []
+        engine = None
+
+    serializer = ns.serializer.LogicSerializerFast(
+        predicates=fol.predicates, domains=fol.domains,
+        constant2domain_name=fol.constant2domain_name,
+        domain2adaptive_constants=domain2adaptive_constants)
+
+  
+    print('starting the gruonding')
+
+    queries, labels = dataset_train[0:len(dataset_train)]
+    facts = fol.facts
+    ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
+    rules = engine.rules
+
+    # print('Generating train data')
+    # start = time.time()
+    # data_gen_train = ns.dataset.DataGenerator(
+    #     dataset_train, fol, serializer, engine,
+    #     batch_size=args.batch_size, ragged=ragged)
+    # end = time.time()
+    # print("Time to create data generator train: ", np.round(end - start,2))
+ 
+
+    # start = time.time()
+    # data_gen_test = ns.dataset.DataGenerator(
+    #     dataset_test, fol, serializer, engine,
+    #     batch_size=args.eval_batch_size, ragged=ragged)
+    # end = time.time()
+    # print("Time to create data generator test: ",  np.round(end - start,2))

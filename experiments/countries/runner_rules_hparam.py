@@ -26,8 +26,8 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['test_dataset','countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
-    GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
+    DATASET_NAME = ['test_dataset_s2','countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full'] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['dcr','no_reasoner','sbr','rnm','dcr','r2n']# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
     RULE_MINER = ['amie','None'] #['amie','ncrl'] 
@@ -200,14 +200,13 @@ if __name__ == '__main__':
         if not os.path.exists(hparam_folder+'headers.txt'):
             with open(hparam_folder+'headers.txt', 'w') as f:
                 f.write(combined_names)
-                f.write('\n')
 
         with open(results_filename, 'a') as f: 
             empty = os.stat(results_filename).st_size == 0
             print("Empty file:", empty)
             if empty:
-                f.write('\n')
                 f.write(combined_names)
+            f.write('\n')
             f.write(combined_results)
 
     def main_wrapper(args): 
