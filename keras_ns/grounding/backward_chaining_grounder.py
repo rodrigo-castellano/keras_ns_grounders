@@ -436,9 +436,7 @@ class BackwardChainingGrounder(Engine):
             # Here we update the queries to process in the next iteration, we only keep the new ones.
             self._init_internals(list(new_queries))
 
-        print('Num groundings')
-        print(sum([len(v) for k, v in self.rule2groundings.items()]))
- 
+        print('Num groundings',sum([len(v) for k, v in self.rule2groundings.items()]))
         if self.prune_incomplete_proofs:
             # check all the groundings with at least 1 atom missing, to see if they are proved (all atoms present in the facts)
             # print('\nstarting PruneIncompleteProofs')
@@ -446,8 +444,7 @@ class BackwardChainingGrounder(Engine):
                                                          self.rule2proofs,
                                                          self._fact_index,
                                                          self.num_steps)
-            print('Num groundings after pruning')
-            print(sum([len(v) for k, v in self.rule2groundings.items()]))
+            print('Num groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
         # print('\nFinal groundings\n')
         # for k,v in self.rule2groundings.items():
             # print('rule2groundings', k, len(v),v)
