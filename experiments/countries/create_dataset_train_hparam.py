@@ -281,6 +281,7 @@ def backward_chaining_grounding_one_rule_with_domains(
     end = time.time()
     # print('NUM_GROUNDINGS', len(new_ground_atoms), 'TIME', end - start)
     # print('NEW GROUND ATOMS', new_ground_atoms) if cont< lim else None
+    print('step number',step,'/',n_steps)
     if step != (n_steps-1) and step!= 0 :
         print('step',step,', adding new_ground_atoms')
         # update atoms_to_remove with new_ground_atoms
@@ -381,6 +382,9 @@ class BackwardChainingGrounder(Engine):
 
             if step == self.num_steps - 1:
                 break
+            
+            # FROM THE ATOMS TO REMOVE, I SHOULD ONLY KEEP THE ONES THAT ARE PROVED, AND AT MOST 1 ATOM IS MISSING
+            # I SHOULD DO THE PROCESS FOR THE TEST SET
 
             # Get the queries for the next iteration.
             new_queries = set()
@@ -519,7 +523,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
 
     enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
-    print('ENABLE RULES',enable_rules)
+    print('ENABLE RULES',enable_rules, 'REASONER DEPTH', args.reasoner_depth, 'NUM RULES', args.num_rules, 'GROUNDER', args.grounder)
     if enable_rules: 
         rules = read_rules(join(base_path, args.dataset_name, args.rules_file),args)
         # For KGEs with no domains.
