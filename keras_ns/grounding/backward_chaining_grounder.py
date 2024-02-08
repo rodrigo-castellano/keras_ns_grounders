@@ -151,7 +151,7 @@ def backward_chaining_grounding_one_rule_with_domains(
     lim=10
     for q in queries:
       cont += 1 
-      print('\n\n***************q', q,'********************') if cont< lim else None
+    #   print('\n\n***************q', q,'********************') if cont< lim else None
       if q[0] != head[0]:  # predicates must match.
         continue
 
