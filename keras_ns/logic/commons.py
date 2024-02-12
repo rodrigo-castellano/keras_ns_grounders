@@ -293,6 +293,7 @@ class RuleGroundings():
         return True
 
 
+
 class FOL():
 
     def __init__(self, domains: List[Domain],
