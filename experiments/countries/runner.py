@@ -26,7 +26,7 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['countries_s2','countries_s3','pharmkg_supersmall','nations']  #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME =  ['kinship_family_small','nations']  #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     MODIFIED_DATASET = [True]
     GROUNDER = ['backward_prune_2','backward_2','backward_prune_3','backward_3']  #['backward_prune_1','backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
