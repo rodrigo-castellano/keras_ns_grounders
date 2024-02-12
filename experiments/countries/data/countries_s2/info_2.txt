@@ -1,1 +1,0 @@
-pred_head_facts_counts: {'locatedInCR': 2}

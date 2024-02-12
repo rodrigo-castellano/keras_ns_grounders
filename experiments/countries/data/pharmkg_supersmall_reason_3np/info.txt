@@ -1,0 +1,10 @@
+Pred_head_facts_counts: {'ML': 57, 'Rg': 9, 'P': 17, 'Q': 17}
+Rg, (Fraction) Atoms from facts to be deleted with this predicate: 1.097. 113/103
+Q, (Fraction) Atoms from facts to be deleted with this predicate: 1.38. 149/108
+ML, (Fraction) Atoms from facts to be deleted with this predicate: 0.373. 59/158
+P, (Fraction) Atoms from facts to be deleted with this predicate: 0.23. 35/152
+Number of atoms removed: 20
+Problematic atoms:
+{('Rg', 'e0', 'e2')}
+Atoms removed:
+[('Q', 'e711', 'e443'), ('ML', 'e86', 'e1155'), ('Q', 'e510', 'e711'), ('Q', 'e1155', 'e166'), ('Rg', 'e495', 'e298'), ('Q', 'e298', 'e1155'), ('Q', 'e446', 'e0'), ('Q', 'e446', 'e2'), ('ML', 'e28', 'e1155'), ('Rg', 'e2', 'e0'), ('Rg', 'e274', 'e443'), ('ML', 'e947', 'e443'), ('Q', 'e219', 'e510'), ('P', 'e201', 'e443'), ('Q', 'e201', 'e0'), ('Q', 'e711', 'e298'), ('Rg', 'e219', 'e354'), ('ML', 'e514', 'e201'), ('Q', 'e443', 'e0'), ('ML', 'e354', 'e1155')]
