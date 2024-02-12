@@ -26,10 +26,10 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['pharmkg_full','kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME = ['test_dataset_s2','pharmkg_full','kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full']  #['backward_prune_1','backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3','domainbody','full'] # ['backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','sbr','rnm','dcr','r2n'] # ['no_reasoner','sbr','rnm','dcr','r2n']  
+    MODEL_NAME = ['r2n','no_reasoner','sbr','rnm','dcr','r2n'] # ['no_reasoner','sbr','rnm','dcr','r2n']  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
