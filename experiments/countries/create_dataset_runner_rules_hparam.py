@@ -26,7 +26,7 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','pharmkg_supersmall']#['kinship_family_small','pharmkg_full','kinship_family_small'] #,'countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME = ['kinship_family_small','pharmkg_full','kinship_family']#['kinship_family_small','pharmkg_full','kinship_family_small'] #,'countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     GROUNDER = ['backward_prune_2','backward_2','backward_prune_3','backward_3']#,'backward_prune_2','backward_3','backward_prune_3'] #['backward_2','backward_3','backward_step_2','backward_step_3'] #,'backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['dcr'] #,'sbr','rnm','dcr','r2n','no_reasoner',]# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
