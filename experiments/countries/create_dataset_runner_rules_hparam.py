@@ -26,8 +26,8 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['test_dataset_s2'] #,'countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
-    GROUNDER = ['backward_3'] #,'backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
+    DATASET_NAME = ['countries_s2'] #,'countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    GROUNDER = ['backward_prune_2']#,'backward_prune_3'] #['backward_2','backward_3','backward_step_2','backward_step_3'] #,'backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['dcr'] #,'sbr','rnm','dcr','r2n','no_reasoner',]# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
     RULE_MINER = ['amie','None'] #['amie','ncrl'] 
@@ -66,6 +66,18 @@ if __name__ == '__main__':
         args.rules_file = 'rules.txt'
         args.rule_miner = rule_miner
 
+        if rule_miner == 'amie':
+            args.rules_file = 'rules_amie.txt'
+        elif rule_miner == 'ncrl':
+            args.rules_file = 'rules_ncrl.txt'
+        elif rule_miner == 'None':
+            args.rules_file = 'rules.txt'
+        else: # raise an error if the rule miner is not recognized
+            raise ValueError('Rule miner not recognized for ', dataset_name)
+        if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
+            print('skipping, rules not existing', run_vars)
+            continue
+
         args.test_negatives = None  # all possible negatives
         if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family':
             args.test_negatives = 1000
@@ -75,7 +87,6 @@ if __name__ == '__main__':
         args.learning_rate = lr
         args.ragged = True
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
-        print('NUM RULES', args.num_rules)
         args.relation_entity_grounder_max_elements = 20
         args.debug = False
         args.stop_gradient_on_kge_embeddings = False
