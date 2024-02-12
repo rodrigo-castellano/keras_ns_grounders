@@ -4,7 +4,7 @@ from typing import List, Set, Tuple, Dict, Union
 from keras_ns.logic.commons import Atom, Domain, Rule
 from keras_ns.grounding.engine import Engine
 from itertools import chain, product
-
+import shutil
 from typing import Dict, List, Tuple, Union, Iterable
 
 import os
@@ -376,12 +376,13 @@ class BackwardChainingGrounder(Engine):
                                                          self._fact_index,
                                                          self.num_steps)
             print('Num groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
-        if self.prune_incomplete_proofs:
-            for level in range(self.num_steps):
-                # if the level is in the keys of groundings_per_level, prune the groundings
-                if level in groundings_per_level:
-                    # print the keys of the groundings_per_level
-                    print('\nNum groundings in level',level,',',len(groundings_per_level[level]))
+        
+        for level in range(self.num_steps):
+            # if the level is in the keys of groundings_per_level, prune the groundings
+            if level in groundings_per_level:
+                # print the keys of the groundings_per_level
+                print('\nNum groundings in level',level,',',len(groundings_per_level[level]))
+                if self.prune_incomplete_proofs:
                     groundings_per_level[level] = Prune_groundings_per_level(groundings_per_level[level],
                                                                 self.rule2proofs,
                                                                 self._fact_index,
@@ -544,7 +545,6 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     groundings,atoms_remove_per_level,groundings_per_level= engine.ground(pred_head_facts_counts,tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
 
-    print('\n')
     if num_steps == 2:
         print('take into account atoms from level 0 ') 
         remove_levels =[0]
@@ -642,28 +642,40 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
                 # print('body', grounding[1])
                 for body_atom in grounding[1]:
                     # print('     body_atom', body_atom)
-                    for atom in atoms_remove:
-                        # print('             atom', atom)
-                        if atom == body_atom:
-                            # print('atom', atom, 'is in the body ', body_atom,'------------------------------------------------------------------------')
-                            cuenta += 1
-                            atoms_problematic.add(atom)
+                    # for atom in atoms_remove:
+                    # print('             atom', atom)
+                    # if atom == body_atom:
+                    if body_atom in atoms_remove:
+                        # print('atom', atom, 'is in the body ', body_atom,'------------------------------------------------------------------------')
+                        cuenta += 1
+                        atoms_problematic.add(atom)
                 if cuenta > 1:
-                    atoms_problem.add(atoms_problematic)
+                    atoms_problem.update(atoms_problematic)
                     print('grounding has more than 1 atom to removed in the body because of', atoms_problematic,'. Added to problematic atoms')
 
-
-
-
+    print('problematic atoms:',atoms_problem)
     print('Number of atoms to remove:', len(atoms_remove))
-    for predicate,cutoff in max_atoms_allowed.items():
-        # first remove the atoms that are not problematic
-        for atom in atoms_remove:
-            if atom[0] == predicate:
-                if len(atoms_remove) > cutoff:
-                    if atom not in atoms_problem:
-                        atoms_remove.remove(atom)
-    print('Number of atoms to remove after selected cutoff:', len(atoms_remove)) 
+    # Exclude problematic atoms from atoms_remove
+    atoms_remove -= atoms_problem
+    # for atom in atoms_remove:
+    #     # for atom_problem in atoms_problem:
+    #     if atom in atoms_problem:
+    #         atoms_remove.remove(atom)  
+    #         # fix line above
+
+    #         print('atom ',atom, 'excluded because it is problematic')
+    print('Number of atoms to remove after excluding porblematic:', len(atoms_remove)) 
+
+
+    # print('Number of atoms to remove:', len(atoms_remove))
+    # for predicate,cutoff in max_atoms_allowed.items():
+    #     # first remove the atoms that are not problematic
+    #     for atom in atoms_remove:
+    #         if atom[0] == predicate:
+    #             if len(atoms_remove) > cutoff:
+    #                 if atom not in atoms_problem:
+    #                     atoms_remove.remove(atom)
+    # print('Number of atoms to remove after selected cutoff:', len(atoms_remove)) 
 
     for predicate,cutoff in max_atoms_allowed.items():
         # if there are still atoms to remove, do it randomly
@@ -673,32 +685,76 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     print('Number of atoms to remove after random cutoff:', len(atoms_remove)) 
 
 
-    # Last thing to do. Write a new (train,facts) file without the final atoms removed
-    # Write the facts file if the number of facts and atoms to remove is bigger than 0
-    # if  
-    facts_file = join(base_path, args.dataset_name,'facts_reason_'+str(num_steps)+'.txt')
-    train_file = join(base_path, args.dataset_name,'train_reason_'+str(num_steps)+'.txt')
+    new_facts = set(data_handler.known_facts) - set(atoms_remove)
+    new_train = set(data_handler.train_facts) - set(atoms_remove)
+    ctes_facts = set()
+    for facts_set in (new_facts,new_train):
+        for (p,a1,a2) in facts_set:
+            ctes_facts.update((a1,a2))
 
     if len(atoms_remove) > 0:
+
+        prune_str = 'p' if prune_backward else 'np'  
+        dest_path = join(base_path, args.dataset_name+'_reason_'+str(num_steps)+prune_str)
+        if not os.path.exists(dest_path): os.mkdir(dest_path)
+
+        output_file = join(dest_path,'info.txt')
+        facts_file = join(dest_path,'facts.txt')
+        train_file = join(dest_path,'train.txt')
+        test_file = join(dest_path,'test.txt')
+        valid_file = join(dest_path,'valid.txt')
+        domain_file = join(dest_path,'domain2constants.txt')
+
         print('Writing the train file', train_file)
         with open(train_file, 'w') as f:
-            for train_fact in data_handler.train_facts:
-                if train_fact not in atoms_remove:
-                    f.write('('+str(train_fact[0])+','+str(train_fact[1])+','+str(train_fact[2])+').\n')
-        if len(facts) > 0:
+            for train_fact in new_train:
+                f.write('('+str(train_fact[0])+','+str(train_fact[1])+','+str(train_fact[2])+').\n')
+        if len(new_facts) > 0:
             print('Writing the facts file', facts_file)
             with open(facts_file, 'w') as f:
-                for fact in data_handler.known_facts:
-                    if fact not in atoms_remove:
-                        f.write('('+str(fact[0])+','+str(fact[1])+','+str(fact[2])+').\n')
+                for fact in new_facts:
+                    f.write('('+str(fact[0])+','+str(fact[1])+','+str(fact[2])+').\n')
 
-    # Print all the info in a .txt file
-    output_file = join(base_path, args.dataset_name,'info_'+str(num_steps)+'.txt')
-    with open(output_file, 'w') as f:
-        f.write('pred_head_facts_counts: {}\n'.format(pred_head_facts_counts))
-        for pred in pred_counts_to_remove:
-            f.write('     ',pred, 'percentage of atoms with that predicate in facts: ', np.round(pred_cutoff[pred],3),'. ', pred_counts_to_remove[pred], '/', pred_counts_facts[pred])
-        f.write('Number of atoms to remove: {}\n'.format(len(atoms_remove)))
-        f.write('Number of atoms to remove after selected cutoff: {}\n'.format(len(atoms_remove)))
-        f.write('Number of atoms to remove after random cutoff: {}\n'.format(len(atoms_remove)))
-        f.write('problematic atoms:',str(atoms_problematic))
+        # write a new test and valid files, skip the atoms with constants not present in ctes_facts
+        print('Writing the test file', test_file)
+        with open(test_file, 'w') as f:
+            for test_fact in data_handler.test_facts:
+                if test_fact[1] in ctes_facts and test_fact[2] in ctes_facts:
+                    f.write('('+str(test_fact[0])+','+str(test_fact[1])+','+str(test_fact[2])+').\n')
+        print('Writing the valid file', valid_file)
+        with open(valid_file, 'w') as f:
+            for valid_fact in data_handler.valid_facts:
+                if valid_fact[1] in ctes_facts and valid_fact[2] in ctes_facts:
+                    f.write('('+str(valid_fact[0])+','+str(valid_fact[1])+','+str(valid_fact[2])+').\n')
+
+
+        # print all the constants in domain file   
+        domain_ctes = data_handler.domain2constants
+        # Now I have to selec from domain_ctes only the constants that are present in the new_facts
+        domain_ctes_write = {}
+        for k,ctes in domain_ctes.items():
+            domain_ctes_write[k] = [cte for cte in ctes if cte in ctes_facts]    
+
+        with open(domain_file, 'w') as f:
+            for k,ctes in domain_ctes_write.items():
+                if k!='default':
+                    f.write(k+' ')
+                    [f.write(cte+' ') for cte in ctes] 
+                    f.write('\n')
+    
+        # copy the rules file
+        rules_file = join(base_path, args.dataset_name, args.rules_file)
+        dest_rules_file = join(dest_path,args.rules_file)   
+        shutil.copyfile(rules_file, dest_rules_file)
+
+        # Print all the info in a .txt file
+        with open(output_file, 'w') as f:
+            f.write('Pred_head_facts_counts: {}\n'.format(pred_head_facts_counts))
+            for pred in pred_counts_to_remove:
+                f.write(str(pred)+ ', (Fraction) Atoms from facts to be deleted with this predicate: '+ str(np.round(pred_cutoff[pred],3))+'. '+ str(pred_counts_to_remove[pred])+ '/'+ str(pred_counts_facts[pred])+'\n')
+                # rewrite the line above  
+            f.write('Number of atoms removed: {}\n'.format(len(atoms_remove))) 
+            f.write('Problematic atoms:\n'+str(atoms_problem)) 
+            f.write('\nAtoms removed:\n'+str(atoms_remove)) 
+
+        

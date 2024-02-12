@@ -8,8 +8,8 @@ directory = os.getcwd()
 import copy
 import datetime  
 import os
-from itertools import product
-from create_dataset_train_hparam import main
+from itertools import product  
+from create_dataset_train_hparam import main 
 import shutil as sh
 import keras_ns as ns
 from keras_ns.utils import MMapModelCheckpoint, NSParser
@@ -21,13 +21,13 @@ NUM_CPUS :int = 1  # set to a larger num to enable parallel processing
 if __name__ == '__main__':
 
     base_path :str = "data"
-    parallel :bool = False
+    parallel :bool = False 
 
     RUNS_PER_CONFIG = [5]
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s2'] #,'countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
-    GROUNDER = ['backward_prune_2']#,'backward_prune_3'] #['backward_2','backward_3','backward_step_2','backward_step_3'] #,'backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','pharmkg_supersmall']#['kinship_family_small','pharmkg_full','kinship_family_small'] #,'countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    GROUNDER = ['backward_prune_2','backward_2','backward_prune_3','backward_3']#,'backward_prune_2','backward_3','backward_prune_3'] #['backward_2','backward_3','backward_step_2','backward_step_3'] #,'backward_1','backward_2','backward_3','domainbody','full','known',] # ['known','backward_1','backward_2','backward_3','domainbody','full'] 
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['dcr'] #,'sbr','rnm','dcr','r2n','no_reasoner',]# ['rnm','dcr','r2n','sbr','gsbr','cdcr','no_reasoner']  'gsbr' 'cdcr' not published yet
     RULE_MINER = ['amie','None'] #['amie','ncrl'] 
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     R = [0.0]
     RR = [0.0]
     LR = [0.01]
-    NUM_RULES = [1] 
+    NUM_RULES = [1]  
     HARD = [False]
     VALID_SIZE = [None]
 
