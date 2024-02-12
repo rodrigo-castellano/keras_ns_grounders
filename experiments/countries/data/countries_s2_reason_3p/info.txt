@@ -1,0 +1,7 @@
+Pred_head_facts_counts: {'locatedInCR': 2}
+locatedInCR, (Fraction) Atoms from facts to be deleted with this predicate: 0.133. 26/195
+Number of atoms removed: 26
+Problematic atoms:
+set()
+Atoms removed:
+{('locatedInCR', 'uzbekistan', 'asia'), ('locatedInCR', 'colombia', 'americas'), ('locatedInCR', 'south_africa', 'africa'), ('locatedInCR', 'senegal', 'africa'), ('locatedInCR', 'montenegro', 'europe'), ('locatedInCR', 'kenya', 'africa'), ('locatedInCR', 'lebanon', 'asia'), ('locatedInCR', 'israel', 'asia'), ('locatedInCR', 'ethiopia', 'africa'), ('locatedInCR', 'costa_rica', 'americas'), ('locatedInCR', 'namibia', 'africa'), ('locatedInCR', 'malawi', 'africa'), ('locatedInCR', 'guinea', 'africa'), ('locatedInCR', 'sint_maarten', 'americas'), ('locatedInCR', 'botswana', 'africa'), ('locatedInCR', 'brazil', 'americas'), ('locatedInCR', 'zambia', 'africa'), ('locatedInCR', 'dr_congo', 'africa'), ('locatedInCR', 'macedonia', 'europe'), ('locatedInCR', 'albania', 'europe'), ('locatedInCR', 'austria', 'europe'), ('locatedInCR', 'india', 'asia'), ('locatedInCR', 'central_african_republic', 'africa'), ('locatedInCR', 'angola', 'africa'), ('locatedInCR', 'uganda', 'africa'), ('locatedInCR', 'china', 'asia')}
