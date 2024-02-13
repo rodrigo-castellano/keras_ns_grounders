@@ -28,7 +28,7 @@ if __name__ == '__main__':
     assert epochs > 0
     DATASET_NAME =  ['kinship_family'] # ['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     MODIFIED_DATASET = [False]
-    GROUNDER = ['backward_prune_2','backward_2','backward_prune_3','backward_3']  #['backward_prune_1','backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3','domainbody','full']  
+    GROUNDER = ['backward_2'] #['backward_prune_2','backward_2','backward_prune_3','backward_3']  #['backward_prune_1','backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['no_reasoner','sbr','rnm','dcr','r2n'] # ['no_reasoner','sbr','rnm','dcr','r2n']  
     RULE_MINER = ['amie','None'] 
