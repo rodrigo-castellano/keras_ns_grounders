@@ -27,8 +27,8 @@ if __name__ == '__main__':
     epochs: int = 100
     assert epochs > 0
     DATASET_NAME =  ['pharmkg_supersmall','countries_s1','countries_s2','countries_s3'] # ['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
-    MODIFIED_DATASET = [True]
-    GROUNDER = ['backward_1','backward_prune_2','backward_2']  #['backward_prune_1','backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3','domainbody','full']  
+    MODIFIED_DATASET = [True,False]
+    GROUNDER = ['backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3',]  #['backward_prune_1','backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['no_reasoner','sbr','rnm','dcr','r2n']  
     RULE_MINER = ['amie','None'] 
@@ -57,7 +57,6 @@ if __name__ == '__main__':
         parser = NSParser()
         args = parser.parse_args()
         args.runs = runs
-        run_vars = (dataset_name,grounder, kge, model_name, rule_miner, modified_dataset, e, dp, seed, neg, w_loss, dropout)
 
         args.dataset_name = dataset_name
         args.facts_file = 'facts.txt'
@@ -72,14 +71,19 @@ if __name__ == '__main__':
         if modified_dataset:
             if 'backward' not in grounder:
                 continue
+            elif 'backward_prune_3'== grounder or 'backward_3' == grounder:
+                continue
             else:
                 pruning= 'p' if 'prune' in grounder else 'np'
                 level = grounder[-1]
-                args.dataset_name = dataset_name+'_reason_2'+pruning
+                dataset_name = dataset_name+'_reason_2'+pruning
+                args.dataset_name = dataset_name
                 # args.dataset_name = dataset_name+'_reason_'+str(level)+pruning
         
         if not os.path.exists(os.path.join(base_path, args.dataset_name)):
             continue
+
+        run_vars = (dataset_name,grounder, kge, model_name, rule_miner, modified_dataset, e, dp, seed, neg, w_loss, dropout)
 
         if rule_miner == 'amie':
             args.rules_file = 'rules_amie.txt'
