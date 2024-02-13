@@ -1,0 +1,6 @@
+
+pharmkg_supersmall_reason_3p_backward_prune_3_complex_no_reasoner_amie_True_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
+pharmkg_supersmall_reason_3p_backward_prune_3_complex_sbr_amie_True_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
+pharmkg_supersmall_reason_3p_backward_prune_3_complex_rnm_amie_True_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
+pharmkg_supersmall_reason_3p_backward_prune_3_complex_dcr_amie_True_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
+pharmkg_supersmall_reason_3np_backward_3_complex_r2n_amie_True_100_1_[0, 1, 2, 3, 4]_1_0.5_0.0
