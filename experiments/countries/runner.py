@@ -26,9 +26,9 @@ if __name__ == '__main__':
     RUNS_PER_CONFIG = [5]
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['kinship_family_small'] # ['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME =  ['pharmkg_supersmall','countries_s1','countries_s2','countries_s3'] # ['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     MODIFIED_DATASET = [True]
-    GROUNDER = ['backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3']  #['backward_prune_1','backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3','domainbody','full']  
+    GROUNDER = ['backward_1','backward_prune_2','backward_2']  #['backward_prune_1','backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['no_reasoner','sbr','rnm','dcr','r2n']  
     RULE_MINER = ['amie','None'] 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
         else: # raise an error if the rule miner is not recognized
             raise ValueError('Rule miner not recognized for ', dataset_name)
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
-            print('skipping, rules not existing', run_vars)
+            # print('skipping, rules not existing', run_vars)
             continue
 
         if 'countries' in dataset_name:
@@ -119,21 +119,20 @@ if __name__ == '__main__':
             print('skipping, no_reasoner not needed if not with backw 1 for',dataset_name, run_vars)    
             continue
 
+        elif 'nations' in dataset_name:
+            if  (grounder == 'full'):
+                print('skipping, grounder too heavy', run_vars)
+                continue
 
-        # elif 'nations' in dataset_name:
-        #     if  (grounder == 'full'):
-                # print('skipping, grounder too heavy', run_vars)
-        #         continue
-
-        # elif  ('pharm' in dataset_name):
-        #     if  ( grounder == 'full'):
-                # print('skipping, grounder too heavy', run_vars)
-        #         continue
+        elif  ('pharm' in dataset_name):
+            if  ( grounder == 'full'):
+                print('skipping, grounder too heavy', run_vars)
+                continue
             
-        # elif ('kinship' in dataset_name):
-        #     if  (grounder == 'full' or grounder == 'domainbody'):
-                # print('skipping, grounder too heavy', run_vars)
-        #         continue
+        elif ('kinship' in dataset_name):
+            if  (grounder == 'full' or grounder == 'domainbody'):
+                print('skipping, grounder too heavy', run_vars)
+                continue
 
         args.test_negatives = None  # all possible negatives
         if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family':
