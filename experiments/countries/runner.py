@@ -30,7 +30,7 @@ if __name__ == '__main__':
     MODIFIED_DATASET = [False]
     GROUNDER = ['backward_2'] #['backward_prune_2','backward_2','backward_prune_3','backward_3']  #['backward_prune_1','backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','sbr','rnm','dcr','r2n'] # ['no_reasoner','sbr','rnm','dcr','r2n']  
+    MODEL_NAME = ['dcr'] # ['no_reasoner','sbr','rnm','dcr','r2n']  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
@@ -51,14 +51,13 @@ if __name__ == '__main__':
     for dataset_name,modified_dataset, grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, h,  v, rr, runs in product(
             DATASET_NAME,MODIFIED_DATASET, GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
             LR, NUM_RULES, HARD,  VALID_SIZE, RR, RUNS_PER_CONFIG ):  
-        
-        if dataset_name == "kinship_family" and model_name!="dcr":
-            continue
+    
 
         # Base parameters
         parser = NSParser()
         args = parser.parse_args()
         args.runs = runs
+        run_vars = (dataset_name,grounder, kge, model_name, rule_miner, modified_dataset, e, dp, seed, neg, w_loss, dropout)
 
         args.dataset_name = dataset_name
         args.facts_file = 'facts.txt'
@@ -90,52 +89,47 @@ if __name__ == '__main__':
         else: # raise an error if the rule miner is not recognized
             raise ValueError('Rule miner not recognized for ', dataset_name)
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
-            # print('skipping, rules not existing', run_vars)
+            print('skipping, rules not existing', run_vars)
             continue
-
 
         if 'countries' in dataset_name:
             # task is the last two letters of the dataset name
             task = dataset_name[-2:]
             if task == 's2' and (grounder == 'full'): # or grounder == 'domainbody'): domainbody sometimes gives problems
-                # print('skipping, grounder too heavy', run_vars)
+                print('skipping, grounder too heavy', run_vars)
                 continue
             elif task == 's3' and (grounder == 'full' or grounder == 'domainbody'):
-                # print('skipping, grounder too heavy', run_vars)
+                print('skipping, grounder too heavy', run_vars)
                 continue
 
         if dataset_name == 'kinship_family_small' and grounder == 'backward_prune_3' and model_name == 'sbr':
-            # print('skipping, sbr doesnt work for kinship backward_3', run_vars)
+            print('skipping, sbr doesnt work for kinship backward_3', run_vars)
             continue
 
         if (dataset_name == 'kinship_family' or dataset_name == 'pharmkg_full') and (model_name == 'sbr' or model_name=='r2n'):
-            # print('skipping,',model_name,' doesnt work for',dataset_name, run_vars)
-            continue
-
-        if dataset_name == 'kinship_family' and grounder == 'backward_2' and model_name == 'dcr':
-            # print('skipping, backward_2 doesnt work for',dataset_name, run_vars)
+            print('skipping,',model_name,' doesnt work for',dataset_name, run_vars)
             continue
 
         if (dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family') and grounder != 'backward_1' and model_name=='no_reasoner':
-            # print('skipping, no_reasoner not needed if not with backw 1 for',dataset_name, run_vars)    
+            print('skipping, no_reasoner not needed if not with backw 1 for',dataset_name, run_vars)    
             continue
         if 'kinship_family_small_reason' in dataset_name and model_name=='r2n':
-            # print('skipping, r2n not valid for',dataset_name, run_vars)    
+            print('skipping, r2n not valid for',dataset_name, run_vars)    
             continue
 
         # elif 'nations' in dataset_name:
         #     if  (grounder == 'full'):
-        #         print('skipping, grounder too heavy', run_vars)
+                # print('skipping, grounder too heavy', run_vars)
         #         continue
 
         # elif  ('pharm' in dataset_name):
         #     if  ( grounder == 'full'):
-        #         print('skipping, grounder too heavy', run_vars)
+                # print('skipping, grounder too heavy', run_vars)
         #         continue
             
         # elif ('kinship' in dataset_name):
         #     if  (grounder == 'full' or grounder == 'domainbody'):
-        #         print('skipping, grounder too heavy', run_vars)
+                # print('skipping, grounder too heavy', run_vars)
         #         continue
 
         args.test_negatives = None  # all possible negatives
