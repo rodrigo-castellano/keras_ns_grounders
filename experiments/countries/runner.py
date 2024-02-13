@@ -103,19 +103,22 @@ if __name__ == '__main__':
                 continue
 
         if dataset_name == 'kinship_family_small' and grounder == 'backward_prune_3' and model_name == 'sbr':
-            print('skipping, sbr doesnt work for kinship backward_3', run_vars)
+            # print('skipping, sbr doesnt work for kinship backward_3', run_vars)
             continue
 
         if (dataset_name == 'kinship_family' or dataset_name == 'pharmkg_full') and (model_name == 'sbr' or model_name=='r2n'):
-            print('skipping,',model_name,' doesnt work for',dataset_name, run_vars)
+            # print('skipping,',model_name,' doesnt work for',dataset_name, run_vars)
             continue
 
         if dataset_name == 'kinship_family' and grounder == 'backward_2' and model_name == 'dcr':
-            print('skipping, backward_2 doesnt work for',dataset_name, run_vars)
+            # print('skipping, backward_2 doesnt work for',dataset_name, run_vars)
             continue
 
         if (dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family') and grounder != 'backward_1' and model_name=='no_reasoner':
-            print('skipping, no_reasoner not needed if not with backw 1 for',dataset_name, run_vars)    
+            # print('skipping, no_reasoner not needed if not with backw 1 for',dataset_name, run_vars)    
+            continue
+        if 'kinship_family_small_reason' in dataset_name and model_name=='r2n':
+            # print('skipping, r2n not valid for',dataset_name, run_vars)    
             continue
 
         # elif 'nations' in dataset_name:
