@@ -75,7 +75,7 @@ if __name__ == '__main__':
         else: # raise an error if the rule miner is not recognized
             raise ValueError('Rule miner not recognized for ', dataset_name)
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
-            print('skipping, rules not existing', run_vars)
+            # print('skipping, rules not existing', run_vars)
             continue
 
         args.test_negatives = None  # all possible negatives
