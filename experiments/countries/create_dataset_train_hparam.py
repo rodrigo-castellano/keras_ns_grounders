@@ -97,7 +97,6 @@ def Prune_groundings_per_level(groundings_per_level,
 
 # res is a Set of (Tuple_head_groundings, Tuple_body_groundings)
 def backward_chaining_grounding_one_rule_with_domains(
-    res_full,
     pred_counts,
     atoms_remove,
     groundings_per_level,
@@ -336,7 +335,6 @@ class BackwardChainingGrounder(Engine):
                 if not queries_per_rule:
                     continue
                 backward_chaining_grounding_one_rule_with_domains(
-                    self.rule2groundings,
                     pred_counts,
                     atoms_remove,
                     groundings_per_level,
