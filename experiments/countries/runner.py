@@ -207,7 +207,6 @@ if __name__ == '__main__':
             all_files = os.listdir(os.path.join(log_folder,'indiv_runs'))
             # get the files that contain the run_signature
             run_files = [file for file in all_files if run_signature in file]
-            print('run_files',run_files)
             # get the number of files
             n_files = len(run_files)
             if n_files != len(seeds):
@@ -215,14 +214,15 @@ if __name__ == '__main__':
             # for every file, read all the lines and if the line starts with 'all_data', take the values and add them to the array
             info = {}
             for file in run_files:
-                print('file to read',os.path.join(log_folder,'indiv_runs',file))
                 with open(os.path.join(log_folder,'indiv_runs',file), 'r') as f:
                     lines = f.readlines()
                     for line in lines:
-                        # print('line',line)
                         if line.startswith('All data'):
-                            d = line.split('-')[1:]
+                            d = line.split(';')[1:]
                             info_exp = {el.split(':')[0] : ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] in ['train_acc', 'valid_acc', 'test_acc','time_run']}
+                            # get the names of the metrics from the element 'metrics'
+                            metrics = [ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] == 'metrics'][0]
+                            print('metrics',metrics)
                             # append the key,values to the dictionary
                             for key in info_exp.keys():
                                 if key in info:
@@ -234,16 +234,19 @@ if __name__ == '__main__':
                 avg = np.mean(info[key],axis=0)
                 std = np.std(info[key],axis=0)
                 info[key] = [list(avg),list(std)]
-            return info
+            return info,metrics
         
-        def write_avg_results(args,filename,info_metrics,training_info):
-            if 'contrastive_loss' in training_info:
-                del training_info['contrastive_loss']
+        def write_avg_results(args,filename,info_metrics,metrics_name):
+            if 'contrastive_loss' in metrics_name: # delete it from the list metrics_name
+                metrics_name.remove('contrastive_loss')
             # join the args.__dict__ with the info_metrics
-            metrics = [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in list(training_info.keys())]
+            metrics = [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in list(metrics_name)]
             combined_names = ';'.join(list(args.__dict__.keys()) + [str(metric) for metric in metrics] )
             values_args = [str(v) for k,v in args.__dict__.items()] 
-            values_metrics = [str([list(np.round(values[0], 4)), list(np.round(values[1], 4))]) for metric,values in info_metrics.items()]
+            values_metrics = []
+            for k,v in info_metrics.items():
+                for i in range(len(v[0])):
+                    values_metrics.append(str([ np.round(v[0][i],3) , np.round(v[1][i],3) ]))
             combined_results = ';'.join(values_args + values_metrics)
 
             # Create a file for my results 
@@ -266,7 +269,6 @@ if __name__ == '__main__':
 
             with open(filename, 'a') as f: 
                 empty = os.stat(filename).st_size == 0
-                print("Empty file:", empty)
                 if empty:
                     f.write('sep=;\n')
                     f.write(combined_names)
@@ -299,10 +301,10 @@ if __name__ == '__main__':
         # LOGGER
         # Results for every epoch will be saved in a folder 
         log_folder :str = "results"
-        # Check if the logger exists, if so, skip the experiment, otherwise run it.
+        # Check if the logger exists, if so, skip the experiment, otherwise run it. Logger exists if all the arguments inside each file in the folder are the same as the current args
         logger = ns.utils.FileLogger(log_folder)
-        if logger.exists(args.__dict__,signature=args.run_signature):
-            print("\n\n\nSkipping training, it has been already done for", args.run_signature, "\n")
+        if logger.exists(args.__dict__):
+            print("\n\nSkipping training, it has been already done for", args.run_signature, "\n")
             return
         else:
             date = logger.get_date()
@@ -319,7 +321,7 @@ if __name__ == '__main__':
             
 
             # Check if the training has already been done for this seed
-            # in log_filename_tmp, take up to the last two elements split by '-' to not take into account the time
+            # in log_filename_tmp, take up to the last two elements split by ';' to not take into account the time
             sub_signature = log_filename_tmp.split('-')[1:-2]
             # addd the seed
             sub_signature.append(str('seed_'+str(seed)))
@@ -349,13 +351,13 @@ if __name__ == '__main__':
 
             end = time.time()
             time_run = end - start
-            print('train info',training_info)
             # The reuslts of the training have been written to tmp. write them as an individual run
             logged_data = copy.deepcopy(args)
             logged_data.train_acc = train_acc
             logged_data.valid_acc = valid_acc
             logged_data.best_val = best_val
             logged_data.test_acc = test_acc
+            logged_data.metrics = list(training_info.keys())
             logged_data.time = time_run
 
             # write the info about the results in the tmp file 
@@ -368,9 +370,8 @@ if __name__ == '__main__':
   
         # write the average results if we need to average over experiments
         if len(args.seed) > 1:
-            info_metrics = get_avg_results(log_folder,args.run_signature,args.seed)
-            if info_metrics:
-                write_avg_results(args,'./hparamsearch/experiments_new.csv',info_metrics,training_info)
+            info_metrics,metrics_name = get_avg_results(log_folder,args.run_signature,args.seed)
+            write_avg_results(args,'./experiments/experiments.csv',info_metrics,metrics_name)
 
                 
     for l,args in enumerate(all_args):
