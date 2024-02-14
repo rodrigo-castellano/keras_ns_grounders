@@ -369,8 +369,8 @@ class FileLogger():
                 f.write(",".join(header))
         with open(filename, "a") as f:
             f.write("\n")
-            f.write('All data-')
-            f.write("-".join(['%s:%s' % (str(k), str(v)) for k,v in list(args.items())]))
+            f.write('All data;')
+            f.write(";".join(['%s:%s' % (str(k), str(v)) for k,v in list(args.items())]))
             f.write('\nSignature;')
             f.write(str(args['run_signature']))
             f.write('\nSeed;')
@@ -384,59 +384,51 @@ class FileLogger():
         return date
     
 
-    def exists(self, args:dict,signature=None):
-        values = [str(a) for a in list(args.values())]
-        keys = [str(a) for a in list(args.keys())]
-        string_args = ",".join(['%s:%s' % (str(k), str(v)) for k,v in list(args.items())])
-        for filename in os.listdir(self.folder):
-            if filename.startswith("log"):
-                
-                last_lines = self._read_last_line(os.path.join(self.folder,filename))
-                last_line = "".join(last_lines)
+    def exists(self, args:dict):
+        # values = [str(a) for a in list(args.values())]
+        # keys = [str(a) for a in list(args.keys())]
+        # string_args = ",".join(['%s:%s' % (str(k), str(v)) for k,v in list(args.items())])
+        # for filename in os.listdir(self.folder):
+        #     if filename.startswith("log"):
+        #         last_lines = self._read_last_line(os.path.join(self.folder,filename))
+        #         last_line = "".join(last_lines)
 
-                last_line = last_line.replace(' ', '')
-                last_line = last_line.replace('\n', '')
+        #         last_line = last_line.replace(' ', '')
+        #         last_line = last_line.replace('\n', '')
 
-                string_args = string_args.replace(' ', '')
-                string_args = string_args.replace('\n', '')
-                # print('\nlast_line\n', last_line)
-                # print('string_args\n', string_args)
-                # look for all the keys in the last line 
-                # for k in keys:
-                #     if k not in last_line:
-                #         # take them out of the signature, as well as the next word splited by "_"
-                #         string_args_split = string_args.split("_")
-                #         pos = string_args_split.index(k)
-                #         # join all except for pos and pos+1
-                #         string_args = "_".join(string_args_split[:pos] + string_args_split[pos+2:])
-                # print('2string_args\n', string_args)
-                if string_args in last_line:
-                    # print('string_args in last_line')
-                    return True 
+        #         string_args = string_args.replace(' ', '')
+        #         string_args = string_args.replace('\n', '')
+        #         if string_args in last_line:
+        #             # print('string_args in last_line')
+        #             return True 
+        # open the experiments file, create it in one does not exist
+        if not os.path.exists(os.path.join(self.folder,'experiments')):
+            return False
 
-                # file_values = [str(a) for a in filename.split("_")]
-                # file_values[0] = file_values[0].replace('log', '')
-                # # remove the date
-                # file_values = file_values[:-1]
-                # print('file_values', file_values)
-                # print(all ([v in signature for v in file_values]))
-                # if all ([v in signature for v in file_values]):
-                #     print('all ([v in file_values for v in values])!!!!!!!!!!!!!!!!!!!!!!\n\n\n')
-                #     return True
 
-                # # check if all the file_values are in string_args
-                # file_values = [str(a) for a in last_line.split(",")]
-                # print('file_values', file_values)
-                # print('string_args\n', string_args)
-                # print([v in string_args for v in file_values])
-                # if all([v in string_args for v in file_values]):
-                #     print('all([v in string_args for v in file_values])')
-                #     print('last_line\n', last_line)
-                #     print('string_args\n', string_args)
-
-                # current_values = [str(a) for a in last_line.split(",")]
-                # if current_values[:len(values)] == values:
-                #     return True
+        with open(os.path.join(self.folder,'experiments', "experiments.csv"), "r") as f:
+            for line in file:
+            # # the first line is the header, take is as keys. 
+            # reader = csv.reader(f)
+            # _ = next(reader)
+            # keys = next(reader)
+            # # for each line in the file, take the values and create a dictionary. Compare the dictionary with the args, if it is the same, return True
+            # for line in reader:
+            #     # the values are split by ;
+            #     print('line',len(line),line)
+            #     print('line', str(line))
+            #     values = str(line).split(';')
+            #     print('values', values)
+            #     d = dict(zip(keys, values))
+            #     print('d', d)
+            #     # if all the key,values of d are in args, return True
+            #     for k,v in d.items():
+            #         print('k,v',k,v)
+            #         print('args[k],v',args[k],v)
+            #         if k in args and args[k] == v:
+            #             print('k,v, args[k], v',k,v, args[k], v)
+            #             return True
+        
         return False
 
     def write_to_csv(self, to_write):
