@@ -6,7 +6,7 @@ import tensorflow as tf
 import argparse
 import numpy as np
 from typing import Dict
-
+import datetime
 from tensorflow_ranking.python.utils import sort_by_scores, ragged_to_dense
 
 
@@ -322,11 +322,38 @@ class Logger():
         return res
 
 
+from keras.callbacks import CSVLogger
+import csv
+
+class CustomCSVLogger(CSVLogger):
+    def __init__(self, filename, separator=';', append=False):
+        super().__init__(filename, separator, append)
+        
+    def on_train_begin(self, logs=None):
+        logs = logs or {}
+
+        if self.append:
+            if tf.io.gfile.exists(self.filename):
+                with tf.io.gfile.GFile(self.filename, "r") as f:
+                    self.append_header = not bool(len(f.readline()))
+            mode = "a"
+        else:
+            mode = "w"
+        self.csv_file = tf.io.gfile.GFile(self.filename, mode)
+
+    def on_train_end(self, logs=None):
+        header = ['epoch'] + list(logs.keys())
+        if logs is not None:
+            self.csv_file.write(';'.join(header) + '\n') 
+        self.csv_file.close()
+        self.writer = None
+
+
 class FileLogger():
 
     def __init__(self, folder):
         self.folder = folder
-
+        if not os.path.exists(folder): os.mkdir(folder)
 
     def _read_last_line(self, filename):
         with open(filename) as f:
@@ -342,7 +369,20 @@ class FileLogger():
                 f.write(",".join(header))
         with open(filename, "a") as f:
             f.write("\n")
-            f.write(",".join(['%s:%s' % (str(k), str(v)) for k,v in list(args.items())]))
+            f.write('All data-')
+            f.write("-".join(['%s:%s' % (str(k), str(v)) for k,v in list(args.items())]))
+            f.write('\nSignature;')
+            f.write(str(args['run_signature']))
+            f.write('\nSeed;')
+            f.write(str(args['seed_run_i']))
+            f.write('\nTotal_Seeds;')
+            f.write(str(args['seed']))
+
+    def get_date(self):
+        date = str(datetime.datetime.now()).replace(":","_").replace(" ","_").replace("-","_")
+        date = date[:date.index('.')]
+        return date
+    
 
     def exists(self, args:dict,signature=None):
         values = [str(a) for a in list(args.values())]

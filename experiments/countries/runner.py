@@ -15,7 +15,7 @@ import keras_ns as ns
 from keras_ns.utils import MMapModelCheckpoint, NSParser
 import time
 import numpy as np
-
+import ast
 NUM_CPUS :int = 1  # set to a larger num to enable parallel processing
 
 if __name__ == '__main__':
@@ -23,18 +23,17 @@ if __name__ == '__main__':
     base_path :str = "data"
     parallel :bool = False
 
-    RUNS_PER_CONFIG = [5]
-    epochs: int = 100
+    epochs: int = 10
     assert epochs > 0
-    DATASET_NAME =  ['pharmkg_supersmall','countries_s1','countries_s2','countries_s3'] # ['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
-    MODIFIED_DATASET = [True,False]
-    GROUNDER = ['backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3',]  #['backward_prune_1','backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3','domainbody','full']  
+    DATASET_NAME =  ['test_dataset'] #['kinship_family'] # ['pharmkg_supersmall','countries_s1','countries_s2','countries_s3'] # ['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    MODIFIED_DATASET = [False]
+    GROUNDER = ['backward_1'] #['backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3',]  #['backward_prune_1','backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME =  ['no_reasoner','sbr','rnm','dcr','r2n']  
+    MODEL_NAME =  ['dcr']#['no_reasoner','sbr','rnm','dcr','r2n']  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
-    SEED = [[0,1,2,3,4]]
+    SEED = [[0,1]]
     NEG_PER_SIDE = [1]
     WEIGHT_LOSS = [.5]  
     DROPOUT = [0.0]
@@ -48,25 +47,15 @@ if __name__ == '__main__':
 
     all_args = []
 
-    for dataset_name,modified_dataset, grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, h,  v, rr, runs in product(
+    for dataset_name,modified_dataset, grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, h,  v, rr in product(
             DATASET_NAME,MODIFIED_DATASET, GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
-            LR, NUM_RULES, HARD,  VALID_SIZE, RR, RUNS_PER_CONFIG ):  
+            LR, NUM_RULES, HARD,  VALID_SIZE, RR ):  
     
 
         # Base parameters
         parser = NSParser()
         args = parser.parse_args()
-        args.runs = runs
 
-        args.dataset_name = dataset_name
-        args.facts_file = 'facts.txt'
-        args.train_file = 'train.txt'  
-        args.valid_file = 'valid.txt'
-        args.test_file = 'test.txt'
-        args.domain_file = 'domain2constants.txt'
-        args.rules_file = 'rules.txt'
-        args.rule_miner = rule_miner
-        args.modified_dataset = modified_dataset
 
         if modified_dataset:
             if 'backward' not in grounder:
@@ -77,25 +66,11 @@ if __name__ == '__main__':
                 pruning= 'p' if 'prune' in grounder else 'np'
                 level = grounder[-1]
                 dataset_name = dataset_name+'_reason_2'+pruning
-                args.dataset_name = dataset_name
-                # args.dataset_name = dataset_name+'_reason_'+str(level)+pruning
-        
-        if not os.path.exists(os.path.join(base_path, args.dataset_name)):
+                dataset_name = dataset_name
+        if not os.path.exists(os.path.join(base_path, dataset_name)):
             continue
 
-        run_vars = (dataset_name,grounder, kge, model_name, rule_miner, modified_dataset, e, dp, seed, neg, w_loss, dropout)
 
-        if rule_miner == 'amie':
-            args.rules_file = 'rules_amie.txt'
-        elif rule_miner == 'ncrl':
-            args.rules_file = 'rules_ncrl.txt'
-        elif rule_miner == 'None':
-            args.rules_file = 'rules.txt'
-        else: # raise an error if the rule miner is not recognized
-            raise ValueError('Rule miner not recognized for ', dataset_name)
-        if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
-            # print('skipping, rules not existing', run_vars)
-            continue
 
         if 'countries' in dataset_name:
             # task is the last two letters of the dataset name
@@ -107,7 +82,11 @@ if __name__ == '__main__':
                 print('skipping, grounder too heavy', run_vars)
                 continue
 
-        if 'kinship_family_small_reason' in dataset_name and model_name=='r2n':
+        if ('kinship_family_small_reason' in dataset_name) and model_name=='dcr' :
+            print('skipping, dcr not valid for',dataset_name, run_vars)    
+            continue
+
+        if ('kinship_family_small' in dataset_name) and model_name=='r2n' and (grounder == 'backward_2' or grounder == 'backward_prune_2' or grounder == 'backward_3' or grounder == 'backward_prune_3'):
             print('skipping, r2n not valid for',dataset_name, run_vars)    
             continue
 
@@ -138,10 +117,35 @@ if __name__ == '__main__':
                 print('skipping, grounder too heavy', run_vars)
                 continue
 
+        args.dataset_name = dataset_name
+        args.grounder = grounder
+        args.kge = kge
+        args.model_name = model_name 
+        args.rule_miner = rule_miner 
+        args.modified_dataset = modified_dataset
+        args.seed = seed
+        args.facts_file = 'facts.txt'
+        args.train_file = 'train.txt'  
+        args.valid_file = 'valid.txt'
+        args.test_file = 'test.txt'
+        args.domain_file = 'domain2constants.txt'
+        args.rules_file = 'rules.txt'
+
+        if rule_miner == 'amie':
+            args.rules_file = 'rules_amie.txt'
+        elif rule_miner == 'ncrl':
+            args.rules_file = 'rules_ncrl.txt'
+        elif rule_miner == 'None':
+            args.rules_file = 'rules.txt'
+        else: # raise an error if the rule miner is not recognized
+            raise ValueError('Rule miner not recognized for ', dataset_name)
+        if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
+            # print('skipping, rules not existing', run_vars)
+            continue
+
         args.test_negatives = None  # all possible negatives
         if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family':
             args.test_negatives = 1000
-        # args.reasoner = "r2n"  # "latent_worlds"
         args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
         args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
         args.learning_rate = lr
@@ -156,10 +160,7 @@ if __name__ == '__main__':
         args.rule_weight = "number" # "embedding"
         args.semiring = "product"
         args.dropout_rate_embedder = dropout
-        args.seed = seed
         args.format = "functional"
-        args.grounder = grounder
-        args.kge = kge
         args.num_negatives = neg
         # DCR/R2N params
         args.signed = True
@@ -170,7 +171,6 @@ if __name__ == '__main__':
         args.filter_activity_regularization = 0.0
         args.epochs = epochs 
         args.weight_loss = w_loss
-        args.model_name = model_name  
         args.batch_size = -1
         # Full batch only for explain.
         args.eval_batch_size = -1
@@ -195,160 +195,183 @@ if __name__ == '__main__':
         args.reasoner_atom_embedding_size = args.kge_atom_embedding_size
         args.create_flat_rule_list = True
         run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, modified_dataset, e, dp, seed, neg, w_loss, dropout)
-        args.run_signature = '_'.join(f'{v}' for v in run_vars) 
-        
+        args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner', 'modified_dataset', 'e', 'dp', 'seed', 'neg', 'w_loss', 'dropout']
+        args.run_signature = '-'.join(f'{v}' for v in run_vars)     
         all_args.append(args)
 
-    def save_results(args, train_acc, valid_acc, test_acc, training_info, total_time, total_time_std, train_std, valid_std, test_std):
-          
-        # Select as metrics a list containing the keys of the dict training_info 
-        # if the key constrastive_loss is in the dict, remove it
-        if 'contrastive_loss' in training_info:
-            del training_info['contrastive_loss']
-        metrics = [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in list(training_info.keys())]
 
-        # Combine all values into a single comma-separated string
-        combined_names = ';'.join(
-            ['Task', 'Grounder', 'KGE','Rule_Miner', 'EmbedSize', 'WeightLoss_Task','Reasoner_depth','Model_name','Time'] + 
-            [str(metric) for metric in metrics]
-            )  
-        
-        combined_results = ';'.join(
-            [args.dataset_name, args.grounder, str(args.kge),args.rule_miner,str(args.kge_atom_embedding_size),
-                str(args.weight_loss),str(args.reasoner_depth),args.model_name]+
-            [str([total_time,total_time_std])] +
-            [str([round(acc, 4), round(std, 4)]) for acc, std in zip(train_acc, train_std)] +
-            [str([round(acc, 4), round(std, 4)]) for acc, std in zip(valid_acc, valid_std)] +
-            [str([round(acc, 4), round(std, 4)]) for acc, std in zip(test_acc, test_std)]
-            )  
-        
-        # Create a file for my results 
-        date = str(datetime.datetime.now()).replace(":","-").replace(" ","_")
-        date = date[:date.index('.')]
-        hparam_folder = './hparamsearch/'
-        if not os.path.exists(hparam_folder): os.mkdir(hparam_folder)
-        results_filename = hparam_folder+'experiments.csv'  
-        print("Writing results to", results_filename)   
-            
-        # Check if the file hparam_folder+'headers.txt' exists, otherwise create it
-        if not os.path.exists(hparam_folder+'headers.txt'):
-            with open(hparam_folder+'headers.txt', 'w') as f:
-                f.write(combined_names)
 
-        with open(results_filename, 'a') as f: 
-            empty = os.stat(results_filename).st_size == 0
-            print("Empty file:", empty)
-            if empty:
-                f.write(combined_names)
-            f.write('\n')
-            f.write(combined_results)
+
+        def get_avg_results(log_folder,run_signature,seeds):
+            # For every file with a different seed, read the results and take the average
+            all_files = os.listdir(os.path.join(log_folder,'indiv_runs'))
+            # get the files that contain the run_signature
+            run_files = [file for file in all_files if run_signature in file]
+            print('run_files',run_files)
+            # get the number of files
+            n_files = len(run_files)
+            if n_files != len(seeds):
+                return
+            # for every file, read all the lines and if the line starts with 'all_data', take the values and add them to the array
+            info = {}
+            for file in run_files:
+                print('file to read',os.path.join(log_folder,'indiv_runs',file))
+                with open(os.path.join(log_folder,'indiv_runs',file), 'r') as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        # print('line',line)
+                        if line.startswith('All data'):
+                            d = line.split('-')[1:]
+                            info_exp = {el.split(':')[0] : ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] in ['train_acc', 'valid_acc', 'test_acc','time_run']}
+                            # append the key,values to the dictionary
+                            for key in info_exp.keys():
+                                if key in info:
+                                    info[key].append(np.round(info_exp[key],3))
+                                else:
+                                    info[key] = [np.round(info_exp[key],3)]
+            # for every key in the dictionary, take the average and the std
+            for key in info.keys():
+                avg = np.mean(info[key],axis=0)
+                std = np.std(info[key],axis=0)
+                info[key] = [list(avg),list(std)]
+            return info
+        
+        def write_avg_results(args,filename,info_metrics,training_info):
+            if 'contrastive_loss' in training_info:
+                del training_info['contrastive_loss']
+            # join the args.__dict__ with the info_metrics
+            metrics = [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in list(training_info.keys())]
+            combined_names = ';'.join(list(args.__dict__.keys()) + [str(metric) for metric in metrics] )
+            values_args = [str(v) for k,v in args.__dict__.items()] 
+            values_metrics = [str([list(np.round(values[0], 4)), list(np.round(values[1], 4))]) for metric,values in info_metrics.items()]
+            combined_results = ';'.join(values_args + values_metrics)
+
+            # Create a file for my results 
+            hparam_folder = './hparamsearch/'
+            if not os.path.exists(hparam_folder): os.mkdir(hparam_folder)
+            print("Writing results to", filename)   
+        
+            # Check if the file hparam_folder+'headers.txt' exists, otherwise create it
+            if not os.path.exists(hparam_folder+'headers.txt'):
+                with open(hparam_folder+'headers.txt', 'w') as f:
+                    f.write('sep=;\n')
+                    f.write(combined_names)
+            else: 
+                with open(hparam_folder+'headers.txt', 'r') as f:
+                    lines = f.readlines()
+                    if combined_names not in lines:
+                        with open(hparam_folder+'headers.txt', 'a') as f:
+                            f.write('\n')
+                            f.write(combined_names)
+
+            with open(filename, 'a') as f: 
+                empty = os.stat(filename).st_size == 0
+                print("Empty file:", empty)
+                if empty:
+                    f.write('sep=;\n')
+                    f.write(combined_names)
+                f.write('\n')
+                f.write(combined_results)
 
     def main_wrapper(args): 
         # HPARAM SEARCH
-        save_hparam_results = True
         # Check if the experiment has already been run.
-        #create a string for the run_vars, each substring separated by a '_'
+        # create a string for the run_vars, each substring separated by a '_'
         print("\nRun vars:", args.run_signature+'\n')
-        hparam_folder = './hparamsearch/'
-        if not os.path.exists(hparam_folder): os.mkdir(hparam_folder)
-        hparam_filename = hparam_folder+'hparamsearch.txt'
-        # If the file does not exist, create it, but do not write anything
-        if not os.path.exists(hparam_filename):
-            with open(hparam_filename, 'w') as f:
-                pass
-        # If the file exists, check if the run_vars are already in the file, if not, write them
-        else:
-            with open(hparam_filename, 'r') as f:
-                lines = f.readlines() 
-                # print("Lines in file:\n", lines)
-                # print("Run vars:\n", args.run_signature+'\n')
-                if args.run_signature+'\n' in lines:
-                    print("Run vars already in file")
-                    return           
+
+        # hparam_folder = './hparamsearch/'
+        # if not os.path.exists(hparam_folder): os.mkdir(hparam_folder)
+        # hparam_filename = hparam_folder+'hparamsearch.txt'
+        # # If the file does not exist, create it, but do not write anything
+        # if not os.path.exists(hparam_filename):
+        #     with open(hparam_filename, 'w') as f:
+        #         pass
+        # # If the file exists, check if the run_vars are already in the file, if not, write them
+        # else:
+        #     with open(hparam_filename, 'r') as f:
+        #         lines = f.readlines() 
+        #         # print("Lines in file:\n", lines)
+        #         # print("Run vars:\n", args.run_signature+'\n')
+        #         if args.run_signature+'\n' in lines:
+        #             print("Run vars already in file")
+        #             return           
         
         # LOGGER
-        # Results for every epoch will be saved in a folder named log_folder
+        # Results for every epoch will be saved in a folder 
         log_folder :str = "results"
-        if not os.path.exists(log_folder): os.mkdir(log_folder)
-
         # Check if the logger exists, if so, skip the experiment, otherwise run it.
         logger = ns.utils.FileLogger(log_folder)
         if logger.exists(args.__dict__,signature=args.run_signature):
             print("\n\n\nSkipping training, it has been already done for", args.run_signature, "\n")
             return
         else:
-            date = str(datetime.datetime.now()).replace(":","-")
-            date = str(datetime.datetime.now()).replace(":","-").replace(" ","-")
-            date = date[:date.index('.')]
-            log_filename_tmp = os.path.join(log_folder, '_tmp_log_{}_{}.csv'.format(date,args.run_signature))
-            log_filename = os.path.join(
-                log_folder, 'log%s_%s.csv' % (args.run_signature, date))
+            date = logger.get_date()
+            # one folder is for temporal files, the other for the final log, and the other is when several runs are done, is like also a temporal folder
+            log_filename = os.path.join(log_folder, 'log{}_{}.csv'.format(args.run_signature, date))
+            os.makedirs(os.path.dirname(os.path.join(log_folder,'indiv_runs')), exist_ok=True)
 
         # try:
-        for i in range(args.runs):
-            print("Run number ", i, " out of ", runs)
+        n_seeds = len(args.seed)
+        for i,seed in enumerate(args.seed):
             start = time.time()
-            args.seed_run_i = args.seed[i]
+            args.seed_run_i = seed
+            log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
+            
+
+            # Check if the training has already been done for this seed
+            # in log_filename_tmp, take up to the last two elements split by '-' to not take into account the time
+            sub_signature = log_filename_tmp.split('-')[1:-2]
+            # addd the seed
+            sub_signature.append(str('seed_'+str(seed)))
+            # read all the files
+            all_files = os.listdir(os.path.join(log_folder,'indiv_runs'))
+            found = False
+            for file in all_files:
+                # if the file contains the sub_signature, then the training has been done
+                if all(sub in file for sub in sub_signature):
+                    found = True
+                    break
+            if found:   
+                print("Seed number ", seed, " in ", args.seed,'already done')
+                continue
+
+            
+            print("Seed number ", seed, " in ", args.seed)
+            # write in the tmp file 'sep=;' to separate the columns with a semicolon
+            with open(log_filename_tmp, 'w') as f:
+                f.write('sep=;\n')
             best_val, _, valid_acc, test_acc, _, train_acc, training_info = main(
                 base_path,
                 None,
                 None,
                 log_filename_tmp,
                 args)
-            if i == 0:
-                # initialize the arrays with the number of keys in training_info
-                keys = list(training_info.keys())
-                test_acc_avg = np.zeros((len(keys),runs))
-                valid_acc_avg = np.zeros((len(keys),runs))
-                train_acc_avg = np.zeros((len(keys),runs))
-                time_arr = np.zeros((runs))
-            print('test_acc',test_acc)
-            print('test acc avg', test_acc_avg) 
-            # print('train acc avg', train_acc_avg)
-            test_acc_avg[:,i] = np.array(test_acc)
-            valid_acc_avg[:,i] = np.array(valid_acc)
-            train_acc_avg[:,i] = np.array(train_acc) 
+
             end = time.time()
-            time_arr[i] = end - start
-        # except Exception as e:
-        #     print('Error in experiment', args.run_signature, e)
-        #     return
-        total_time =  np.mean(time_arr)
-        total_time_std = np.std(time_arr)
-        # Take the average across cols
-        test_acc =  np.mean(test_acc_avg, axis=1)
-        valid_acc = np.mean(valid_acc_avg, axis=1)
-        train_acc = np.mean(train_acc_avg, axis=1)
-        # Take the standard deviation across cols
-        test_std = np.std(test_acc_avg, axis=1)
-        valid_std = np.std(valid_acc_avg, axis=1)
-        train_std = np.std(train_acc_avg, axis=1)
+            time_run = end - start
+            print('train info',training_info)
+            # The reuslts of the training have been written to tmp. write them as an individual run
+            logged_data = copy.deepcopy(args)
+            logged_data.train_acc = train_acc
+            logged_data.valid_acc = valid_acc
+            logged_data.best_val = best_val
+            logged_data.test_acc = test_acc
+            logged_data.time = time_run
 
+            # write the info about the results in the tmp file 
+            logger.log(logged_data.__dict__, log_filename_tmp)
+            # Rename to not be temporal anymore
+            log_filename_run = os.path.join(log_folder,'indiv_runs', '_ind_log-{}-{}-seed_{}.csv'.format(args.run_signature,date, i))
+            if os.path.exists(log_filename_run):
+                os.remove(log_filename_run)
+            os.rename(log_filename_tmp, log_filename_run)
+  
+        # write the average results if we need to average over experiments
+        if len(args.seed) > 1:
+            info_metrics = get_avg_results(log_folder,args.run_signature,args.seed)
+            if info_metrics:
+                write_avg_results(args,'./hparamsearch/experiments_new.csv',info_metrics,training_info)
 
-        # SAVE RESULTS FROM TRAINING IN LOG
-        # # Split the args used for trainig from the logged data.
-        if hasattr(args, 'seed_run_i'):
-            delattr(args, 'seed_run_i')
-        logged_data = copy.deepcopy(args)
-        # # Add some extra info to log.
-        logged_data.valid_acc = valid_acc
-        logged_data.best_val = best_val
-        logged_data.test_acc = test_acc
-        logged_data.log_filename = log_filename
-        # Log the data to its final location.
-        logger.log(logged_data.__dict__, log_filename_tmp)
-        if os.path.exists(log_filename):
-            os.remove(log_filename)
-        os.rename(log_filename_tmp, log_filename)
-
-
-        # SAVE RESULTS FROM HPARAMSEARCH
-        # Write the run_vars to the file
-        with open(hparam_filename, 'a') as f:
-            f.write('\n')
-            f.write(args.run_signature)   
-        if save_hparam_results: 
-            save_results(args, train_acc, valid_acc, test_acc, training_info, total_time, total_time_std, train_std, valid_std, test_std)
                 
     for l,args in enumerate(all_args):
         print('Experiment',l,':',args.run_signature)
