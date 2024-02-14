@@ -308,7 +308,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     train_accuracy = model.evaluate(data_gen_train) 
     print("\nEvaluation val", flush=True)
     # valid_accuracy =  model.evaluate(data_gen_valid) 
-    valid_accuracy = [0.0]
+    valid_accuracy = list(np.zeros(len(train_accuracy)))
 
     # from DataGenerator, generate the next item in data_gen_train, and data_gen_test
     # print('DATASET_TRAIN query', data_gen_train[0][0])
