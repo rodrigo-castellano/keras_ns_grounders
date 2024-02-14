@@ -104,7 +104,8 @@ def read_rules(path,args):
 
 def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
-    csv_logger = CSVLogger(log_filename, append=True, separator=';')
+    # csv_logger = ns.utils.CustomCallback(log_filename)
+    csv_logger = ns.utils.CustomCSVLogger(log_filename, append=True, separator=';') 
     print('\nARGS', args,'\n')
 
     seed = get_arg(args, 'seed_run_i', 0)
@@ -296,6 +297,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
               callbacks=callbacks)
               #validation_data=data_gen_valid,
               #validation_freq=valid_frequency)
+
     # best_model_callback.restore_weights()
 
     if output_filename is not None:
@@ -306,7 +308,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     train_accuracy = model.evaluate(data_gen_train) 
     print("\nEvaluation val", flush=True)
     # valid_accuracy =  model.evaluate(data_gen_valid) 
-    valid_accuracy = 0.0
+    valid_accuracy = [0.0]
 
     # from DataGenerator, generate the next item in data_gen_train, and data_gen_test
     # print('DATASET_TRAIN query', data_gen_train[0][0])
