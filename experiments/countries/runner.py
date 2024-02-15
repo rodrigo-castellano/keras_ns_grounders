@@ -31,7 +31,7 @@ if __name__ == '__main__':
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
-    SEED = [[0,1]]
+    SEED = [[0,1,2,3,4]]
     NEG_PER_SIDE = [1]
     WEIGHT_LOSS = [.5]  
     DROPOUT = [0.0]
