@@ -1,6 +1,6 @@
 import os.path
 import sys
-
+import ast
 import pandas as pd
 import tensorflow as tf
 import argparse
@@ -351,9 +351,13 @@ class CustomCSVLogger(CSVLogger):
 
 class FileLogger():
 
-    def __init__(self, folder):
+    def __init__(self, folder,folder_experiments,folder_run):
         self.folder = folder
+        self.folder_experiments = folder_experiments
+        self.folder_run = folder_run
         if not os.path.exists(folder): os.mkdir(folder)
+        if not os.path.exists(folder_experiments): os.mkdir(folder_experiments)
+        if not os.path.exists(folder_run): os.mkdir(folder_run)
 
     def _read_last_line(self, filename):
         with open(filename) as f:
@@ -384,51 +388,45 @@ class FileLogger():
         return date
     
 
-    def exists(self, args:dict):
-        # values = [str(a) for a in list(args.values())]
-        # keys = [str(a) for a in list(args.keys())]
-        # string_args = ",".join(['%s:%s' % (str(k), str(v)) for k,v in list(args.items())])
-        # for filename in os.listdir(self.folder):
-        #     if filename.startswith("log"):
-        #         last_lines = self._read_last_line(os.path.join(self.folder,filename))
-        #         last_line = "".join(last_lines)
-
-        #         last_line = last_line.replace(' ', '')
-        #         last_line = last_line.replace('\n', '')
-
-        #         string_args = string_args.replace(' ', '')
-        #         string_args = string_args.replace('\n', '')
-        #         if string_args in last_line:
-        #             # print('string_args in last_line')
-        #             return True 
-        # open the experiments file, create it in one does not exist
-        if not os.path.exists(os.path.join(self.folder,'experiments')):
+    def exists_experiment(self, args:dict):
+        
+        if not os.path.exists(os.path.join(self.folder_experiments,'experiments.csv')):
+            return False
+        # if there are no csv files starting iwth experiments, return False
+        experiments_files = [f for f in os.listdir(self.folder_experiments) if f.startswith('experiments')]
+        if len(experiments_files) == 0:
             return False
 
+        # open the experiments file. for every line, check if the signature is in the line
+        for file in experiments_files:
+            with open(os.path.join(self.folder_experiments,file), 'r') as f:
+                lines = f.readlines()
+                for j,line in enumerate(lines):
+                    if j == 1:
+                        headers = line.split(';')
+                        pos = headers.index('run_signature')
+                    elif j == 0:
+                        continue
+                    else:
+                        file_signature = line.split(';')[pos]
+                        # print('signature', args['run_signature'])
+                        # print('file_signature', file_signature)
+                        if file_signature in args['run_signature']:
+                            return True
+        return False
 
-        with open(os.path.join(self.folder,'experiments', "experiments.csv"), "r") as f:
-            for line in file:
-            # # the first line is the header, take is as keys. 
-            # reader = csv.reader(f)
-            # _ = next(reader)
-            # keys = next(reader)
-            # # for each line in the file, take the values and create a dictionary. Compare the dictionary with the args, if it is the same, return True
-            # for line in reader:
-            #     # the values are split by ;
-            #     print('line',len(line),line)
-            #     print('line', str(line))
-            #     values = str(line).split(';')
-            #     print('values', values)
-            #     d = dict(zip(keys, values))
-            #     print('d', d)
-            #     # if all the key,values of d are in args, return True
-            #     for k,v in d.items():
-            #         print('k,v',k,v)
-            #         print('args[k],v',args[k],v)
-            #         if k in args and args[k] == v:
-            #             print('k,v, args[k], v',k,v, args[k], v)
-            #             return True
-        
+    def exists_run(self, args:dict,log_filename_tmp,seed):
+        # Check if the training has already been done for this seed
+        # in log_filename_tmp,to not take into account the time, split by ';'  and take up to the last two elements 
+        sub_signature = log_filename_tmp.split('-')[1:-2]
+        # addd the seed
+        sub_signature.append(str('seed_'+str(seed)))
+        # read all the files
+        all_files = os.listdir(self.folder_run)
+        for file in all_files:
+            # if the file contains the sub_signature, then the training has been done
+            if all(sub in file for sub in sub_signature):
+                return True
         return False
 
     def write_to_csv(self, to_write):
@@ -443,6 +441,83 @@ class FileLogger():
             f.write(header + "\n")
             for line in lines:
                 f.write(line+"\n")
+
+    def get_avg_results(self,run_signature,seeds):
+        # For every file with a different seed, read the results and take the average
+        all_files = os.listdir(self.folder_run)
+        # get the files that contain the run_signature
+        run_files = [file for file in all_files if run_signature in file]
+        # get the number of files
+        n_files = len(run_files)
+        if n_files != len(seeds):
+            return
+        # for every file, read all the lines and if the line starts with 'all_data', take the values and add them to the array
+        info = {}
+        seeds_found = set()
+        for file in run_files:
+            with open(os.path.join(self.folder_run,file), 'r') as f:
+                lines = f.readlines()
+                for line in lines:
+                    if line.startswith('All data'):
+                        d = line.split(';')[1:]
+                        info_exp = {el.split(':')[0] : ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] in ['train_acc', 'valid_acc', 'test_acc','time_run']}
+                        # get the names of the metrics from the element 'metrics'
+                        metrics_names = [ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] == 'metrics'][0]
+                        seed_found = [ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] == 'seed_run_i'][0]
+                        seeds_found.add(seed_found)
+                        # append the key,values to the dictionary
+                        if seed_found in seeds:
+                            for key in info_exp.keys():
+                                if key in info:
+                                    info[key].append(np.round(info_exp[key],3))
+                                else:
+                                    info[key] = [np.round(info_exp[key],3)]
+        #print a message also
+        assert len(seeds_found) == len(seeds), 'The number of seeds found in the experiments is different from the number of seeds'
+        # for every key in the dictionary, take the average and the std
+        for key in info.keys():
+            avg = np.mean(info[key],axis=0)
+            std = np.std(info[key],axis=0)
+            info[key] = [list(avg),list(std)]
+        return info,metrics_names
+
+    def write_avg_results(self,args_dict,folder,info_metrics,metrics_name):
+        file_csv = os.path.join(folder,'experiments.csv')
+        if 'contrastive_loss' in metrics_name: # delete it from the list metrics_name
+            metrics_name.remove('contrastive_loss')
+        # join the args_dict with the info_metrics
+        metrics = [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in list(metrics_name)]
+        combined_names = ';'.join(list(args_dict.keys()) + [str(metric) for metric in metrics] )
+        values_args = [str(v) for k,v in args_dict.items()] 
+        values_metrics = []
+        for k,v in info_metrics.items():
+            for i in range(len(v[0])):
+                values_metrics.append(str([ np.round(v[0][i],3) , np.round(v[1][i],3) ]))
+        combined_results = ';'.join(values_args + values_metrics)
+
+        # Create a file for my results 
+        print("Writing results to", file_csv)   
+    
+        # Check if the file folder+'headers.txt' exists, otherwise create it
+        if not os.path.exists(folder+'headers.txt'):
+            with open(folder+'headers.txt', 'w') as f:
+                f.write('sep=;\n')
+                f.write(combined_names)
+        else: 
+            with open(folder+'headers.txt', 'r') as f:
+                lines = f.readlines()
+                if combined_names not in lines:
+                    with open(folder+'headers.txt', 'a') as f:
+                        f.write('\n')
+                        f.write(combined_names)
+        with open(file_csv, 'a') as f: 
+            empty = os.stat(file_csv).st_size == 0
+            if empty:
+                f.write('sep=;\n')
+                f.write(combined_names)
+            f.write('\n')
+            f.write(combined_results)
+
 
 
 class BinaryCrossEntropyRagged(tf.keras.losses.Loss):
