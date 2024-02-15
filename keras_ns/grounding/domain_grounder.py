@@ -129,13 +129,13 @@ class DomainBodyGrounder(Engine):
             if rel_queries:
                 self.ground_one_rule(rule, rel_queries)
         if 'deterministic' in kwargs and kwargs['deterministic']:
-            ret = {rule.name:
+            ret = {rule_name:
                    RuleGroundings(rule_name,
                                   sorted(list(groundings),
                                          key=lambda x : x.__repr__()))
                    for rule_name,groundings in self.rule2groundings.items()}
         else:
-            ret = {rule.name:
+            ret = {rule_name:
                    RuleGroundings(rule_name, list(groundings))
                    for rule_name,groundings in self.rule2groundings.items()}
 
