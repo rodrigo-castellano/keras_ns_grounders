@@ -366,7 +366,7 @@ class FileLogger():
 
     def log(self, args:dict, filename):
         """Append`the results as last line of a filename"""
-        header_filename = os.path.join(self.folder, "header.txt")
+        header_filename = os.path.join(self.folder_run, "header.txt")
         if not os.path.exists(header_filename):
             header = [str(a) for a in list(args.keys())]
             with open(header_filename, "w") as f:
@@ -453,6 +453,7 @@ class FileLogger():
             return
         # for every file, read all the lines and if the line starts with 'all_data', take the values and add them to the array
         info = {}
+        metrics_names = []
         seeds_found = set()
         for file in run_files:
             with open(os.path.join(self.folder_run,file), 'r') as f:
@@ -479,6 +480,8 @@ class FileLogger():
             avg = np.mean(info[key],axis=0)
             std = np.std(info[key],axis=0)
             info[key] = [list(avg),list(std)]
+        print('info',info)
+        print('metrics_names',metrics_names)
         return info,metrics_names
 
     def write_avg_results(self,args_dict,folder,info_metrics,metrics_name):
@@ -499,12 +502,12 @@ class FileLogger():
         print("Writing results to", file_csv)   
     
         # Check if the file folder+'headers.txt' exists, otherwise create it
-        if not os.path.exists(folder+'headers.txt'):
-            with open(folder+'headers.txt', 'w') as f:
+        if not os.path.exists(os.path.join(self.folder_experiments,'header.txt')):
+            with open(os.path.join(self.folder_experiments,'header.txt'), 'w') as f:
                 f.write('sep=;\n')
                 f.write(combined_names)
         else: 
-            with open(folder+'headers.txt', 'r') as f:
+            with open(os.path.join(self.folder_experiments,'header.txt'), 'r') as f:
                 lines = f.readlines()
                 if combined_names not in lines:
                     with open(folder+'headers.txt', 'a') as f:
@@ -646,7 +649,6 @@ class HitsMetric(tf.keras.metrics.Metric):
      of tensorflow_ranking MRRMetric but with an online check for ragged
      tensors."""
   def __init__(self, n, name='hits', dtype=None, **kwargs):
-    #   super().__init__(name, dtype, **kwargs)
       super().__init__('%s@%d' % (name, n), dtype, **kwargs)
       self._n = n
       self.hits = self.add_weight("total", initializer="zeros")
@@ -678,15 +680,11 @@ class HitsMetric(tf.keras.metrics.Metric):
     top_relevance = relevance[:, :self._n]
     hits = tf.reduce_sum(top_relevance, axis=1, keepdims=True)
     return hits
-  
+
   def get_config(self):
-    config = {
-        'n': self._n,  # Save the value of 'n'
-    }
-    base_config = super().get_config()
-    return dict(list(base_config.items()) + list(config.items()))
-
-
+      base_config = super().get_config()
+      config = { 'n': self._n, }
+      return {**base_config, **config}
 
 def get_model_memory_usage(batch_size, model):
     import numpy as np

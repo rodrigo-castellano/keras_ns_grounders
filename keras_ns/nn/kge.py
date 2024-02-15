@@ -25,7 +25,7 @@ class AtomEmbeddingLayer(Layer):
         self.embedders = {}
         self.embedder_class = embedder_class
 
-        for predicate in self.predicates: 
+        for predicate in self.predicates:
             self.embedders[predicate.name] = self.embedder_class(
                 atom_embedding_size=self.atom_embedding_size,
                 regularization=regularization,
@@ -71,32 +71,20 @@ class AtomEmbeddingLayer(Layer):
                     constants_embeddings=constants_embeddings,
                     tuples_tensor=predicate_to_constant_tuples[predicate.name],
                     predicate_domains=predicate.domains)
-            # for the predicate, substitute the indeces of constants by their embeddings (getTuples), unless the embedds are 0 (getZeros)
             tuple_features[predicate.name] = tf.cond(
                 tf.size(predicate_to_constant_tuples[predicate.name]) == 0,
                 GetZeros(self.embedders[predicate.name].input_size()),
                 GetTuples)
-        # if kwargs['training'] != True :
-        #     predicate_atoms2embeddings = []  # do not use list comprehansion, causes out os scope errors
-        #     for predicate in self.predicates:
-        #         if (predicate.name != 'neighborOf') and (predicate.name != 'locatedInSR'):
-        #             print('predicate', predicate.name, flush=True)
-        #             print('tuple_features[predicate.name]', tuple_features[predicate.name].shape,tuple_features[predicate.name], flush=True)
-        #             embeddings = self.embedders[predicate.name](
-        #                 tuple_features[predicate.name])
-        #             predicate_atoms2embeddings.append(embeddings)
-        #     print('finish predicate', flush=True)
-        # else: 
+
         # Now we embed the tuples (per predicate) using the dynamically defined atom_embedders
         # Each element has shape (B,atom_emb_size).
         predicate_atoms2embeddings = []  # do not use list comprehansion, causes out os scope errors
         for predicate in self.predicates:
             embeddings = self.embedders[predicate.name](
                 tuple_features[predicate.name])
-            # shape (n_atoms for that predicate, n_domains, embedd size)
             predicate_atoms2embeddings.append(embeddings)
-        # Put all the atoms of all the predicates in a unique dense tensor (instead of having it per predicate, we have it all together)
-        # shape (n_atoms for all predicates, n_domains, embedd size)
+
+        # Put all the atoms of all the predicates in a unique dense tensor
         embeddings = tf.concat(predicate_atoms2embeddings, axis=0)
 
         # Specify the last dimension size for the following layers
@@ -293,14 +281,14 @@ class ComplEx(KGELayer, Layer):
     def output_size(self):
         return self.atom_embedding_size
 
-    def call(self, inputs, **kwargs): 
+    def call(self, inputs, **kwargs):
         inputs = self.dropout_layer(inputs)
         Rr = self.dropout_layer(self.Rr)
         Ri = self.dropout_layer(self.Ri)
 
-        # assert inputs.shape[-1] == self.input_size(), (
-        #     'Wrong Shape (%s[-1] <=> %d', (inputs.shape,
-        #                                    self.input_size()))
+        assert inputs.shape[-1] == self.input_size(), (
+            'Wrong Shape (%s[-1] <=> %d', (inputs.shape,
+                                           self.input_size()))
 
         head = tf.squeeze(tf.gather(params=inputs, indices=[0], axis=1),axis=1)
         tail = tf.squeeze(tf.gather(params=inputs, indices=[1], axis=1), axis=1)

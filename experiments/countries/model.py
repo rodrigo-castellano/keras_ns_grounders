@@ -11,36 +11,6 @@ from keras_ns.logic.semantics import GodelTNorm
 from typing import Dict, List, Union
 import tensorflow_probability as tfp
 
-def logit(x):
-
-    """ Computes the logit function, i.e. the logistic sigmoid inverse. """
-    x = tf.clip_by_value(x, 1e-6, 1.0)
-    x = 1.0 / x - 1.0
-    x = tf.clip_by_value(x, 1e-6, 1e6)
-    return -tf.math.log(x)
-
-# Take a generic layer and gumbelifies it.
-class MakeGumbel(Layer):
-
-    # The passed layer must fold a shape (..., N) into (..., 1) like for example
-    #  dense layer.
-    def __init__(self, temperature, layer=Dense(1, activation=None), **kwargs):
-        super().__init__(**kwargs)
-        self.parameter_bernoulli = layer
-        assert temperature > 0.
-        self.coolness = 1. / temperature
-
-    def call(self, inputs, *args, **kwargs):
-        atom_embeddings = inputs
-        logits = self.parameter_bernoulli(atom_embeddings)
-        dist = tfp.distributions.Logistic(logits * self.coolness, self.coolness)
-        #if keras.backend.learning_phase():
-        concept_output = tf.sigmoid(dist.sample())
-        #else:
-        #  concept_output = tf.one_hot(tf.math.argmax(logits), tf.shape(logits)[-1])
-        concept_output = tf.squeeze(concept_output, axis=-1)
-        return concept_output
-
 
 class KGEModel(Model):
 
@@ -96,7 +66,8 @@ class KGEModel(Model):
                     constant_embeddings_adaptive[name])
                 for name in X_domains.keys()}
         else:
-            constant_embeddings = self.constant_embedder(X_domains)  
+            constant_embeddings = self.constant_embedder(X_domains)
+
         atom_embeddings = self.kge_embedder([constant_embeddings, A_predicates])
         return atom_embeddings
 
@@ -123,10 +94,11 @@ class CollectiveModel(Model):
                  temperature: float,
                  model_name: str,
                  resnet: bool,
-                 use_gumbel: bool,
                  filter_num_heads: int,
                  filter_activity_regularization: float,
-                 num_adaptive_constants: int):
+                 num_adaptive_constants: int,
+                 cdcr_use_positional_embeddings: bool,
+                 cdcr_num_formulas: int):
         super().__init__()
         # Reasoning depth of the model structure.
         self.reasoner_depth = reasoner_depth
@@ -144,17 +116,10 @@ class CollectiveModel(Model):
                                   kge_atom_embedding_size,
                                   dropout_rate_embedder,
                                   num_adaptive_constants)
-        
         self.model_name = model_name
 
-        # OUTPUT LAYER
-        kge_output_layer = kge_embedder.output_layer()
-        if use_gumbel:
-            layer = tf.keras.layers.Lambda(
-                lambda x: tf.expand_dims(logit(kge_output_layer(x)), axis=-1))
-            self.output_layer = MakeGumbel(temperature=temperature, layer=layer)
-        else:
-            self.output_layer = kge_output_layer
+        # CONCEPT LAYER
+        self.output_layer = kge_embedder.output_layer()
 
         # REASONING LAYER
         self.reasoning = None
@@ -178,8 +143,8 @@ class CollectiveModel(Model):
 
               elif model_name == 'cdcr':
                   self.reasoning.append(ClusteredDCRReasoningLayer(
-                      num_formulas=3,  # make it a param
-                      use_gumbel=True,
+                      num_formulas=cdcr_num_formulas,
+                      use_positional_embeddings=cdcr_use_positional_embeddings,
                       templates=rules,
                       formula_hidden_size=reasoner_formula_hidden_embedding_size,
                       aggregation_type=aggregation_type,
@@ -225,9 +190,11 @@ class CollectiveModel(Model):
         self._explain_mode = mode
 
     def call(self, inputs, *args, **kwargs):
-        # No explanations are posible when reasoning is disabled.
-        assert self.reasoning is not None or not self._explain_mode
-        # Check that we are using an explainable model.
+        if self._explain_mode:
+            # No explanations are posible when reasoning is disabled.
+            assert self.reasoning is not None
+            # Check that we are using an explainable model.
+            assert self.model_name == 'dcr' or self.model_name == 'cdcr'
         assert self.model_name == 'dcr' or self.model_name == 'cdcr' or self.model_name == 'r2n' or self.model_name == 'sbr' or self.model_name == 'gsbr' or self.model_name == 'rnm' or self.model_name == 'no_reasoner'
 
         # X_domains type is Dict[str, tensor[constant_indices_in_domain]]
@@ -259,22 +226,20 @@ class CollectiveModel(Model):
                 # tf.print('task_output', task_output.shape )
                 # tf.print('atom_embeddings', atom_embeddings.shape )
                 # tf.print('A_rules',  A_rules)
-
                 task_output, atom_embeddings = self.reasoning[i]([
                     task_output, atom_embeddings, A_rules])
+        else:
+            task_output = tf.identity(concept_output)
                 # tf.print('task_output', task_output.shape, task_output)
                 # tf.print('atom_embeddings', atom_embeddings.shape, atom_embeddings)
 
-        if self.reasoning is not None:
-            task_output = tf.gather(params=tf.squeeze(task_output, -1), indices=Q)
+        task_output = tf.gather(params=tf.squeeze(task_output, -1), indices=Q)
         # tf.print('task_output after reasoning', task_output.shape, task_output)
         concept_output = tf.gather(params=tf.squeeze(concept_output, -1),
                                    indices=Q)
         # tf.print('concept_output after reasoning', concept_output.shape, concept_output)
         if self.resnet and self.reasoning is not None:
             task_output = self.logic.disj_pair(task_output, concept_output)
-        else: # no resnet, set task_output to 0
-            task_output = tf.zeros_like(concept_output)
         # tf.print('task_output after resnet', task_output.shape, task_output )
 
         if self._explain_mode:

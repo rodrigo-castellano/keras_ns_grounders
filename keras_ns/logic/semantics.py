@@ -35,7 +35,7 @@ class Logic:
 
 class ProductTNorm(Logic):
     def __init__(self):
-        super(ProductTNorm, self).__init__()
+        super().__init__()
         self.current_truth = tf.constant(1)
         self.current_false = tf.constant(0)
 
@@ -71,7 +71,7 @@ class ProductTNorm(Logic):
 
 class GodelTNorm(Logic):
     def __init__(self):
-        super(GodelTNorm, self).__init__()
+        super().__init__()
         self.current_truth = tf.constant(1)
         self.current_false = tf.constant(0)
 
@@ -99,6 +99,43 @@ class GodelTNorm(Logic):
 
     def imply_pair(self, a, b):
         return tf.where(a > b, 1.0, b)
+
+    def predict_proba(self, a):
+        return a.squeeze(-1)
+
+
+class SumProductSemiring(Logic):
+    def __init__(self):
+        super().__init__()
+        self.current_truth = tf.constant(1)
+        self.current_false = tf.constant(0)
+
+    def update(self):
+        pass
+
+    def conj(self, a, axis=-1):
+        return tf.reduce_prod(a, axis=axis, keepdims=True)
+
+    def conj_pair(self, a, b):
+        return a * b
+
+    def disj(self, a, axis=-1):
+        return tf.reduce_sum(a, axis=axis, keepdims=True)
+
+    def disj_pair(self, a, b):
+        return a + b
+
+    def iff_pair(self, a, b):
+        return self.conj_pair(self.disj_pair(self.neg(a), b),
+                              self.disj_pair(a, self.neg(b)))
+
+    def neg(self, a):
+        return 1 - a
+
+    def imply_pair(self, a, b):
+        a = tf.minimum(a, 1e-6)
+        b = tf.minimum(b, 1e-6)
+        return tf.where(a > b, 1.0, tf.math.divide_no_nan(b, a))
 
     def predict_proba(self, a):
         return a.squeeze(-1)
@@ -183,25 +220,6 @@ class GodelTNorm(Logic):
 #         return res
 #
 #
-# class SumProduct(Semiring):
-#
-#     def conj_n(self, x, axis):
-#         return tf.reduce_prod(x, axis=axis)
-#
-#     def conj(self, x, y):
-#         return x * y
-#
-#     def disj_n(self, x, axis):
-#         x = tf.math.reduce_sum(x, axis=axis)
-#         return x
-#
-#     def disj(self, x, y):
-#         return x + y
-#
-#     def disj_scatter(self, base, update, indices):
-#         indices = tf.expand_axiss(indices, -1)
-#         x = tf.tensor_scatter_nd_add(base, indices, update)
-#         return x
 #
 #
 # class LogSumProduct(Semiring):

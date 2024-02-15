@@ -322,6 +322,7 @@ class ClusteredDCRReasoningLayer(DCRReasoningLayer):
                  filter_activity_regularization: float=0.0,
                  regularization: float=0.0,
                  dropout_rate: float=0.0,
+                 constrastive_task_loss_weight: float=0.1,
                  logic: Logic=GodelTNorm()):
 
         super().__init__(templates=templates,
@@ -337,6 +338,7 @@ class ClusteredDCRReasoningLayer(DCRReasoningLayer):
         self.num_formulas = num_formulas
         self.formula_hidden_size = formula_hidden_size
         self.use_positional_embeddings = use_positional_embeddings
+        self.constrastive_task_loss_weight = constrastive_task_loss_weight
 
         self.positional_embeddings = {}
         self.formula_scorer = {}
@@ -457,8 +459,9 @@ class ClusteredDCRReasoningLayer(DCRReasoningLayer):
                 rule2explain_info[rule.name]['relational_info'] = [A_in, A_out]
 
             # Shape (batch_size, num_atoms_out)
-            head_predictions = rule_embedders([concepts, formula_embeddings],
-                                              constrastive_task_loss_weight=0.1)
+            head_predictions = rule_embedders(
+                [concepts, formula_embeddings],
+                constrastive_task_loss_weight=self.constrastive_task_loss_weight)
             # Shape (batch_size, num_atoms_out, 1)
             head_predictions = tf.expand_dims(head_predictions, axis=-1)
 

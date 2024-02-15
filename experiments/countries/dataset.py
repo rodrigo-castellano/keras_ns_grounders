@@ -112,7 +112,6 @@ def read_ontology(paths: List[str], format: str):
     predicates = OrderedDict()
     constants = OrderedDict()
     atoms = read_atoms(paths, format)
-    # print('atoms', len(atoms),atoms[:10], flush=True)
     for a in atoms:
         p = a[0]
         if p not in predicates:
@@ -170,6 +169,7 @@ class KGCTrainingDataset(Dataset):
             domain2constants=self.domain2constants,
             num_negatives=self.num_negatives,
             corrupt_mode=self.corrupt_mode)
+
         # Training corruptions are mixed head/tail corruptions
         Q = []
         L = []
@@ -180,8 +180,7 @@ class KGCTrainingDataset(Dataset):
         if isinstance(item, int):
             Q = Q[0]
             L = L[0]
-        # tf.print('len Q', len(Q), 'len L', len(L))
-        # tf.print('QUERY TRAIN', Q[0], 'LABEL', L[0])
+        # print('QUERY', Q, 'LABEL', L)
         return Q, L
 
 class KGCEvalDataset(Dataset):
@@ -229,9 +228,6 @@ class KGCEvalDataset(Dataset):
             Q.append(q + c.tail)
             L.append(l + [0] * len(c.head))
             L.append(l + [0] * len(c.tail))
-        # tf.print('len Q', len(Q), 'len L', len(L))
-        # tf.print('QUERY VAL/TEST', Q[0], 'LABEL', L[0])
-        # tf.print('QUERY VAL/TEST', Q[1], 'LABEL', L[1])
         return Q, L
 
 
@@ -297,14 +293,11 @@ class KGCDataHandler():
         self.default_domain_name = 'default'
         # Global domain.
         self.domains: List[Domain] = []
-        # Domain(self.default_domain_name, self.constants)]
 
         if domain_file is not None:
             self.constant2domain, self.domain2constants = read_domains(
                 join(base_path, domain_file))
-            # print('self.constant2domain', len(self.constant2domain), self.constant2domain)
             constants_set = set(self.constants)
-            # print('constants_set', len(constants_set), constants_set)
             for c in self.constant2domain.keys():
                 assert c in constants_set, (
                     '%s constant missing in the ontology constraits' % c)
@@ -314,6 +307,7 @@ class KGCDataHandler():
         else:
             self.constant2domain = {}
             self.domain2constants = {}
+            self.domains = [Domain(self.default_domain_name, self.constants)]
 
         self.domain2constants[self.default_domain_name] = []
 
@@ -330,18 +324,14 @@ class KGCDataHandler():
         predicate2domains: Dict[str, List[Tuple[str]]] = Predicate2Domains(
             atoms=list(self.ground_facts_set),
             constant2domain=self.constant2domain)
-        # print('predicate2domains', predicate2domains, flush=True)
-        # Computes the domains for each positional input of a predicate, checking
-        # that the possible domains are univocally determined.
+        # Computes the domains for each positional input of a predicate,
+        # checking that the possible domains are univocally determined.
         for p,domain_list in predicate2domains.items():
-            # print('p', p, 'domain_list', domain_list, flush=True)
             assert len(domain_list) > 0
             num_possible_domains = len(domain_list)
-            arity = len(domain_list[0])
             assert num_possible_domains == 1, '%s %s'%(p, domain_list)
             domains = [name2domain[d] for d in domain_list[0]]
             self.predicates.append(Predicate(p, tuple(domains)))
-            # print('appended ',Predicate(p, tuple(domains)), flush=True)
 
         self.fol = FOL(self.domains, self.predicates, self.train_facts_set,
                        constant2domain_name=self.constant2domain)
@@ -429,15 +419,14 @@ class KGCDataHandler():
                 # Head corruptions
                 o_domain = constant2domain[o_idx]
                 n_constants = len(domain2constants[o_domain])
-                constants = domain2constants[o_domain] 
+                constants = domain2constants[o_domain]
                 while num_corruptions_head < num_negatives:
                     idx = random.randint(0, n_constants - 1)
                     entity = constants[idx]
                     a1 = (r_idx, s_idx, entity)
-                    # print('idx, entity, a1', idx, entity, a1, flush=True)
                     if a1 not in known_facts:
                         ret1.append(a1)
-                        num_corruptions_head += 1 
+                        num_corruptions_head += 1
 
             if corrupt_mode == 'HEAD_AND_TAIL' or corrupt_mode == 'TAIL':
                 # Tail corruptions
