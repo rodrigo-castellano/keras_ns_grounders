@@ -2,21 +2,17 @@ import sys
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\keras_ns_grounders')
 sys.path.append('/home/castellanoontiv/keras_ns_grounders')
 sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
-# get current directory
 import os
-directory = os.getcwd()
 import copy
-import datetime  
 import os
 from itertools import product
-from train_hparam import main
+from train import main
 import shutil as sh
 import keras_ns as ns
-from keras_ns.utils import MMapModelCheckpoint, NSParser
+from keras_ns.utils import NSParser
 import time
-import numpy as np
-import ast
-NUM_CPUS :int = 1  # set to a larger num to enable parallel processing
+import tracemalloc
+
 
 if __name__ == '__main__':
 
@@ -25,9 +21,9 @@ if __name__ == '__main__':
 
     epochs: int = 10
     assert epochs > 0
-    DATASET_NAME =  ['test_dataset'] #['kinship_family'] # ['pharmkg_supersmall','countries_s1','countries_s2','countries_s3'] # ['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME =  ['countries_s2'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     MODIFIED_DATASET = [False]
-    GROUNDER = ['backward_1'] #['backward_1','backward_prune_2','backward_2','backward_prune_3','backward_3',]  #['backward_1','backward_2','backward_3','domainbody','full']  
+    GROUNDER = ['backward_1']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['dcr'] #['no_reasoner','sbr','rnm','dcr','r2n']  
     RULE_MINER = ['amie','None'] 
@@ -41,15 +37,14 @@ if __name__ == '__main__':
     RR = [0.0]
     LR = [0.01]
     NUM_RULES = [1] 
-    HARD = [False]
     VALID_SIZE = [None]
 
 
     all_args = []
 
-    for dataset_name,modified_dataset, grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, h,  v, rr in product(
+    for dataset_name,modified_dataset, grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, v, rr in product(
             DATASET_NAME,MODIFIED_DATASET, GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
-            LR, NUM_RULES, HARD,  VALID_SIZE, RR ):  
+            LR, NUM_RULES, VALID_SIZE, RR ):  
     
 
         # Base parameters
@@ -117,7 +112,6 @@ if __name__ == '__main__':
         args.stop_gradient_on_kge_embeddings = False
         args.loss = "binary_crossentropy"
         args.kge_atom_embedding_size = e
-        args.hard_rules = h
         args.rule_weight = "number" # "embedding"
         args.semiring = "product"
         args.dropout_rate_embedder = dropout
@@ -125,28 +119,28 @@ if __name__ == '__main__':
         args.num_negatives = neg
         # DCR/R2N params
         args.signed = True
-        args.temperature = 3.0
-        args.use_gumbel = True
+        args.temperature = 0.0
         args.aggregation_type = "max"
-        args.filter_num_heads = 1
+        args.filter_num_heads = 3
         args.filter_activity_regularization = 0.0
-        args.epochs = epochs 
+        args.epochs = epochs
         args.weight_loss = w_loss
         args.batch_size = -1
         # Full batch only for explain.
-        args.eval_batch_size = -1
-        args.test_batch_size = -1
+        args.val_batch_size = -1
+        args.test_batch_size = 128
+        args.cdcr_use_positional_embeddings = False
+        args.cdcr_num_formulas = 3
         args.valid_size = v
-        args.valid_negatives = 10 # 10
-        args.valid_frequency = 1000
+        args.valid_negatives = 200
+        args.valid_frequency = 3
         args.engine_num_negatives = 0
-        args.engine_num_adaptive_constants = 0  # HERE BEFOREEEEEE THERE WERE 3
+        args.engine_num_adaptive_constants = 0
         args.constant_embedding_size = (
             2 * args.kge_atom_embedding_size
             if args.kge == "complex" or args.kge == "rotate"
             else args.kge_atom_embedding_size)
         args.kge_regularization = r
-        # args.resnet_rule = True
         args.resnet = True
         args.reasoner_depth = dp if nr > 0 else 0
         args.enabled_reasoner_depth = args.reasoner_depth
@@ -176,7 +170,7 @@ if __name__ == '__main__':
         logger = ns.utils.FileLogger(log_folder,log_folder_experiments,log_folder_run)
         if logger.exists_experiment(args.__dict__):
             print("Skipping training, it has been already done for", args.run_signature, "\n")
-            return
+            # return
 
         date = logger.get_date()
         # try:
@@ -187,25 +181,31 @@ if __name__ == '__main__':
             log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
             if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
                 print("Seed number ", seed, " in ", args.seed,'already done')
-                continue
+                # continue
 
             print("Seed number ", seed, " in ", args.seed)
             # write in the tmp file 'sep=;' to separate the columns with a semicolon
+            # tracemalloc.start()
+            # snapshot1 = tracemalloc.take_snapshot()
             with open(log_filename_tmp, 'w') as f:
                 f.write('sep=;\n')
             try:
-                best_val, _, valid_acc, test_acc, _, train_acc, training_info = main(base_path,None,None,log_filename_tmp,args)
+                train_acc,valid_acc, test_acc,training_info = main(base_path,None,None,log_filename_tmp,args)
             except Exception as e:
                 print('Error in experiment', args.run_signature, 'seed', seed, 'error:', e, '. Try again!')
-                best_val, _, valid_acc, test_acc, _, train_acc, training_info = main(base_path,None,None,log_filename_tmp,args)
-
+                train_acc,valid_acc, test_acc,training_info = main(base_path,None,None,log_filename_tmp,args)
+            # snapshot2 = tracemalloc.take_snapshot()
+            # tracemalloc.stop()
+            # top_stats = snapshot2.compare_to(snapshot1, 'lineno')
+            # print("[ Top 10 differences ]")
+            # for stat in top_stats[:20]:
+            #     print(stat)
             end = time.time()
             time_run = end - start
             # The reuslts of the training have been written to tmp. write them as an individual run
             logged_data = copy.deepcopy(args)
             logged_data.train_acc = train_acc
             logged_data.valid_acc = valid_acc
-            logged_data.best_val = best_val
             logged_data.test_acc = test_acc
             logged_data.metrics = list(training_info.keys())
             logged_data.time = time_run

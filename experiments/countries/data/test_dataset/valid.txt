@@ -1,0 +1,1 @@
+locatedInCR(spain,europe). 
