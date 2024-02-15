@@ -11,19 +11,19 @@ import shutil as sh
 import keras_ns as ns
 from keras_ns.utils import NSParser
 import time
-import tracemalloc
-
+import datetime
+import numpy as np
+import ast
+import tensorflow as tf
 
 if __name__ == '__main__':
 
     base_path :str = "data"
-    parallel :bool = False
-
     epochs: int = 10
     assert epochs > 0
     DATASET_NAME =  ['countries_s2'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
-    MODIFIED_DATASET = [False]
-    GROUNDER = ['backward_1']  #['backward_1','backward_2','backward_3','domainbody','full']  
+    MODIFIED_DATASET = [False,True]
+    GROUNDER = ['backward_1','backward_2']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['dcr'] #['no_reasoner','sbr','rnm','dcr','r2n']  
     RULE_MINER = ['amie','None'] 
@@ -42,9 +42,9 @@ if __name__ == '__main__':
 
     all_args = []
 
-    for dataset_name,modified_dataset, grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, v, rr in product(
+    for dataset_name,modified_dataset, grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, rr in product(
             DATASET_NAME,MODIFIED_DATASET, GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
-            LR, NUM_RULES, VALID_SIZE, RR ):  
+            LR, NUM_RULES, RR ):  
     
 
         # Base parameters
@@ -80,6 +80,7 @@ if __name__ == '__main__':
         args.rule_miner = rule_miner 
         args.modified_dataset = modified_dataset
         args.seed = seed
+        args.kge_atom_embedding_size = e
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
@@ -99,63 +100,60 @@ if __name__ == '__main__':
             # print('skipping, rules not existing', run_vars)
             continue
 
+        # Data params
         args.test_negatives = None  # all possible negatives
         if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family':
             args.test_negatives = 1000
-        args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
-        args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
-        args.learning_rate = lr
-        args.ragged = True
-        args.num_rules = 0 if model_name == "no_reasoner"  else nr
-        args.relation_entity_grounder_max_elements = 20
-        args.debug = False
-        args.stop_gradient_on_kge_embeddings = False
-        args.loss = "binary_crossentropy"
-        args.kge_atom_embedding_size = e
-        args.rule_weight = "number" # "embedding"
-        args.semiring = "product"
-        args.dropout_rate_embedder = dropout
-        args.format = "functional"
         args.num_negatives = neg
-        # DCR/R2N params
-        args.signed = True
-        args.temperature = 0.0
-        args.aggregation_type = "max"
-        args.filter_num_heads = 3
-        args.filter_activity_regularization = 0.0
-        args.epochs = epochs
-        args.weight_loss = w_loss
-        args.batch_size = -1
-        # Full batch only for explain.
-        args.val_batch_size = -1
-        args.test_batch_size = 128
-        args.cdcr_use_positional_embeddings = False
-        args.cdcr_num_formulas = 3
-        args.valid_size = v
         args.valid_negatives = 200
-        args.valid_frequency = 3
+        args.ragged = True
+        args.format = "functional"
         args.engine_num_negatives = 0
         args.engine_num_adaptive_constants = 0
         args.constant_embedding_size = (
             2 * args.kge_atom_embedding_size
             if args.kge == "complex" or args.kge == "rotate"
             else args.kge_atom_embedding_size)
+        # KGE params
+        args.dropout_rate_embedder = dropout
         args.kge_regularization = r
+        # Model params
+        args.learning_rate = lr
+        args.epochs = epochs
+        args.num_rules = 0 if model_name == "no_reasoner"  else nr
+        args.loss = "binary_crossentropy"
+        args.weight_loss = w_loss
+        args.batch_size = 256 # Full batch only for explain.
+        args.val_batch_size = 256
+        args.test_batch_size = 128
+        args.cdcr_use_positional_embeddings = False
+        args.cdcr_num_formulas = 3
+        args.valid_frequency = 3
         args.resnet = True
         args.reasoner_depth = dp if nr > 0 else 0
-        args.enabled_reasoner_depth = args.reasoner_depth
         args.reasoner_regularization_factor = rr
         args.reasoner_formula_hidden_embedding_size = args.kge_atom_embedding_size
         args.reasoner_dropout_rate = dropout
         args.reasoner_atom_embedding_size = args.kge_atom_embedding_size
-        args.create_flat_rule_list = True
+        # DCR/R2N params
+        args.signed = True
+        args.temperature = 0.0
+        args.aggregation_type = "max"
+        args.filter_num_heads = 3
+        args.filter_activity_regularization = 0.0
+        # Other
+        args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
+        args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
+        args.relation_entity_grounder_max_elements = 20
+        args.semiring = "product"
+
         run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, modified_dataset, seed, neg,e)
         args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner', 'modified_dataset', 'seed', 'neg','e']
         args.run_signature = '-'.join(f'{v}' for v in run_vars)     
         all_args.append(args)
 
 
- 
+
 
 
     def main_wrapper(args): 
@@ -170,23 +168,18 @@ if __name__ == '__main__':
         logger = ns.utils.FileLogger(log_folder,log_folder_experiments,log_folder_run)
         if logger.exists_experiment(args.__dict__):
             print("Skipping training, it has been already done for", args.run_signature, "\n")
-            # return
+            #return
 
         date = logger.get_date()
-        # try:
-        n_seeds = len(args.seed)
         for i,seed in enumerate(args.seed):
             start = time.time()
             args.seed_run_i = seed
             log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
             if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
                 print("Seed number ", seed, " in ", args.seed,'already done')
-                # continue
+                #continue
 
             print("Seed number ", seed, " in ", args.seed)
-            # write in the tmp file 'sep=;' to separate the columns with a semicolon
-            # tracemalloc.start()
-            # snapshot1 = tracemalloc.take_snapshot()
             with open(log_filename_tmp, 'w') as f:
                 f.write('sep=;\n')
             try:
@@ -194,12 +187,6 @@ if __name__ == '__main__':
             except Exception as e:
                 print('Error in experiment', args.run_signature, 'seed', seed, 'error:', e, '. Try again!')
                 train_acc,valid_acc, test_acc,training_info = main(base_path,None,None,log_filename_tmp,args)
-            # snapshot2 = tracemalloc.take_snapshot()
-            # tracemalloc.stop()
-            # top_stats = snapshot2.compare_to(snapshot1, 'lineno')
-            # print("[ Top 10 differences ]")
-            # for stat in top_stats[:20]:
-            #     print(stat)
             end = time.time()
             time_run = end - start
             # The reuslts of the training have been written to tmp. write them as an individual run
@@ -221,7 +208,8 @@ if __name__ == '__main__':
         # write the average results if we need to average over experiments
         if len(args.seed) > 1:
             info_metrics,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
-            logger.write_avg_results(args.__dict__,log_folder_experiments,info_metrics,metrics_name)
+            if info_metrics is not None:
+                logger.write_avg_results(args.__dict__,info_metrics,metrics_name)
 
                 
     for l,args in enumerate(all_args):
