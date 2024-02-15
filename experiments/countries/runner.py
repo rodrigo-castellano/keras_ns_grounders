@@ -21,9 +21,9 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 10
     assert epochs > 0
-    DATASET_NAME =  ['countries_s2'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
-    MODIFIED_DATASET = [False,True]
-    GROUNDER = ['backward_1','backward_2']  #['backward_1','backward_2','backward_3','domainbody','full']  
+    DATASET_NAME =  ['countries_s1'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    MODIFIED_DATASET = [False]# True]
+    GROUNDER = ['backward_1']#,'backward_2']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['dcr'] #['no_reasoner','sbr','rnm','dcr','r2n']  
     RULE_MINER = ['amie','None'] 
@@ -101,11 +101,11 @@ if __name__ == '__main__':
             continue
 
         # Data params
+        args.num_negatives = neg # 1
+        args.valid_negatives = 100 #200
         args.test_negatives = None  # all possible negatives
         if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family':
             args.test_negatives = 1000
-        args.num_negatives = neg
-        args.valid_negatives = 200
         args.ragged = True
         args.format = "functional"
         args.engine_num_negatives = 0
@@ -123,8 +123,8 @@ if __name__ == '__main__':
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
         args.loss = "binary_crossentropy"
         args.weight_loss = w_loss
-        args.batch_size = 256 # Full batch only for explain.
-        args.val_batch_size = 256
+        args.batch_size = -1 # Full batch only for explain.
+        args.val_batch_size = -1
         args.test_batch_size = 128
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
@@ -142,10 +142,10 @@ if __name__ == '__main__':
         args.filter_num_heads = 3
         args.filter_activity_regularization = 0.0
         # Other
-        args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
-        args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
-        args.relation_entity_grounder_max_elements = 20
-        args.semiring = "product"
+        # args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
+        # args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
+        # args.relation_entity_grounder_max_elements = 20
+        # args.semiring = "product"
 
         run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, modified_dataset, seed, neg,e)
         args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner', 'modified_dataset', 'seed', 'neg','e']
