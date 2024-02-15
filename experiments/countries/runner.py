@@ -16,16 +16,18 @@ import numpy as np
 import ast
 import tensorflow as tf
 
+
+
 if __name__ == '__main__':
 
     base_path :str = "data"
     epochs: int = 10
     assert epochs > 0
-    DATASET_NAME =  ['countries_s1'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME =  ['kinship_family'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     MODIFIED_DATASET = [False]# True]
-    GROUNDER = ['backward_1']#,'backward_2']  #['backward_1','backward_2','backward_3','domainbody','full']  
+    GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME =  ['dcr'] #['no_reasoner','sbr','rnm','dcr','r2n']  
+    MODEL_NAME =  ['no_reasoner','sbr','rnm','dcr','r2n']  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]

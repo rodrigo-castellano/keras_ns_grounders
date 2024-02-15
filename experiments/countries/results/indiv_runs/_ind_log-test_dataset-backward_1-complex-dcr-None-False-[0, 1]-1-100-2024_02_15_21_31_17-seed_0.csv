@@ -1,0 +1,17 @@
+sep=;
+0;0.09090909361839294;1.0;0.6934501528739929;0.4545454680919647;0.7281167507171631;0.09090909361839294;1.0;0.6934686899185181;0.4545454680919647;NA;NA;NA;NA;NA;NA;NA;NA;NA
+1;1.0;1.0;0.6910482048988342;1.0;0.7257124185562134;1.0;1.0;0.6910609602928162;1.0;NA;NA;NA;NA;NA;NA;NA;NA;NA
+2;1.0;1.0;0.6883898377418518;1.0;0.7230502367019653;1.0;1.0;0.6883898377418518;1.0;1.0;1.0;0.3450884222984314;0.9999999403953552;0.3797544240951538;1.0;1.0;0.3450884222984314;0.9999999403953552
+3;1.0;1.0;0.6849579811096191;1.0;0.7196246385574341;1.0;1.0;0.6849579811096191;1.0;NA;NA;NA;NA;NA;NA;NA;NA;NA
+4;1.0;1.0;0.6803937554359436;1.0;0.7150747776031494;1.0;1.0;0.6803937554359436;1.0;NA;NA;NA;NA;NA;NA;NA;NA;NA
+5;1.0;1.0;0.6743996143341064;1.0;0.7091102600097656;1.0;1.0;0.6743996143341064;1.0;1.0;1.0;0.33366522192955017;0.9999999403953552;0.36842429637908936;1.0;1.0;0.33366522192955017;0.9999999403953552
+6;1.0;1.0;0.6667104959487915;1.0;0.7014778852462769;1.0;1.0;0.6667104959487915;1.0;NA;NA;NA;NA;NA;NA;NA;NA;NA
+7;1.0;1.0;0.6570808291435242;1.0;0.6919502019882202;1.0;1.0;0.6570808291435242;1.0;NA;NA;NA;NA;NA;NA;NA;NA;NA
+8;1.0;1.0;0.6452736258506775;1.0;0.6803166270256042;1.0;1.0;0.6452736258506775;1.0;1.0;1.0;0.3124869763851166;0.9999999403953552;0.3477603495121002;1.0;1.0;0.3124869763851166;0.9999999403953552
+9;1.0;1.0;0.6310602426528931;1.0;0.6663861870765686;1.0;1.0;0.6310602426528931;1.0;NA;NA;NA;NA;NA;NA;NA;NA;NA
+epoch;loss;concept_loss;task_loss;concept_mrr;concept_hits@1@1;concept_hits@3@3;task_mrr;task_hits@1@1;task_hits@3@3
+
+All data;kge:complex;kge_atom_embedding_size:100;reasoning_depth:1;epochs:10;seed:[0, 1];learning_rate:0.01;dataset_name:test_dataset;grounder:backward_1;model_name:dcr;rule_miner:None;modified_dataset:False;facts_file:facts.txt;train_file:train.txt;valid_file:valid.txt;test_file:test.txt;domain_file:domain2constants.txt;rules_file:rules.txt;num_negatives:1;valid_negatives:100;test_negatives:None;ragged:True;format:functional;engine_num_negatives:0;engine_num_adaptive_constants:0;constant_embedding_size:200;dropout_rate_embedder:0.0;kge_regularization:0.0;num_rules:1;loss:binary_crossentropy;weight_loss:0.5;batch_size:-1;val_batch_size:-1;test_batch_size:128;cdcr_use_positional_embeddings:False;cdcr_num_formulas:3;valid_frequency:3;resnet:True;reasoner_depth:1;reasoner_regularization_factor:0.0;reasoner_formula_hidden_embedding_size:100;reasoner_dropout_rate:0.0;reasoner_atom_embedding_size:100;signed:True;temperature:0.0;aggregation_type:max;filter_num_heads:3;filter_activity_regularization:0.0;keys_signature:['dataset_name', 'grounder', 'kge', 'model_name', 'rule_miner', 'modified_dataset', 'seed', 'neg', 'e'];run_signature:test_dataset-backward_1-complex-dcr-None-False-[0, 1]-1-100;seed_run_i:0;train_acc:[0.6663861870765686, 0.6310602426528931, 0.6310602426528931, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0];valid_acc:[0.3477603495121002, 0.3124869763851166, 0.3124869763851166, 0.9999999403953552, 1.0, 1.0, 0.9999999403953552, 1.0, 1.0];test_acc:[0.5361289978027344, 0.5008556246757507, 0.5008556246757507, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0];metrics:['loss', 'concept_loss', 'task_loss', 'concept_mrr', 'concept_hits@1@1', 'concept_hits@3@3', 'task_mrr', 'task_hits@1@1', 'task_hits@3@3', 'val_loss', 'val_concept_loss', 'val_task_loss', 'val_concept_mrr', 'val_concept_hits@1@1', 'val_concept_hits@3@3', 'val_task_mrr', 'val_task_hits@1@1', 'val_task_hits@3@3'];time:10.164191722869873
+Signature;test_dataset-backward_1-complex-dcr-None-False-[0, 1]-1-100
+Seed;0
+Total_Seeds;[0, 1]
