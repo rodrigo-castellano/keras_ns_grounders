@@ -276,15 +276,15 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     callbacks = []
     callbacks.append(csv_logger)
-    # best_model_callback = MMapModelCheckpoint(model, 'val_task_mrr',frequency=args.valid_frequency)
-    # callbacks.append(best_model_callback)
+    best_model_callback = MMapModelCheckpoint(model, 'val_task_mrr',frequency=args.valid_frequency)
+    callbacks.append(best_model_callback)
     history = model.fit(data_gen_train,
               epochs=args.epochs,
               callbacks=callbacks,
               validation_data=data_gen_valid,
               validation_freq=args.valid_frequency
               )
-    # best_model_callback.restore_weights()
+    best_model_callback.restore_weights()
 
     if output_filename is not None:
         print('Saving model weights to', output_filename)
@@ -300,9 +300,9 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     print('Metrics,loss:',history.history.keys()) 
     print('\nResults',
-          '\nTrain', train_accuracy,
-          '\nVal', valid_accuracy,
-          '\nTest', test_accuracy,
+          '\nTrain', np.round(train_accuracy,3),
+          '\nVal', np.round(valid_accuracy,3),
+          '\nTest', np.round(test_accuracy,3),
           flush=True)
 
     if explain_enabled and enable_rules and (args.model_name == 'dcr' or args.model_name == 'cdcr'):
