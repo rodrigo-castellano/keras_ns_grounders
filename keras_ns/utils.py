@@ -521,6 +521,9 @@ class FileLogger():
                 f.write(combined_names)
             f.write('\n')
             f.write(combined_results)
+        # write also the results in signature.txt
+        with open(os.path.join(self.folder_experiments,'signature.txt'), 'a') as f:
+            f.write(args_dict['run_signature'])
 
 
 
