@@ -449,8 +449,9 @@ class FileLogger():
         run_files = [file for file in all_files if run_signature in file]
         # get the number of files
         n_files = len(run_files)
-        if n_files != len(seeds):
-            return
+        if n_files < len(seeds):
+            print('The number of files found in the experiments is different from the number of seeds!!!!!!!')
+            return None,None
         # for every file, read all the lines and if the line starts with 'all_data', take the values and add them to the array
         info = {}
         metrics_names = []
@@ -475,17 +476,17 @@ class FileLogger():
                                     info[key] = [np.round(info_exp[key],3)]
         #print a message also
         assert len(seeds_found) == len(seeds), 'The number of seeds found in the experiments is different from the number of seeds'
+        if len(seeds_found) != len(seeds):
+            print('The number of seeds found in the experiments is different from the number of seeds!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         # for every key in the dictionary, take the average and the std
         for key in info.keys():
             avg = np.mean(info[key],axis=0)
             std = np.std(info[key],axis=0)
             info[key] = [list(avg),list(std)]
-        print('info',info)
-        print('metrics_names',metrics_names)
         return info,metrics_names
 
-    def write_avg_results(self,args_dict,folder,info_metrics,metrics_name):
-        file_csv = os.path.join(folder,'experiments.csv')
+    def write_avg_results(self,args_dict,info_metrics,metrics_name):
+        file_csv = os.path.join(self.folder_experiments,'experiments.csv')
         if 'contrastive_loss' in metrics_name: # delete it from the list metrics_name
             metrics_name.remove('contrastive_loss')
         # join the args_dict with the info_metrics
@@ -501,7 +502,7 @@ class FileLogger():
         # Create a file for my results 
         print("Writing results to", file_csv)   
     
-        # Check if the file folder+'headers.txt' exists, otherwise create it
+        # Check if the file folder+'header.txt' exists, otherwise create it
         if not os.path.exists(os.path.join(self.folder_experiments,'header.txt')):
             with open(os.path.join(self.folder_experiments,'header.txt'), 'w') as f:
                 f.write('sep=;\n')
@@ -510,7 +511,7 @@ class FileLogger():
             with open(os.path.join(self.folder_experiments,'header.txt'), 'r') as f:
                 lines = f.readlines()
                 if combined_names not in lines:
-                    with open(folder+'headers.txt', 'a') as f:
+                    with open(os.path.join(self.folder_experiments,'header.txt'), 'a') as f:
                         f.write('\n')
                         f.write(combined_names)
         with open(file_csv, 'a') as f: 

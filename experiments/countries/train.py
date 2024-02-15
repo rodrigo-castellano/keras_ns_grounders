@@ -119,7 +119,6 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     # Params
     ragged = get_arg(args, 'ragged', None, True)
-    valid_frequency = get_arg(args, 'valid_frequency', None, True)
 
     # Data Loading
     data_handler = KGCDataHandler(
@@ -264,7 +263,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     metrics = [ns.utils.MRRMetric(),
                ns.utils.HitsMetric(1),
                ns.utils.HitsMetric(3),
-               ns.utils.HitsMetric(10)]
+            #    ns.utils.HitsMetric(10)
+               ]
     model.compile(optimizer=optimizer,
                     loss=loss,
                     loss_weights = {
@@ -276,15 +276,15 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     callbacks = []
     callbacks.append(csv_logger)
-    best_model_callback = MMapModelCheckpoint(model, 'val_task_mrr',
-                                              frequency=valid_frequency)
-    callbacks.append(best_model_callback)
+    # best_model_callback = MMapModelCheckpoint(model, 'val_task_mrr',frequency=args.valid_frequency)
+    # callbacks.append(best_model_callback)
     history = model.fit(data_gen_train,
               epochs=args.epochs,
               callbacks=callbacks,
               validation_data=data_gen_valid,
-              validation_freq=valid_frequency)
-    best_model_callback.restore_weights()
+              validation_freq=args.valid_frequency
+              )
+    # best_model_callback.restore_weights()
 
     if output_filename is not None:
         print('Saving model weights to', output_filename)
