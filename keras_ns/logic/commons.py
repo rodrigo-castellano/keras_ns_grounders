@@ -86,6 +86,7 @@ class Predicate():
     def __init__(self, name: str, domains: List[Domain]):
         self.name = name
         self.domains = domains
+        self.arity = len(domains)
 
     def __repr__(self):
         args_str = ','.join([d.name for d in self.domains])
@@ -292,7 +293,21 @@ class RuleGroundings():
             return False
         return True
 
-
+def Predicate2Domains(
+    atoms: List[Tuple[str, str, str]],
+    constant2domain: Dict[str, str]) -> Dict[str, List[Tuple[str]]]:
+    predictate2domains = {}
+    for a in atoms:
+        p = a[0]
+        for c in a[1:]:
+            assert c in constant2domain, 'Unknown domain for %s' % c
+        domain_tuple = tuple([constant2domain[c] for c in a[1:]])
+        if (p in predictate2domains and
+            domain_tuple not in predictate2domains[p]):
+            predictate2domains[p].append(domain_tuple)
+        else:
+            predictate2domains[p] = [domain_tuple]
+    return predictate2domains
 
 class FOL():
 
@@ -302,6 +317,7 @@ class FOL():
                  format: str='functional',
                  constant2domain_name: Dict[str, str]=None):
         self.predicates = predicates
+        self.name2predicate = {p.name:p for p in predicates}
         self.domains = domains
         self.name2domain = {d.name:d for d in self.domains}
         _facts = facts if facts is not None else []
@@ -320,3 +336,53 @@ class FOL():
     @property
     def facts(self):
         return self._facts
+
+    # Factory.
+    @staticmethod
+    def Build(facts: List[Tuple[str, str, str]],
+              constants: List[str]=None,
+              domain2constants: Dict[str, List[str]]=None):
+        if constants is None:
+            # Compute the constants from the facts.
+            constants = set()
+            for fact in facts:
+                for c in fact[1:]:
+                    constants.add(c)
+            constants = list(constants)
+
+        sorted_constants = sorted(constants)
+        default_domain_name = 'default'
+        domains: List[Domain] = []
+
+        if domain2constants is not None:
+            constant2domain = {}
+            for domain_name,d_constants in domain2constants.items():
+                for c in d_constants:
+                    constant2domain[c] = domain_name
+            constants_set = set(sorted_constants)
+            for c in constant2domain.keys():
+                assert c in constants_set, (
+                    '%s constant missing from the ontology' % c)
+                domains = [Domain(name, d_constants)
+                           for name,d_constants in domain2constants.items()]
+        else:
+            constant2domain = {c:default_domain_name for c in sorted_constants}
+            domain2constants = {default_domain_name:sorted_constants}
+            domains = [Domain(default_domain_name, sorted_constants)]
+
+        name2domain: Dict[str, Domain] = {d.name:d for d in domains}
+        predicate2domains: Dict[str, List[Tuple[str]]] = Predicate2Domains(
+            atoms=list(facts), constant2domain=constant2domain)
+
+        # Computes the domains for each positional input of a predicate, checking
+        # that the possible domains are univocally determined.
+        predicates = []
+        for p,domain_list in predicate2domains.items():
+            assert len(domain_list) > 0
+            num_possible_domains = len(domain_list)
+            arity = len(domain_list[0])
+            assert num_possible_domains == 1, '%s %s' % (p, domain_list)
+            p_domains = [name2domain[d] for d in domain_list[0]]
+            predicates.append(Predicate(p, tuple(p_domains)))
+
+        return FOL(domains, predicates, facts, constant2domain_name=constant2domain)
