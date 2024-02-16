@@ -8,6 +8,7 @@ import numpy as np
 from typing import Dict
 import datetime
 from tensorflow_ranking.python.utils import sort_by_scores, ragged_to_dense
+from keras_ns.logic.commons import Atom, Domain, Rule, RuleLoader
 
 
 def get_arg(args, name: str, default=None, assert_defined=False):
