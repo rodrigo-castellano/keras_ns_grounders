@@ -23,7 +23,7 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['kinship_family'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME =  ['countries_s2'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     MODIFIED_DATASET = [False]# True]
     GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
@@ -155,67 +155,18 @@ if __name__ == '__main__':
         all_args.append(args)
 
 
-
-
+     
 
     def main_wrapper(args): 
-
-        print("\nRun vars:", args.run_signature+'\n')
-        # LOGGER
-        # Results for every epoch will be saved in a folder 
+        date = str(datetime.datetime.now()).replace(":","-")
+        date = str(datetime.datetime.now()).replace(":","-").replace(" ","-")
+        date = date[:date.index('.')]
         log_folder :str = "results"
-        log_folder_run = os.path.join(log_folder,'indiv_runs')
-        log_folder_experiments = os.path.join(log_folder,'experiments')
-        # Check if the logger exists, if so, skip the experiment, otherwise run it. Logger exists if all the arguments inside each file in the folder are the same as the current args
-        logger = ns.utils.FileLogger(log_folder,log_folder_experiments,log_folder_run)
-        if logger.exists_experiment(args.__dict__):
-            print("Skipping training, it has been already done for", args.run_signature, "\n")
-            return
+        log_filename_tmp = os.path.join(log_folder, '_tmp_log_{}_{}.csv'.format(date,args.run_signature))
 
-        date = logger.get_date()
-        for i,seed in enumerate(args.seed):
-            start = time.time()
-            args.seed_run_i = seed
-            log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
-            if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
-                print("Seed number ", seed, " in ", args.seed,'already done')
-                continue
+        main(base_path,None,None,log_filename_tmp,args)
 
-            print("Seed number ", seed, " in ", args.seed)
-            with open(log_filename_tmp, 'w') as f:
-                f.write('sep=;\n')
-            try:
-                train_acc,valid_acc, test_acc,training_info = main(base_path,None,None,log_filename_tmp,args)
-            except Exception as e:
-                print('Error in experiment', args.run_signature, 'seed', seed, 'error:', e, '. Try again!')
-                train_acc,valid_acc, test_acc,training_info = main(base_path,None,None,log_filename_tmp,args)
-            end = time.time()
-            time_run = end - start
-            # The reuslts of the training have been written to tmp. write them as an individual run
-            logged_data = copy.deepcopy(args)
-            logged_data.train_acc = train_acc
-            logged_data.valid_acc = valid_acc
-            logged_data.test_acc = test_acc
-            logged_data.metrics = list(training_info.keys())
-            logged_data.time = time_run
 
-            # write the info about the results in the tmp file 
-            logger.log(logged_data.__dict__, log_filename_tmp)
-            # Rename to not be temporal anymore
-            log_filename_run = os.path.join(log_folder,'indiv_runs', '_ind_log-{}-{}-seed_{}.csv'.format(args.run_signature,date, i))
-            if os.path.exists(log_filename_run):
-                os.remove(log_filename_run)
-            os.rename(log_filename_tmp, log_filename_run)
-  
-        # write the average results if we need to average over experiments
-        if len(args.seed) > 1:
-            info_metrics,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
-            if info_metrics is not None:
-                logger.write_avg_results(args.__dict__,info_metrics,metrics_name)
-
-                
-    for l,args in enumerate(all_args):
-        print('Experiment',l,':',args.run_signature)
     for args in all_args:
         print('Experiment number ', all_args.index(args), ' out of ', len(all_args), ' experiments.')
         main_wrapper(args)
