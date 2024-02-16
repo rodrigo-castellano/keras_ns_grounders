@@ -28,7 +28,7 @@ from keras_ns.logic.commons import Atom, Domain, Rule, RuleLoader
 from keras_ns.nn.kge import KGEFactory
 from keras_ns.utils import MMapModelCheckpoint, KgeLossFactory, read_file_as_lines
 from keras_ns.grounding import  AtomIndex, get_atoms, get_atoms_on_groundings, backward_chaining_grounding_one_rule
- 
+from keras_ns.utils import get_arg
 
 def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
                           rule2proofs:Dict[str, List[Tuple[Tuple, List[Tuple]]]],
@@ -59,8 +59,6 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
                      fact_index._index.get(a, None) is not None)
                     for a in head_atoms]):                pruned_groundings.append(g)
         pruned_rule2groundings[rule_name] = set(pruned_groundings)
-    #for rn,g in pruned_rule2groundings.items():
-    #    print('ROUT', rn, g)
     return pruned_rule2groundings
 
 def Prune_groundings_per_level(groundings_per_level,
@@ -90,8 +88,6 @@ def Prune_groundings_per_level(groundings_per_level,
                     fact_index._index.get(a, None) is not None)
                 for a in head_atoms]):                pruned_groundings.append(g)
     pruned_groundings_per_level = set(pruned_groundings)
-    #for rn,g in pruned_groundings_per_level.items():
-    #    print('ROUT', rn, g)
     return pruned_groundings_per_level
 
 
@@ -104,13 +100,8 @@ def backward_chaining_grounding_one_rule_with_domains(
     rule: Rule,
     queries: List[Tuple],
     fact_index: AtomIndex,
-    # Max number of unknown facts to expand:
-    # 0 implements the known_body_grounder
-    # -1 or body_size implements pure unrestricted backward_chaining (
     max_unknown_fact_count: int,
     res: Set[Tuple[Tuple, Tuple]]=None,
-    # proof is a dictionary:
-    # atom -> list of atoms needed to be proved in the application of the rule.
     proofs: Dict[Tuple[Tuple, Tuple], List[Tuple[Tuple, Tuple]]]=None,step=-1, n_steps=-1) -> Union[
         None, Set[Tuple[Tuple, Tuple]]]:
     
@@ -217,24 +208,23 @@ def backward_chaining_grounding_one_rule_with_domains(
                         # print('\nALL ATOMS KNOWN', body_grounding) if cont< lim else None
                         possible_atoms = [atom for atom in body_grounding if atom[0] in pred_counts]
                         # print('POSSIBLE ATOMS', possible_atoms) if cont< lim else None
-                        if len(possible_atoms) == 0:
-                            break
-                        # for each predicate, go through all the atoms.if the predicate is the same as the most frequent predicate, remove it
-                        for pred in pred_counts_ordered:
-                            atom_found = False
-                            for atom in possible_atoms: 
-                                # print('     Predicate', pred, 'Atom', atom) if cont< lim else None
-                                # if the predicate is the same as the most frequent predicate, remove it
-                                if atom[0] == pred:
-                                    # print('     (fully found. ADDED', q, '->', tuple(body_grounding)) if cont< lim else None
-                                    # print('     Predicate', pred, 'Atom', atom,'. Remove') if cont< lim else None
-                                    if step not in atoms_remove:
-                                        atoms_remove[step] = set()
-                                    atoms_remove[step].add(atom)
-                                    atom_found = True
+                        if len(possible_atoms) != 0:
+                            # for each predicate, go through all the atoms.if the predicate is the same as the most frequent predicate, remove it
+                            for pred in pred_counts_ordered:
+                                atom_found = False
+                                for atom in possible_atoms: 
+                                    # print('     Predicate', pred, 'Atom', atom) if cont< lim else None
+                                    # if the predicate is the same as the most frequent predicate, remove it
+                                    if atom[0] == pred:
+                                        # print('     (fully found. ADDED', q, '->', tuple(body_grounding)) if cont< lim else None
+                                        # print('     Predicate', pred, 'Atom', atom,'. Remove') if cont< lim else None
+                                        if step not in atoms_remove:
+                                            atoms_remove[step] = set()
+                                        atoms_remove[step].add(atom)
+                                        atom_found = True
+                                        break
+                                if atom_found:
                                     break
-                            if atom_found:
-                                break
     # print('Number of groundings gone through', count_groundings) if cont< lim else None
     end = time.time()
     res.update(new_ground_atoms) if res is not None else None       
@@ -396,85 +386,104 @@ class BackwardChainingGrounder(Engine):
                    for rule_name,groundings in self.rule2groundings.items()}
         return ret,atoms_remove,groundings_per_level
 
-
+ 
  
 
+def find_atom_in_groundings(atom, groundings): 
+    # this, in case of pruning, checks if the atom is still present in the groundings
+    # Only on the body
+    for grounding in groundings:
+        for body_atom in grounding[1]:
+            if body_atom == atom:
+                return True
+    return False
+
+def find_cutoff(atoms_remove,data_handler):
+    # from atoms_remove, count how many times each predicate appears, and divide it by the total number of atoms in the facts with that predicate
+    pred_counts_to_remove = {}
+    for  atom in atoms_remove:
+        pred = atom[0]
+        if pred not in pred_counts_to_remove:
+            pred_counts_to_remove[pred] = 0
+        pred_counts_to_remove[pred] += 1
+
+    # calculate the number of times that predicate appears in train_known_facts_set
+    pred_counts_facts = {}
+    for atom in data_handler.train_known_facts_set:
+        pred = atom[0]
+        if pred not in pred_counts_facts:
+            pred_counts_facts[pred] = 0
+        pred_counts_facts[pred] += 1
+    
+    # calculate the % of atoms to remove out of the total number of atoms in the facts with that predicate
+    pred_cutoff = {}
+    max_atoms_allowed = {}
+    print('Threshold per predicate:')
+    for pred in pred_counts_to_remove:
+        max_atoms_allowed[pred] = int(0.2*pred_counts_facts[pred])
+        pred_cutoff[pred] = pred_counts_to_remove[pred] / pred_counts_facts[pred]
+        print('     ',pred, 'percentage of atoms with that predicate in facts: ', np.round(pred_cutoff[pred],3),'. ', pred_counts_to_remove[pred], '/', pred_counts_facts[pred])
+    return max_atoms_allowed,pred_cutoff,pred_counts_to_remove,pred_counts_facts
+
+def write_dataset(base_path, dest_path, args, data_handler, new_facts, new_train, ctes_facts, num_steps, prune_backward):
+    if not os.path.exists(dest_path): os.mkdir(dest_path)
+    facts_file = join(dest_path,'facts.txt')
+    train_file = join(dest_path,'train.txt')
+    test_file = join(dest_path,'test.txt')
+    valid_file = join(dest_path,'valid.txt')
+    domain_file = join(dest_path,'domain2constants.txt')
+
+    print('Writing the train file', train_file)
+    with open(train_file, 'w') as f:
+        for train_fact in new_train:
+            f.write('('+str(train_fact[0])+','+str(train_fact[1])+','+str(train_fact[2])+').\n')
+    if len(new_facts) > 0:
+        print('Writing the facts file', facts_file)
+        with open(facts_file, 'w') as f:
+            for fact in new_facts:
+                f.write('('+str(fact[0])+','+str(fact[1])+','+str(fact[2])+').\n')
+
+    # write a new test and valid files, skip the atoms with constants not present in ctes_facts
+    print('Writing the test file', test_file)
+    with open(test_file, 'w') as f:
+        for test_fact in data_handler.test_facts:
+            if test_fact[1] in ctes_facts and test_fact[2] in ctes_facts:
+                f.write('('+str(test_fact[0])+','+str(test_fact[1])+','+str(test_fact[2])+').\n')
+    print('Writing the valid file', valid_file)
+    with open(valid_file, 'w') as f:
+        for valid_fact in data_handler.valid_facts:
+            if valid_fact[1] in ctes_facts and valid_fact[2] in ctes_facts:
+                f.write('('+str(valid_fact[0])+','+str(valid_fact[1])+','+str(valid_fact[2])+').\n')
+    # Write the domain file 
+    domain_ctes = data_handler.domain2constants
+    # Now I have to selec from domain_ctes only the constants that are present in the new_facts
+    domain_ctes_write = {}
+    for k,ctes in domain_ctes.items():
+        domain_ctes_write[k] = [cte for cte in ctes if cte in ctes_facts]    
+
+    with open(domain_file, 'w') as f:
+        for k,ctes in domain_ctes_write.items():
+            if k!='default':
+                f.write(k+' ')
+                [f.write(cte+' ') for cte in ctes] 
+                f.write('\n')
+    
+        # copy the rules file
+        rules_file = join(base_path, args.dataset_name, args.rules_file)
+        dest_rules_file = join(dest_path,args.rules_file)   
+        shutil.copyfile(rules_file, dest_rules_file)
 
 
-def get_arg(args, name: str, default=None, assert_defined=False):
-    value = getattr(args, name) if hasattr(args, name) else default
-    if assert_defined:
-        assert value is not None, 'Arg %s is not defined: %s' % (name, str(args))
-    return value
-
-def read_rules(path,args):
-    print('Reading rules')
-    rules = []
-    with open(path, 'r') as f:
-        for line in f:
-            # if len(rules) < 11:
-            # split by :
-            line = line.split(':')
-            # first element is the name of the rule
-            rule_name = line[0]
-            # second element is the weight of the rule
-            rule_weight = float(line[1].replace(',', '.'))
-            # third element is the rule itself. Split by ->
-            rule = line[2].split('->')
-            # second element is the head of the rule
-            rule_head = rule[1]
-            # remove the \n from the head and the space
-            rule_head = [rule_head[1:-1]]
-            # first element is the body of the rule
-            rule_body = rule[0]
-            # split the body by ,
-            rule_body = rule_body.split(', ')
-            # for every body element, if the last character is a " ", remove it
-            for i in range(len(rule_body)):
-                if rule_body[i][-1] == " ":
-                    rule_body[i] = rule_body[i][:-1]
-            # Take the vars of the body and head and put them in a dictionary
-            all_vars = rule_body + rule_head
-            var_names = {}
-            for i in range(len(all_vars)):
-                # split the element of the body by (
-                open_parenthesis = all_vars[i].split('(')
-                # Split the second element by )
-                variables = open_parenthesis[1].split(')')
-                # divide the variables by ,
-                variables = variables[0].split(',')
-                # Create a dictionary with the variables as keys and the value "countries" as values
-                if 'nations' in args.dataset_name:
-                    for var in variables:
-                        var_names[var] = "countries"
-                elif ('countries' in args.dataset_name) or ('test_dataset' in args.dataset_name):
-                        var_names = {"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"}
-                elif 'kinship' in args.dataset_name:
-                    # var_names = {"x": "people", "y": "people", "z": "people","a": "people", "b": "people","c": "people","d": "people"}
-                    for var in variables:
-                        var_names[var] = "people"      
-                elif 'pharmkg' in args.dataset_name:
-                    # var_names = {"a": "cte", "b": "cte","c": "cte","d": "cte", "h": "cte", "g": "cte"}
-                    for var in variables:
-                        var_names[var] = "cte" 
-            rules.append(Rule(name=rule_name,var2domain=var_names,body=rule_body,head=rule_head))
-    print('number of rules: ', len(rules))
-    return rules
 
 def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
-    csv_logger = CSVLogger(log_filename, append=True, separator=';')
     print('\nARGS', args,'\n')
 
     seed = get_arg(args, 'seed_run_i', 0)
     random.seed(seed)
     np.random.seed(seed)
     tf.random.set_seed(seed)
-
-    # Params
-    ragged = get_arg(args, 'ragged', None, True)
-    valid_frequency = get_arg(args, 'valid_frequency', None, True)
-
+  
     # Data Loading
     data_handler = KGCDataHandler(
         dataset_name=args.dataset_name,
@@ -492,22 +501,12 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL',number_negatives=args.test_negatives)
     
-    fol = data_handler.fol
-    domain2adaptive_constants: Dict[str, List[str]] = None
-    num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
+    fol = data_handler.fol 
 
     enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
     if enable_rules: 
-        rules = read_rules(join(base_path, args.dataset_name, args.rules_file),args)
-        # For KGEs with no domains.
-        # domains = {Rule.default_domain(): fol.domains[0]}
+        rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
 
-        domain2adaptive_constants = {
-            d.name : ['__adaptive_%s_%d' % (d.name, i)
-                    for i in range(num_adaptive_constants)]
-            for d in fol.domains
-            }
-        
         if 'backward' in args.grounder:
             num_steps = int(args.grounder.split('_')[-1])
             prune_backward = True if ( ('backward' in args.grounder) and ('prune'in args.grounder) ) else False
@@ -519,27 +518,23 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     else:
         rules = []
         engine = None
-
-    serializer = ns.serializer.LogicSerializerFast(
-        predicates=fol.predicates, domains=fol.domains,
-        constant2domain_name=fol.constant2domain_name,
-        domain2adaptive_constants=domain2adaptive_constants)
-
+ 
   
     queries, labels = dataset_test[0:len(dataset_test)]
     facts = fol.facts
     rules = engine.rules
-    # for every rule, get the predicate in the head. Count the number of times each predicate appears
+
+
+    # For every rule, get the predicate in the head. Count the number of times each predicate appears
     pred_head_facts_counts = {}
     for rule in rules:
         pred = rule.head[0][0]
         if pred not in pred_head_facts_counts:
             pred_head_facts_counts[pred] = 0
         pred_head_facts_counts[pred] += 1
-    # print the number of times each predicate appears
+    # print the number of times each predicate appears in the head of the rules
     print('pred_head_facts_counts', pred_head_facts_counts)
     pred_counts = sorted(pred_head_facts_counts, key=pred_head_facts_counts.get, reverse=True)
-    print('PRED COUNTS ORDERED', pred_counts) 
 
     groundings,atoms_remove_per_level,groundings_per_level= engine.ground(pred_head_facts_counts,tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
 
@@ -553,14 +548,6 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         print('ERROR: num_steps should be 2 or 3 minimum')
     print()
 
-    def find_atom_in_groundings(atom, groundings): 
-        # this, in case of pruning, checks if the atom is still present in the groundings
-        # Only on the body
-        for grounding in groundings:
-            for body_atom in grounding[1]:
-                if body_atom == atom:
-                    return True
-        return False
 
     # Take only the levels we are interested in and append the atoms into final atoms. Filter the atoms that are not in the proved groundings.  
     atoms_remove = set()
@@ -579,46 +566,16 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
             # print('level',k,', number of atoms to remove taking into account prunning:',count)
             print()
 
-    # THE MEASURE TO DO THE CUTOFF IS, FOR EACH PREDICATE, THE % OF ATOMS OUT OF THE NUMBER OF ATOMS IN FACTS WITH THAT PREDICATE
-    # I COULD ALSO TAKE INTO ACCOUNT HOW MANY TIMES THEY ARE IN THE BODY OF A GROUNDING IN THE LAST LEVEL, i.e. if I do backward 3, level 3
+
+    # The measure to do the cutoff is, for each predicate, the % of atoms out of the number of atoms in facts with that predicate
+    # I could also take into account how many times they are in the body of a grounding in the last level, i.e. if I do backward 3, level 3
     # Ex: If in a grounding at level 2 I remove  LocIn(Italy,Europe), then it is a problem if that is later in another grounding at level 3, because if it is not in the body at level 3, it is not proved
-        
-    def find_cutoff(atoms_remove,data_handler):
-        # from atoms_remove, count how many times each predicate appears, and divide it by the total number of atoms in the facts with that predicate
-        pred_counts_to_remove = {}
-        for  atom in atoms_remove:
-            pred = atom[0]
-            if pred not in pred_counts_to_remove:
-                pred_counts_to_remove[pred] = 0
-            pred_counts_to_remove[pred] += 1
-
-        # calculate the number of times that predicate appears in train_known_facts_set
-        pred_counts_facts = {}
-        for atom in data_handler.train_known_facts_set:
-            pred = atom[0]
-            if pred not in pred_counts_facts:
-                pred_counts_facts[pred] = 0
-            pred_counts_facts[pred] += 1
-        
-        # calculate the % of atoms to remove out of the total number of atoms in the facts with that predicate
-        pred_cutoff = {}
-        max_atoms_allowed = {}
-        print('Threshold per predicate:')
-        for pred in pred_counts_to_remove:
-            max_atoms_allowed[pred] = int(0.2*pred_counts_facts[pred])
-            pred_cutoff[pred] = pred_counts_to_remove[pred] / pred_counts_facts[pred]
-            print('     ',pred, 'percentage of atoms with that predicate in facts: ', np.round(pred_cutoff[pred],3),'. ', pred_counts_to_remove[pred], '/', pred_counts_facts[pred])
-        return max_atoms_allowed,pred_cutoff,pred_counts_to_remove,pred_counts_facts
-
     max_atoms_allowed,pred_cutoff,pred_counts_to_remove,pred_counts_facts = find_cutoff(atoms_remove,data_handler)
 
     # from atoms_remove, check how many atoms are in the body of the grounding of the last level 
     atoms_problem = set()
     if num_steps-1 in groundings_per_level and len(groundings_per_level[num_steps-1])!=0 :
-        n_groundings_last_level = len(groundings_per_level[num_steps-1])  
-        print('n_groundings_last_level',n_groundings_last_level)
-        groundings_last_level = groundings_per_level[num_steps-1]
-        for grounding in groundings_last_level:
+        for grounding in groundings_per_level[num_steps-1]:
             for body_atom in grounding[1]:
                 if body_atom in atoms_remove:
                     print('atom', atom, 'is in the body of a grounding in the last level. Added to problematic atoms')
@@ -627,10 +584,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         print('No groundings in the last level')
 
 
-    # after that, I should check how many groundings for all the levels except the last one, have the atoms to remove in the body
-    # If it is more than 2, we are not going to the next level because we are not admitting the subsitution
-    # Therefore, for every level, for every final_atom, check how many groundings have that more than one final_atom in their body  
-    
+    # How many groundings for all the levels except the last one, have nmore than 1 atoms to remove in the body
+    # If it is more than 1, we are not going to the next level because we are not admitting the subsitution   
     for level,groundings_level_i in groundings_per_level.items():
         if level != num_steps-1:
             # print('level', level)
@@ -651,36 +606,21 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
                     atoms_problem.update(atoms_problematic)
                     print('grounding has more than 1 atom to removed in the body because of', atoms_problematic,'. Added to problematic atoms')
 
+
     print('problematic atoms:',atoms_problem)
     print('Number of atoms to remove:', len(atoms_remove))
     # Exclude problematic atoms from atoms_remove
     atoms_remove -= atoms_problem
-    # for atom in atoms_remove:
-    #     # for atom_problem in atoms_problem:
-    #     if atom in atoms_problem:
-    #         atoms_remove.remove(atom)  
-    #         # fix line above
-
-    #         print('atom ',atom, 'excluded because it is problematic')
     print('Number of atoms to remove after excluding porblematic:', len(atoms_remove)) 
 
 
-    # print('Number of atoms to remove:', len(atoms_remove))
+    # # Remove atoms randomly if there are more than the max allowed
     # for predicate,cutoff in max_atoms_allowed.items():
-    #     # first remove the atoms that are not problematic
-    #     for atom in atoms_remove:
+    #     # if there are still atoms to remove, do it randomly
+    #     if len(atoms_remove) > cutoff:
     #         if atom[0] == predicate:
-    #             if len(atoms_remove) > cutoff:
-    #                 if atom not in atoms_problem:
-    #                     atoms_remove.remove(atom)
-    # print('Number of atoms to remove after selected cutoff:', len(atoms_remove)) 
-
-    for predicate,cutoff in max_atoms_allowed.items():
-        # if there are still atoms to remove, do it randomly
-        if len(atoms_remove) > cutoff:
-            if atom[0] == predicate:
-                atoms_remove = random.sample(list(atoms_remove), cutoff)
-    print('Number of atoms to remove after random cutoff:', len(atoms_remove)) 
+    #             atoms_remove = random.sample(list(atoms_remove), cutoff)
+    # print('Number of atoms to remove after random cutoff:', len(atoms_remove)) 
 
 
     new_facts = set(data_handler.known_facts) - set(atoms_remove)
@@ -691,61 +631,11 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
             ctes_facts.update((a1,a2))
 
     if len(atoms_remove) > 0:
-
-        prune_str = 'p' if prune_backward else 'np'  
-        dest_path = join(base_path, args.dataset_name+'_reason_'+str(num_steps)+prune_str)
-        if not os.path.exists(dest_path): os.mkdir(dest_path)
-
-        output_file = join(dest_path,'info.txt')
-        facts_file = join(dest_path,'facts.txt')
-        train_file = join(dest_path,'train.txt')
-        test_file = join(dest_path,'test.txt')
-        valid_file = join(dest_path,'valid.txt')
-        domain_file = join(dest_path,'domain2constants.txt')
-
-        print('Writing the train file', train_file)
-        with open(train_file, 'w') as f:
-            for train_fact in new_train:
-                f.write('('+str(train_fact[0])+','+str(train_fact[1])+','+str(train_fact[2])+').\n')
-        if len(new_facts) > 0:
-            print('Writing the facts file', facts_file)
-            with open(facts_file, 'w') as f:
-                for fact in new_facts:
-                    f.write('('+str(fact[0])+','+str(fact[1])+','+str(fact[2])+').\n')
-
-        # write a new test and valid files, skip the atoms with constants not present in ctes_facts
-        print('Writing the test file', test_file)
-        with open(test_file, 'w') as f:
-            for test_fact in data_handler.test_facts:
-                if test_fact[1] in ctes_facts and test_fact[2] in ctes_facts:
-                    f.write('('+str(test_fact[0])+','+str(test_fact[1])+','+str(test_fact[2])+').\n')
-        print('Writing the valid file', valid_file)
-        with open(valid_file, 'w') as f:
-            for valid_fact in data_handler.valid_facts:
-                if valid_fact[1] in ctes_facts and valid_fact[2] in ctes_facts:
-                    f.write('('+str(valid_fact[0])+','+str(valid_fact[1])+','+str(valid_fact[2])+').\n')
-
-
-        # print all the constants in domain file   
-        domain_ctes = data_handler.domain2constants
-        # Now I have to selec from domain_ctes only the constants that are present in the new_facts
-        domain_ctes_write = {}
-        for k,ctes in domain_ctes.items():
-            domain_ctes_write[k] = [cte for cte in ctes if cte in ctes_facts]    
-
-        with open(domain_file, 'w') as f:
-            for k,ctes in domain_ctes_write.items():
-                if k!='default':
-                    f.write(k+' ')
-                    [f.write(cte+' ') for cte in ctes] 
-                    f.write('\n')
-    
-        # copy the rules file
-        rules_file = join(base_path, args.dataset_name, args.rules_file)
-        dest_rules_file = join(dest_path,args.rules_file)   
-        shutil.copyfile(rules_file, dest_rules_file)
+        dest_path = join(base_path, args.dataset_name+'_reason_'+str(num_steps))
+        write_dataset(base_path, dest_path, args, data_handler, new_facts, new_train, ctes_facts, num_steps, prune_backward)
 
         # Print all the info in a .txt file
+        output_file = join(dest_path,'info.txt')
         with open(output_file, 'w') as f:
             f.write('Pred_head_facts_counts: {}\n'.format(pred_head_facts_counts))
             for pred in pred_counts_to_remove:
