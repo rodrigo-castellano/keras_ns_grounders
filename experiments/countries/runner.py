@@ -23,7 +23,7 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['test_dataset'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME =  ['kinship_family'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
     MODIFIED_DATASET = [False]# True]
     GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
@@ -127,7 +127,7 @@ if __name__ == '__main__':
         args.weight_loss = w_loss
         args.batch_size = -1 # Full batch only for explain.
         args.val_batch_size = -1
-        args.test_batch_size = 128
+        args.test_batch_size = 512
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
         args.valid_frequency = 3
@@ -170,7 +170,7 @@ if __name__ == '__main__':
         logger = ns.utils.FileLogger(log_folder,log_folder_experiments,log_folder_run)
         if logger.exists_experiment(args.__dict__):
             print("Skipping training, it has been already done for", args.run_signature, "\n")
-            #return
+            return
 
         date = logger.get_date()
         for i,seed in enumerate(args.seed):
@@ -179,7 +179,7 @@ if __name__ == '__main__':
             log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
             if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
                 print("Seed number ", seed, " in ", args.seed,'already done')
-                #continue
+                continue
 
             print("Seed number ", seed, " in ", args.seed)
             with open(log_filename_tmp, 'w') as f:
