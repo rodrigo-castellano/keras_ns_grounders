@@ -509,7 +509,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
         if 'backward' in args.grounder:
             num_steps = int(args.grounder.split('_')[-1])
-            prune_backward = True if ( ('backward' in args.grounder) and ('prune'in args.grounder) ) else False
+            prune_backward = True  
             print('Using backward chaining with %d steps' % num_steps)
             engine = BackwardChainingGrounder(rules, facts=list(data_handler.train_known_facts_set),
                                                         domains={d.name:d for d in fol.domains},
