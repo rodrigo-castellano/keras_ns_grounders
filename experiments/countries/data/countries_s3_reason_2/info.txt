@@ -1,7 +1,38 @@
-Pred_head_facts_counts: {'locatedInCR': 3}
-locatedInCR, (Fraction) Atoms from facts to be deleted with this predicate: 0.225. 25/111
-Number of atoms removed: 22
+Number of atoms removed: 24
 Problematic atoms:
-{('locatedInCR', 'liechtenstein', 'europe')}
+{('locatedInCR', 'estonia', 'europe')}
+Number of times a predicate appears in the head of rules (in train facts): {'locatedInCR': 3}
+locatedInCR, (Fraction of) Atoms from facts to be deleted with this predicate: 0.225. 25/111
 Atoms removed:
-[('locatedInCR', 'panama', 'americas'), ('locatedInCR', 'nepal', 'asia'), ('locatedInCR', 'senegal', 'africa'), ('locatedInCR', 'namibia', 'africa'), ('locatedInCR', 'italy', 'europe'), ('locatedInCR', 'saint_martin', 'americas'), ('locatedInCR', 'mongolia', 'asia'), ('locatedInCR', 'paraguay', 'americas'), ('locatedInCR', 'estonia', 'europe'), ('locatedInCR', 'lesotho', 'africa'), ('locatedInCR', 'albania', 'europe'), ('locatedInCR', 'lebanon', 'asia'), ('locatedInCR', 'moldova', 'europe'), ('locatedInCR', 'guinea_bissau', 'africa'), ('locatedInCR', 'bhutan', 'asia'), ('locatedInCR', 'sint_maarten', 'americas'), ('locatedInCR', 'tunisia', 'africa'), ('locatedInCR', 'nigeria', 'africa'), ('locatedInCR', 'gambia', 'africa'), ('locatedInCR', 'brunei', 'asia'), ('locatedInCR', 'uruguay', 'americas'), ('locatedInCR', 'mauritania', 'africa')]
+('locatedInCR', 'macau', 'asia')
+('locatedInCR', 'mauritania', 'africa')
+('locatedInCR', 'panama', 'americas')
+('locatedInCR', 'moldova', 'europe')
+('locatedInCR', 'italy', 'europe')
+('locatedInCR', 'vietnam', 'asia')
+('locatedInCR', 'paraguay', 'americas')
+('locatedInCR', 'liechtenstein', 'europe')
+('locatedInCR', 'sint_maarten', 'americas')
+('locatedInCR', 'nepal', 'asia')
+('locatedInCR', 'mongolia', 'asia')
+('locatedInCR', 'tunisia', 'africa')
+('locatedInCR', 'senegal', 'africa')
+('locatedInCR', 'guinea_bissau', 'africa')
+('locatedInCR', 'saint_martin', 'americas')
+('locatedInCR', 'lebanon', 'asia')
+('locatedInCR', 'nigeria', 'africa')
+('locatedInCR', 'gambia', 'africa')
+('locatedInCR', 'brunei', 'asia')
+('locatedInCR', 'lesotho', 'africa')
+('locatedInCR', 'namibia', 'africa')
+('locatedInCR', 'uruguay', 'americas')
+('locatedInCR', 'bhutan', 'asia')
+('locatedInCR', 'albania', 'europe')
+Total number of unique groundings with original dataset:5755
+Number of groundings per level with original dataset:
+Level 0. Number of groundings: 5422
+Level 1. Number of groundings: 333
+Total number of unique groundings with new dataset:3319
+Number of groundings per level with new dataset:
+Level 0. Number of groundings: 3203
+Level 1. Number of groundings: 116

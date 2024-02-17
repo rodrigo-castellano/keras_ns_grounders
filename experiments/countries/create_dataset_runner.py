@@ -6,7 +6,7 @@ import os
 import copy
 import os
 from itertools import product
-from train import main
+from create_dataset_train import main
 import shutil as sh
 import keras_ns as ns
 from keras_ns.utils import NSParser
@@ -23,11 +23,11 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['countries_s2'] #['kinship_family'] #['pharmkg_small','kinship_family'] 
+    DATASET_NAME =  ['kinship_family','pharmkg_small','pharmkg_full']  #['countries_s2'] 
     MODIFIED_DATASET = [False]# True]
-    GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
-    KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME =  ['no_reasoner','sbr','rnm','dcr','r2n']  
+    GROUNDER = ['backward_2','backward_3']    
+    KGE = ['complex']   
+    MODEL_NAME =  ['sbr',]  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
