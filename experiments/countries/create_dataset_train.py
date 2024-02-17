@@ -398,7 +398,7 @@ def find_atom_in_groundings(atom, groundings):
                 return True
     return False
 
-def find_cutoff(atoms_remove,data_handler):
+def find_cutoff(atoms_remove,data_handler,threshold=0.4):
     # from atoms_remove, count how many times each predicate appears, and divide it by the total number of atoms in the facts with that predicate
     pred_counts_to_remove = {}
     for  atom in atoms_remove:
@@ -420,7 +420,7 @@ def find_cutoff(atoms_remove,data_handler):
     max_atoms_allowed = {}
     print('Threshold per predicate:')
     for pred in pred_counts_to_remove:
-        max_atoms_allowed[pred] = int(0.2*pred_counts_facts[pred])
+        max_atoms_allowed[pred] = int(threshold*pred_counts_facts[pred])
         pred_cutoff[pred] = pred_counts_to_remove[pred] / pred_counts_facts[pred]
         print('     ',pred, 'percentage of atoms with that predicate in facts: ', np.round(pred_cutoff[pred],3),'. ', pred_counts_to_remove[pred], '/', pred_counts_facts[pred])
     return max_atoms_allowed,pred_cutoff,pred_counts_to_remove,pred_counts_facts
@@ -564,7 +564,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     # The measure to do the cutoff is, for each predicate, the % of atoms out of the number of atoms in facts with that predicate
     # I could also take into account how many times they are in the body of a grounding in the last level, i.e. if I do backward 3, level 3
     # Ex: If in a grounding at level 2 I remove  LocIn(Italy,Europe), then it is a problem if that is later in another grounding at level 3, because if it is not in the body at level 3, it is not proved
-    max_atoms_allowed,pred_cutoff,pred_counts_to_remove,pred_counts_facts = find_cutoff(atoms_remove,data_handler)
+    max_atoms_allowed,pred_cutoff,pred_counts_to_remove,pred_counts_facts = find_cutoff(atoms_remove,data_handler,threshold=0.4)
 
     # from atoms_remove, check how many atoms are in the body of the grounding of the last level 
     atoms_problem = set()
