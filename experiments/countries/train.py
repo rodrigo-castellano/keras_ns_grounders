@@ -137,6 +137,30 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         constant2domain_name=fol.constant2domain_name,
         domain2adaptive_constants=domain2adaptive_constants)
 
+    # Preparing data as generators for model fit
+    print('Generating train data')
+    start = time.time()
+    data_gen_train = ns.dataset.DataGenerator(
+        dataset_train, fol, serializer, engine,
+        batch_size=args.batch_size, ragged=ragged)
+    end = time.time()
+    print("Time to create data generator train: ", np.round(end - start,2))
+    # print('batch 0 from data_gen_train', data_gen_train[0][0])
+    # print('batch 0 from data_gen_train',data_gen_train.__getitem__(0))
+    start = time.time()
+    data_gen_valid = ns.dataset.DataGenerator(
+       dataset_valid, fol, serializer, engine,
+       batch_size=args.val_batch_size, ragged=ragged)
+    end = time.time()
+    print("Time to create data generator valid: ",  np.round(end - start,2))
+    start = time.time()
+    data_gen_test = ns.dataset.DataGenerator(
+        dataset_test, fol, serializer, engine,
+        batch_size=args.test_batch_size, ragged=ragged)
+    end = time.time()
+    print("Time to create data generator test: ",  np.round(end - start,2))
+
+
     # KGE
     kge_embedder = KGEFactory(args.kge)
     assert kge_embedder is not None
@@ -168,35 +192,11 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         cdcr_num_formulas=get_arg(args, 'cdcr_num_formulas', 3),
     )
 
-    # Preparing data as generators for model fit
-    print('Generating train data')
-    start = time.time()
-    data_gen_train = ns.dataset.DataGenerator(
-        dataset_train, fol, serializer, engine,
-        batch_size=args.batch_size, ragged=ragged)
-    end = time.time()
-    print("Time to create data generator train: ", np.round(end - start,2))
-    # print('batch 0 from data_gen_train', data_gen_train[0][0])
-    # print('batch 0 from data_gen_train',data_gen_train.__getitem__(0))
-    start = time.time()
-    data_gen_valid = ns.dataset.DataGenerator(
-       dataset_valid, fol, serializer, engine,
-       batch_size=args.val_batch_size, ragged=ragged)
-    end = time.time()
-    print("Time to create data generator valid: ",  np.round(end - start,2))
-    start = time.time()
-    data_gen_test = ns.dataset.DataGenerator(
-        dataset_test, fol, serializer, engine,
-        batch_size=args.test_batch_size, ragged=ragged)
-    end = time.time()
-    print("Time to create data generator test: ",  np.round(end - start,2))
 
     #Loss
     loss_name = get_arg(args, 'loss', 'binary_crossentropy')
     loss = KgeLossFactory(loss_name)
-
     optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
-
     metrics = [ns.utils.MRRMetric(),
                ns.utils.HitsMetric(1),
                ns.utils.HitsMetric(3),

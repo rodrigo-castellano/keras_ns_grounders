@@ -433,27 +433,23 @@ def write_dataset(base_path, dest_path, args, data_handler, new_facts, new_train
     valid_file = join(dest_path,'valid.txt')
     domain_file = join(dest_path,'domain2constants.txt')
 
-    print('Writing the train file', train_file)
     with open(train_file, 'w') as f:
         for train_fact in new_train:
-            f.write('('+str(train_fact[0])+','+str(train_fact[1])+','+str(train_fact[2])+').\n')
+            f.write(str(train_fact[0])+'('+str(train_fact[1])+','+str(train_fact[2])+').\n')
     if len(new_facts) > 0:
-        print('Writing the facts file', facts_file)
         with open(facts_file, 'w') as f:
             for fact in new_facts:
-                f.write('('+str(fact[0])+','+str(fact[1])+','+str(fact[2])+').\n')
+                f.write(str(fact[0])+'('+str(fact[1])+','+str(fact[2])+').\n')
 
     # write a new test and valid files, skip the atoms with constants not present in ctes_facts
-    print('Writing the test file', test_file)
     with open(test_file, 'w') as f:
         for test_fact in data_handler.test_facts:
             if test_fact[1] in ctes_facts and test_fact[2] in ctes_facts:
-                f.write('('+str(test_fact[0])+','+str(test_fact[1])+','+str(test_fact[2])+').\n')
-    print('Writing the valid file', valid_file)
+                f.write(str(test_fact[0])+'('+str(test_fact[1])+','+str(test_fact[2])+').\n')
     with open(valid_file, 'w') as f:
         for valid_fact in data_handler.valid_facts:
             if valid_fact[1] in ctes_facts and valid_fact[2] in ctes_facts:
-                f.write('('+str(valid_fact[0])+','+str(valid_fact[1])+','+str(valid_fact[2])+').\n')
+                f.write(str(valid_fact[0])+'('+str(valid_fact[1])+','+str(valid_fact[2])+').\n')
     # Write the domain file 
     domain_ctes = data_handler.domain2constants
     # Now I have to selec from domain_ctes only the constants that are present in the new_facts
@@ -495,10 +491,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         test_file= args.test_file,
         fact_file= args.facts_file)
     
-    dataset_train = data_handler.get_dataset(
-        split="train",
-        number_negatives=args.num_negatives)
-
+    dataset_train = data_handler.get_dataset(split="train",number_negatives=args.num_negatives)
     dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL',number_negatives=args.test_negatives)
     
     fol = data_handler.fol 
@@ -508,6 +501,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
 
         if 'backward' in args.grounder:
+            print('Using backward chaining with %d steps' % args.reasoner_depth)
             num_steps = int(args.grounder.split('_')[-1])
             prune_backward = True  
             print('Using backward chaining with %d steps' % num_steps)
@@ -519,7 +513,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         rules = []
         engine = None
  
-  
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! SHOULDNT IT BE TRAIN???????????????????
     queries, labels = dataset_test[0:len(dataset_test)]
     facts = fol.facts
     rules = engine.rules
@@ -637,12 +631,77 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         # Print all the info in a .txt file
         output_file = join(dest_path,'info.txt')
         with open(output_file, 'w') as f:
-            f.write('Pred_head_facts_counts: {}\n'.format(pred_head_facts_counts))
-            for pred in pred_counts_to_remove:
-                f.write(str(pred)+ ', (Fraction) Atoms from facts to be deleted with this predicate: '+ str(np.round(pred_cutoff[pred],3))+'. '+ str(pred_counts_to_remove[pred])+ '/'+ str(pred_counts_facts[pred])+'\n')
-                # rewrite the line above  
             f.write('Number of atoms removed: {}\n'.format(len(atoms_remove))) 
             f.write('Problematic atoms:\n'+str(atoms_problem)) 
-            f.write('\nAtoms removed:\n'+str(atoms_remove)) 
+            f.write('\nNumber of times a predicate appears in the head of rules (in train facts): {}\n'.format(pred_head_facts_counts))
 
-        
+            for pred in pred_counts_to_remove:
+                f.write(str(pred)+ ', (Fraction of) Atoms from facts to be deleted with this predicate: '+ str(np.round(pred_cutoff[pred],3))+'. '+ str(pred_counts_to_remove[pred])+ '/'+ str(pred_counts_facts[pred])+'\n')
+
+            f.write('Atoms removed:\n') 
+            for atom in atoms_remove:
+                f.write(str(atom)+'\n')
+            
+            total_groundings = set()
+            for level,groundings_level_i in groundings_per_level.items():
+                for grounding in groundings_level_i:
+                    total_groundings.add(grounding)
+            f.write('Total number of unique groundings with original dataset:'+ str(len(total_groundings)))
+
+            f.write('\nNumber of groundings per level with original dataset:\n')
+            for level in range(num_steps):
+                f.write('Level {}. Number of groundings: {}\n'.format(level,len(groundings_per_level[level])) if level in groundings_per_level else 'level {}. No groundings in this level\n'.format(level))
+
+    # something interesting to do is to check, with the new dataset, how many new groudnings we have in the last level
+    
+
+    # Data Loading
+    data_handler = KGCDataHandler(
+        dataset_name=args.dataset_name+'_reason_'+str(num_steps),
+        base_path=base_path,
+        format=get_arg(args, 'format', None, True),
+        domain_file= args.domain_file,
+        train_file= args.train_file,
+        valid_file=args.valid_file,
+        test_file= args.test_file,
+        fact_file= args.facts_file)
+    
+    dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL',number_negatives=args.test_negatives)
+    fol = data_handler.fol 
+
+    rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
+
+    num_steps = int(args.grounder.split('_')[-1])
+    prune_backward = True  
+    engine = BackwardChainingGrounder(rules, facts=list(data_handler.train_known_facts_set),
+                                                    domains={d.name:d for d in fol.domains},
+                                                    num_steps=num_steps,prune_incomplete_proofs=prune_backward)
+ 
+ 
+    queries, labels = dataset_test[0:len(dataset_test)]
+    facts = fol.facts
+    rules = engine.rules
+
+    # For every rule, get the predicate in the head. Count the number of times each predicate appears
+    pred_head_facts_counts = {}
+    for rule in rules:
+        pred = rule.head[0][0]
+        if pred not in pred_head_facts_counts:
+            pred_head_facts_counts[pred] = 0
+        pred_head_facts_counts[pred] += 1
+
+    groundings,atoms_remove_per_level,groundings_per_level= engine.ground(pred_head_facts_counts,tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
+
+
+    # in the output file, print the number of groundings in every level
+    with open(output_file, 'a') as f:
+
+        total_groundings = set()
+        for level,groundings_level_i in groundings_per_level.items():
+            for grounding in groundings_level_i:
+                total_groundings.add(grounding)
+        f.write('Total number of unique groundings with new dataset:'+ str(len(total_groundings)))
+
+        f.write('\nNumber of groundings per level with new dataset:\n')
+        for level in range(num_steps):
+            f.write('Level {}. Number of groundings: {}\n'.format(level,len(groundings_per_level[level])) if level in groundings_per_level else 'level {}. No groundings in this level\n'.format(level))

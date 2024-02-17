@@ -1,7 +1,0 @@
-Pred_head_facts_counts: {'locatedInCR': 3}
-locatedInCR, (Fraction) Atoms from facts to be deleted with this predicate: 0.252. 28/111
-Number of atoms removed: 22
-Problematic atoms:
-{('locatedInCR', 'liechtenstein', 'europe')}
-Atoms removed:
-[('locatedInCR', 'sint_maarten', 'americas'), ('locatedInCR', 'tunisia', 'africa'), ('locatedInCR', 'gambia', 'africa'), ('locatedInCR', 'equatorial_guinea', 'africa'), ('locatedInCR', 'brunei', 'asia'), ('locatedInCR', 'macau', 'asia'), ('locatedInCR', 'nepal', 'asia'), ('locatedInCR', 'mongolia', 'asia'), ('locatedInCR', 'uruguay', 'americas'), ('locatedInCR', 'san_marino', 'europe'), ('locatedInCR', 'paraguay', 'americas'), ('locatedInCR', 'bhutan', 'asia'), ('locatedInCR', 'albania', 'europe'), ('locatedInCR', 'senegal', 'africa'), ('locatedInCR', 'vatican_city', 'europe'), ('locatedInCR', 'nigeria', 'africa'), ('locatedInCR', 'moldova', 'europe'), ('locatedInCR', 'italy', 'europe'), ('locatedInCR', 'mauritania', 'africa'), ('locatedInCR', 'estonia', 'europe'), ('locatedInCR', 'lesotho', 'africa'), ('locatedInCR', 'vietnam', 'asia')]
