@@ -23,8 +23,8 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['pharmkg_small','pharmkg_full'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
-    MODIFIED_DATASET = [False]# True]
+    DATASET_NAME =  ['kinship_family_reason_2','pharmkg_small_reason_2','kinship_family_reason_3',] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    MODIFIED_DATASET = [True]
     GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['no_reasoner','sbr','rnm','dcr','r2n']  
@@ -54,16 +54,17 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
 
-        if modified_dataset:
+        if 'reason' in dataset_name:
             if 'backward' not in grounder:
                 continue
             else:
-                level = grounder[-1]
-                dataset_name = dataset_name+'_reason_'+level
+                backward_level = backward_level[-1]
+                dataset_level = grounder[-1]
+                if int(backward_level) > int(dataset_level):
+                    continue
+                dataset_name = dataset_name+'_reason_'+ dataset_level
         if not os.path.exists(os.path.join(base_path, dataset_name)):
             continue
-
-
 
         if 'countries' in dataset_name:
             # task is the last two letters of the dataset name
