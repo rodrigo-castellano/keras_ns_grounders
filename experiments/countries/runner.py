@@ -58,8 +58,8 @@ if __name__ == '__main__':
             if 'backward' not in grounder:
                 continue
             else:
-                backward_level = backward_level[-1]
-                dataset_level = grounder[-1]
+                backward_level = grounder[-1]
+                dataset_level = dataset_name[-1]
                 if int(backward_level) > int(dataset_level):
                     continue
                 dataset_name = dataset_name+'_reason_'+ dataset_level
