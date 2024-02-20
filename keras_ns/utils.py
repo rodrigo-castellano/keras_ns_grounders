@@ -513,9 +513,11 @@ class FileLogger():
         # get the files that contain the run_signature
         run_files = [file for file in all_files if run_signature in file]
         # get the number of files
+        print('run_signature',run_signature)
+        # print('all files',all_files)
         n_files = len(run_files)
         if n_files < len(seeds):
-            print('The number of files found in the experiments is different from the number of seeds!!!!!!!')
+            print('The number of files',n_files,' found in the experiments is different from the number of seeds',seeds,'!!!!!!!')
             return None,None
         # for every file, read all the lines and if the line starts with 'all_data', take the values and add them to the array
         info = {}
