@@ -33,73 +33,10 @@ from keras.callbacks import CSVLogger
 from keras_ns.logic.commons import Atom, Domain, Rule, RuleLoader
 from keras_ns.nn.kge import KGEFactory
 from keras_ns.utils import MMapModelCheckpoint, KgeLossFactory, read_file_as_lines
+from keras_ns.utils import get_arg
 
 explain_enabled: bool = False
-
-def get_arg(args, name: str, default=None, assert_defined=False):
-    value = getattr(args, name) if hasattr(args, name) else default
-    if assert_defined:
-        assert value is not None, 'Arg %s is not defined: %s' % (name, str(args))
-    return value
-
-def read_rules(path,args):
-    print('Reading rules')
-    rules = []
-    with open(path, 'r') as f:
-        for line in f:
-            # if len(rules) < 11:
-            # split by :
-            line = line.split(':')
-            # first element is the name of the rule
-            rule_name = line[0]
-            # second element is the weight of the rule
-            rule_weight = float(line[1].replace(',', '.'))
-            # third element is the rule itself. Split by ->
-            rule = line[2].split('->')
-            # second element is the head of the rule
-            rule_head = rule[1]
-            # remove the \n from the head and the space
-            rule_head = [rule_head[1:-1]]
-            # first element is the body of the rule
-            rule_body = rule[0]
-            # split the body by ,
-            rule_body = rule_body.split(', ')
-            # for every body element, if the last character is a " ", remove it
-            for i in range(len(rule_body)):
-                if rule_body[i][-1] == " ":
-                    rule_body[i] = rule_body[i][:-1]
-            # Take the vars of the body and head and put them in a dictionary
-            all_vars = rule_body + rule_head
-            var_names = {}
-            for i in range(len(all_vars)):
-                # split the element of the body by (
-                open_parenthesis = all_vars[i].split('(')
-                # Split the second element by )
-                variables = open_parenthesis[1].split(')')
-                # divide the variables by ,
-                variables = variables[0].split(',')
-                # Create a dictionary with the variables as keys and the value "countries" as values
-                if 'nations' in args.dataset_name:
-                    for var in variables:
-                        var_names[var] = "countries"
-                elif ('countries' in args.dataset_name) or ('test_dataset' in args.dataset_name):
-                        var_names = {"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"}
-                elif 'kinship' in args.dataset_name:
-                    # var_names = {"x": "people", "y": "people", "z": "people","a": "people", "b": "people","c": "people","d": "people"}
-                    for var in variables:
-                        var_names[var] = "people"      
-                elif 'pharmkg' in args.dataset_name:
-                    # var_names = {"a": "cte", "b": "cte","c": "cte","d": "cte", "h": "cte", "g": "cte"}
-                    for var in variables:
-                        var_names[var] = "cte" 
-            # print all the info
-            # if len(rules) < 1001:
-            #     print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
-            #         'rule body: ', rule_body, 'var_names: ', var_names)
-            rules.append(Rule(name=rule_name,var2domain=var_names,body=rule_body,head=rule_head))
-    print('number of rules: ', len(rules))
-    return rules
-
+ 
 def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     # csv_logger = ns.utils.CustomCallback(log_filename)
@@ -154,7 +91,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     ### defining rules and grounding engine
     enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
     if enable_rules: 
-        rules = read_rules(join(base_path, args.dataset_name, args.rules_file),args)
+        rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
         # For KGEs with no domains.
         # domains = {Rule.default_domain(): fol.domains[0]}
 
@@ -200,6 +137,30 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         constant2domain_name=fol.constant2domain_name,
         domain2adaptive_constants=domain2adaptive_constants)
 
+    # Preparing data as generators for model fit
+    print('Generating train data')
+    start = time.time()
+    data_gen_train = ns.dataset.DataGenerator(
+        dataset_train, fol, serializer, engine,
+        batch_size=args.batch_size, ragged=ragged)
+    end = time.time()
+    print("Time to create data generator train: ", np.round(end - start,2))
+    # print('batch 0 from data_gen_train', data_gen_train[0][0])
+    # print('batch 0 from data_gen_train',data_gen_train.__getitem__(0))
+    start = time.time()
+    data_gen_valid = ns.dataset.DataGenerator(
+       dataset_valid, fol, serializer, engine,
+       batch_size=args.val_batch_size, ragged=ragged)
+    end = time.time()
+    print("Time to create data generator valid: ",  np.round(end - start,2))
+    start = time.time()
+    data_gen_test = ns.dataset.DataGenerator(
+        dataset_test, fol, serializer, engine,
+        batch_size=args.test_batch_size, ragged=ragged)
+    end = time.time()
+    print("Time to create data generator test: ",  np.round(end - start,2))
+
+
     # KGE
     kge_embedder = KGEFactory(args.kge)
     assert kge_embedder is not None
@@ -231,35 +192,11 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         cdcr_num_formulas=get_arg(args, 'cdcr_num_formulas', 3),
     )
 
-    # Preparing data as generators for model fit
-    print('Generating train data')
-    start = time.time()
-    data_gen_train = ns.dataset.DataGenerator(
-        dataset_train, fol, serializer, engine,
-        batch_size=args.batch_size, ragged=ragged)
-    end = time.time()
-    print("Time to create data generator train: ", np.round(end - start,2))
-    # print('batch 0 from data_gen_train', data_gen_train[0][0])
-    # print('batch 0 from data_gen_train',data_gen_train.__getitem__(0))
-    start = time.time()
-    data_gen_valid = ns.dataset.DataGenerator(
-       dataset_valid, fol, serializer, engine,
-       batch_size=args.val_batch_size, ragged=ragged)
-    end = time.time()
-    print("Time to create data generator valid: ",  np.round(end - start,2))
-    start = time.time()
-    data_gen_test = ns.dataset.DataGenerator(
-        dataset_test, fol, serializer, engine,
-        batch_size=args.test_batch_size, ragged=ragged)
-    end = time.time()
-    print("Time to create data generator test: ",  np.round(end - start,2))
 
     #Loss
     loss_name = get_arg(args, 'loss', 'binary_crossentropy')
     loss = KgeLossFactory(loss_name)
-
     optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
-
     metrics = [ns.utils.MRRMetric(),
                ns.utils.HitsMetric(1),
                ns.utils.HitsMetric(3),

@@ -1,3 +1,4 @@
+tensorflow < 11
 numpy
 scipy
 scikit-learn
