@@ -15,16 +15,17 @@ import datetime
 import numpy as np
 import ast
 import tensorflow as tf
+import argparse
 
 
 
 if __name__ == '__main__':
 
+
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['kinship_family'] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
-    MODIFIED_DATASET = [False]# True]
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
     GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['no_reasoner','sbr','rnm','dcr','r2n']  
@@ -41,38 +42,51 @@ if __name__ == '__main__':
     NUM_RULES = [1] 
     VALID_SIZE = [None]
 
+    parser = argparse.ArgumentParser(description='Description of your script') 
+    parser.add_argument('-s', '--seed',nargs='+', type=int, default = None, help='Description of seed') 
+    parser.add_argument('-m', '--model_name', nargs='+', type=str, default = None, help='Description of model')
+    parser.add_argument('-d', '--dataset_name', nargs='+', type=str, default = None, help='Description of dataset')
+    args = parser.parse_args()
+    if args.seed is not None:
+        SEED = [args.seed]
+    if args.model_name is not None:
+        MODEL_NAME = args.model_name
+    if args.dataset_name is not None:
+        DATASET_NAME = args.dataset_name
 
+    print('Running experiments for the following parameters:', 'SEED:', SEED, 'MODEL_NAME:', MODEL_NAME, 'DATASET_NAME:', DATASET_NAME)
     all_args = []
 
-    for dataset_name,modified_dataset, grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, rr in product(
-            DATASET_NAME,MODIFIED_DATASET, GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
+    for dataset_name,grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, rr in product(
+            DATASET_NAME,GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
             LR, NUM_RULES, RR ):  
-    
 
         # Base parameters
-        parser = NSParser()
-        args = parser.parse_args()
-
-
-        if modified_dataset:
+        # parser = NSParser()
+        # args = parser.parse_args()
+        run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
+        if 'reason' in dataset_name:
             if 'backward' not in grounder:
+                # print('skipping, no backward', run_vars)
                 continue
             else:
-                level = grounder[-1]
-                dataset_name = dataset_name+'_reason_'+level
+                backward_level = grounder[-1]
+                dataset_level = dataset_name[-1]
+                if int(backward_level) > int(dataset_level):
+                    # print('skipping, backward level higher than dataset level', run_vars)
+                    continue
         if not os.path.exists(os.path.join(base_path, dataset_name)):
+            # print('skipping, dataset not existing', run_vars)
             continue
-
-
 
         if 'countries' in dataset_name:
             # task is the last two letters of the dataset name
             task = dataset_name[-2:]
             if task == 's2' and (grounder == 'full'): # or grounder == 'domainbody'): domainbody sometimes gives problems
-                print('skipping, grounder too heavy', run_vars)
+                # print('skipping, grounder too heavy', run_vars)
                 continue
             elif task == 's3' and (grounder == 'full' or grounder == 'domainbody'):
-                print('skipping, grounder too heavy', run_vars)
+                # print('skipping, grounder too heavy', run_vars)
                 continue
 
         args.dataset_name = dataset_name
@@ -80,7 +94,6 @@ if __name__ == '__main__':
         args.kge = kge
         args.model_name = model_name 
         args.rule_miner = rule_miner 
-        args.modified_dataset = modified_dataset
         args.seed = seed
         args.kge_atom_embedding_size = e
         args.facts_file = 'facts.txt'
@@ -103,8 +116,8 @@ if __name__ == '__main__':
             continue
 
         # Data params
-        args.num_negatives = neg # 1
-        args.valid_negatives = 100 #200
+        args.num_negatives = neg  
+        args.valid_negatives = 100  
         args.test_negatives = None  # all possible negatives
         if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family':
             args.test_negatives = 1000
@@ -127,7 +140,7 @@ if __name__ == '__main__':
         args.weight_loss = w_loss
         args.batch_size = -1 # Full batch only for explain.
         args.val_batch_size = -1
-        args.test_batch_size = 512
+        args.test_batch_size = 256
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
         args.valid_frequency = 3
@@ -148,12 +161,11 @@ if __name__ == '__main__':
         # args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
         # args.relation_entity_grounder_max_elements = 20
         # args.semiring = "product"
-
-        run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, modified_dataset, seed, neg,e)
-        args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner', 'modified_dataset', 'seed', 'neg','e']
+        run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg, e)
+        args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e']
         args.run_signature = '-'.join(f'{v}' for v in run_vars)     
-        all_args.append(args)
-
+        # append a hard copy of the args to the list of all_args
+        all_args.append(copy.deepcopy(args)) 
 
 
 
@@ -173,12 +185,15 @@ if __name__ == '__main__':
             return
 
         date = logger.get_date()
-        for i,seed in enumerate(args.seed):
+        for seed in args.seed:
             start = time.time()
             args.seed_run_i = seed
             log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
             if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
                 print("Seed number ", seed, " in ", args.seed,'already done')
+                continue
+            else:
+                print("Seed number ", seed, " not done. Exit")
                 continue
 
             print("Seed number ", seed, " in ", args.seed)
@@ -202,7 +217,7 @@ if __name__ == '__main__':
             # write the info about the results in the tmp file 
             logger.log(logged_data.__dict__, log_filename_tmp)
             # Rename to not be temporal anymore
-            log_filename_run = os.path.join(log_folder,'indiv_runs', '_ind_log-{}-{}-seed_{}.csv'.format(args.run_signature,date, i))
+            log_filename_run = os.path.join(log_folder,'indiv_runs', '_ind_log-{}-{}-seed_{}.csv'.format(args.run_signature,date, seed))
             if os.path.exists(log_filename_run):
                 os.remove(log_filename_run)
             os.rename(log_filename_tmp, log_filename_run)
