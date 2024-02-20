@@ -1,0 +1,9 @@
+kinship_family-backward_1-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
+kinship_family-backward_1-complex-sbr-amie-False-[0, 1, 2, 3, 4]-1-100
+kinship_family-backward_1-complex-rnm-amie-False-[0, 1, 2, 3, 4]-1-100
+kinship_family-backward_1-complex-dcr-amie-False-[0, 1, 2, 3, 4]-1-100
+kinship_family-backward_1-complex-r2n-amie-False-[0, 1, 2, 3, 4]-1-100
+kinship_family-backward_2-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
+kinship_family-backward_2-complex-sbr-amie-False-[0, 1, 2, 3, 4]-1-100
+kinship_family-backward_2-complex-rnm-amie-False-[0, 1, 2, 3, 4]-1-100
+kinship_family-backward_2-complex-dcr-amie-False-[0, 1, 2, 3, 4]-1-100
