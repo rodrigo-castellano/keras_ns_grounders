@@ -25,7 +25,7 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['kinship_family_reason_2','pharmkg_small_reason_2','kinship_family_reason_3',] #['kinship_family'] #['countries_s1','countries_s2','countries_s3','pharmkg_supersmall','nations','kinship_family_small'] 
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
     GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['no_reasoner','sbr','rnm','dcr','r2n']  
@@ -64,8 +64,7 @@ if __name__ == '__main__':
         # Base parameters
         # parser = NSParser()
         # args = parser.parse_args()
-        run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg,e)
-        
+        run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
         if 'reason' in dataset_name:
             if 'backward' not in grounder:
                 # print('skipping, no backward', run_vars)
@@ -77,6 +76,7 @@ if __name__ == '__main__':
                     # print('skipping, backward level higher than dataset level', run_vars)
                     continue
         if not os.path.exists(os.path.join(base_path, dataset_name)):
+            # print('skipping, dataset not existing', run_vars)
             continue
 
         if 'countries' in dataset_name:
@@ -161,12 +161,11 @@ if __name__ == '__main__':
         # args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
         # args.relation_entity_grounder_max_elements = 20
         # args.semiring = "product"
-
-        run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg,e)
-        args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner', 'modified_dataset', 'neg','e']
+        run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg, e)
+        args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e']
         args.run_signature = '-'.join(f'{v}' for v in run_vars)     
-        all_args.append(args)
-
+        # append a hard copy of the args to the list of all_args
+        all_args.append(copy.deepcopy(args)) 
 
 
 
@@ -192,6 +191,9 @@ if __name__ == '__main__':
             log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
             if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
                 print("Seed number ", seed, " in ", args.seed,'already done')
+                continue
+            else:
+                print("Seed number ", seed, " not done. Exit")
                 continue
 
             print("Seed number ", seed, " in ", args.seed)
