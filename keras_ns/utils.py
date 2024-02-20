@@ -463,16 +463,28 @@ class FileLogger():
             return False
 
         # open the experiments file. for every line, check if the signature is in the line
+        headers = None
         for file in experiments_files:
             with open(os.path.join(self.folder_experiments,file), 'r') as f:
                 lines = f.readlines()
                 for j,line in enumerate(lines):
-                    if j == 1:
-                        headers = line.split(';')
-                        pos = headers.index('run_signature')
-                    elif j == 0:
+                    if j == 0:
+                        # if line starts with 'sep', continue
+                        if line.startswith('sep'):
+                            continue
+                        else:
+                            headers = line.split(';')
+                            pos = headers.index('run_signature')
                         continue
-                    else:
+
+                    if j == 1:
+                        if headers is None:
+                            headers = line.split(';')
+                            pos = headers.index('run_signature')
+                        continue
+                    else:# if the line is not empty
+                        if line == '\n':
+                            continue
                         file_signature = line.split(';')[pos]
                         # print('signature', args['run_signature'])
                         # print('file_signature', file_signature)
@@ -513,14 +525,16 @@ class FileLogger():
         # get the files that contain the run_signature
         run_files = [file for file in all_files if run_signature in file]
         # get the number of files
-        print('run_signature',run_signature)
+        # print('run_signature',run_signature)
         # print('all files',all_files)
         n_files = len(run_files)
+        # print('n_files',n_files,'seeds',seeds)
+        # print('run_files',run_files)
         if n_files < len(seeds):
             print('The number of files',n_files,' found in the experiments is different from the number of seeds',seeds,'!!!!!!!')
             return None,None
         # for every file, read all the lines and if the line starts with 'all_data', take the values and add them to the array
-        info = {}
+        info = {}   
         metrics_names = []
         seeds_found = set()
         for file in run_files:
@@ -529,10 +543,16 @@ class FileLogger():
                 for line in lines:
                     if line.startswith('All data'):
                         d = line.split(';')[1:]
+                        # remove the \n from the last element
+                        d[-1] = d[-1][:-1]
                         info_exp = {el.split(':')[0] : ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] in ['train_acc', 'valid_acc', 'test_acc','time_run']}
+                        # add also time_run
+                        info_exp['time'] = [float(el.split(':')[1]) for el in d if el.split(':')[0] == 'time']
+                        # print('info_exp',info_exp)
                         # get the names of the metrics from the element 'metrics'
                         metrics_names = [ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] == 'metrics'][0]
                         seed_found = [ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] == 'seed_run_i'][0]
+                        # print ('seed_found',seed_found,'metrics_names',metrics_names)
                         seeds_found.add(seed_found)
                         # append the key,values to the dictionary
                         if seed_found in seeds:
@@ -550,6 +570,8 @@ class FileLogger():
             avg = np.mean(info[key],axis=0)
             std = np.std(info[key],axis=0)
             info[key] = [list(avg),list(std)]
+        # for key in info.keys():
+        #     print('names',metrics_names,'\nkey',key,'info[key]',info[key])
         return info,metrics_names
 
     def write_avg_results(self,args_dict,info_metrics,metrics_name):
@@ -557,15 +579,23 @@ class FileLogger():
         if 'contrastive_loss' in metrics_name: # delete it from the list metrics_name
             metrics_name.remove('contrastive_loss')
         # join the args_dict with the info_metrics
-        metrics = [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in list(metrics_name)]
+        # take the metric elements until one element starts with 'val'
+        names_metrics = [str(metric) for metric in list(metrics_name) if not metric.startswith('val')]
+        metrics =  [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in names_metrics]
+        metrics += ['time']
+        # metrics = [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in list(metrics_name)]
         combined_names = ';'.join(list(args_dict.keys()) + [str(metric) for metric in metrics] )
         values_args = [str(v) for k,v in args_dict.items()] 
         values_metrics = []
         for k,v in info_metrics.items():
+            print('k',k,'v',v)
             for i in range(len(v[0])):
                 values_metrics.append(str([ np.round(v[0][i],3) , np.round(v[1][i],3) ]))
         combined_results = ';'.join(values_args + values_metrics)
+        # print('args_dict',list(args_dict.keys()))
 
+        # print('metrics',metrics)
+        # print('values_metrics',values_metrics)
         # Create a file for my results 
         print("Writing results to", file_csv)   
     
