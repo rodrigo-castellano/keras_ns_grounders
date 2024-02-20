@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 kinship_family-backward_1-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
 kinship_family-backward_1-complex-sbr-amie-False-[0, 1, 2, 3, 4]-1-100
 kinship_family-backward_1-complex-rnm-amie-False-[0, 1, 2, 3, 4]-1-100
@@ -7,3 +8,204 @@ kinship_family-backward_2-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
 kinship_family-backward_2-complex-sbr-amie-False-[0, 1, 2, 3, 4]-1-100
 kinship_family-backward_2-complex-rnm-amie-False-[0, 1, 2, 3, 4]-1-100
 kinship_family-backward_2-complex-dcr-amie-False-[0, 1, 2, 3, 4]-1-100
+=======
+countries_s1-backward_1-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_1-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_1-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_1-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_1-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_1-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_1-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_1-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_1-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_1-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_2-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_2-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_2-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_2-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_2-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_2-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_2-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_2-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_2-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_2-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_3-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_3-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_3-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_3-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_3-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_3-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_3-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_3-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_3-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_3-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_1-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_1-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_1-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_1-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_1-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_1-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_1-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_1-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_1-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_1-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_2-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_2-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_2-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_2-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_2-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_2-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_2-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_2-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_2-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_2-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_3-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_3-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_3-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_3-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_3-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_3-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_3-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_3-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_3-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s2-backward_3-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_1-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_1-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_1-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_1-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_1-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_1-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_1-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_1-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_1-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_1-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_2-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_2-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_2-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_2-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_2-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_2-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_2-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_2-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_2-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_2-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_3-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_3-complex-no_reasoner-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_3-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_3-complex-sbr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_3-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_3-complex-rnm-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_3-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_3-complex-dcr-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_3-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+countries_s3-backward_3-complex-r2n-None-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_1-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_1-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_1-complex-sbr-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_1-complex-sbr-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_1-complex-rnm-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_1-complex-rnm-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_1-complex-dcr-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_1-complex-r2n-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_2-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_2-complex-sbr-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_2-complex-rnm-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_2-complex-dcr-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_2-complex-r2n-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_3-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_3-complex-sbr-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_3-complex-rnm-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_3-complex-dcr-amie-False-[0, 1, 2, 3, 4]-1-100
+nations-backward_3-complex-r2n-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_supersmall-backward_1-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_1-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_1-complex-sbr-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_1-complex-rnm-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_1-complex-dcr-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_1-complex-r2n-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_2-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_2-complex-sbr-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_2-complex-rnm-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_2-complex-dcr-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_2-complex-r2n-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_3-complex-no_reasoner-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_3-complex-sbr-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_3-complex-rnm-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_3-complex-dcr-amie-False-[0, 1, 2, 3, 4]-1-100
+pharmkg_small-backward_3-complex-r2n-amie-False-[0, 1, 2, 3, 4]-1-100
+countries_s1-backward_1-complex-no_reasoner-None-1-100
+countries_s1-backward_1-complex-sbr-None-1-100
+countries_s1-backward_1-complex-rnm-None-1-100
+countries_s1-backward_1-complex-dcr-None-1-100
+countries_s1-backward_1-complex-r2n-None-1-100
+countries_s1-backward_2-complex-no_reasoner-None-1-100
+countries_s1-backward_2-complex-sbr-None-1-100
+countries_s1-backward_2-complex-rnm-None-1-100
+countries_s1-backward_2-complex-dcr-None-1-100
+countries_s1-backward_2-complex-r2n-None-1-100
+countries_s1-backward_3-complex-no_reasoner-None-1-100
+countries_s1-backward_3-complex-sbr-None-1-100
+countries_s1-backward_3-complex-rnm-None-1-100
+countries_s1-backward_3-complex-dcr-None-1-100
+countries_s1-backward_3-complex-r2n-None-1-100
+countries_s2-backward_1-complex-no_reasoner-None-1-100
+countries_s2-backward_1-complex-sbr-None-1-100
+countries_s2-backward_1-complex-rnm-None-1-100
+countries_s2-backward_1-complex-dcr-None-1-100
+countries_s2-backward_1-complex-r2n-None-1-100
+countries_s2-backward_2-complex-no_reasoner-None-1-100
+countries_s2-backward_2-complex-sbr-None-1-100
+countries_s2-backward_2-complex-rnm-None-1-100
+countries_s2-backward_2-complex-dcr-None-1-100
+countries_s2-backward_2-complex-r2n-None-1-100
+countries_s2-backward_3-complex-no_reasoner-None-1-100
+countries_s2-backward_3-complex-sbr-None-1-100
+countries_s2-backward_3-complex-rnm-None-1-100
+countries_s2-backward_3-complex-dcr-None-1-100
+countries_s2-backward_3-complex-r2n-None-1-100
+countries_s3-backward_1-complex-no_reasoner-None-1-100
+countries_s3-backward_1-complex-sbr-None-1-100
+countries_s3-backward_1-complex-rnm-None-1-100
+countries_s3-backward_1-complex-dcr-None-1-100
+countries_s3-backward_1-complex-r2n-None-1-100
+countries_s3-backward_2-complex-no_reasoner-None-1-100
+countries_s3-backward_2-complex-sbr-None-1-100
+countries_s3-backward_2-complex-rnm-None-1-100
+countries_s3-backward_2-complex-dcr-None-1-100
+countries_s3-backward_2-complex-r2n-None-1-100
+countries_s3-backward_3-complex-no_reasoner-None-1-100
+countries_s3-backward_3-complex-sbr-None-1-100
+countries_s3-backward_3-complex-rnm-None-1-100
+countries_s3-backward_3-complex-dcr-None-1-100
+countries_s3-backward_3-complex-r2n-None-1-100
+pharmkg_small-backward_1-complex-no_reasoner-amie-1-100
+pharmkg_small-backward_1-complex-sbr-amie-1-100
+pharmkg_small-backward_1-complex-rnm-amie-1-100
+pharmkg_small-backward_1-complex-dcr-amie-1-100
+pharmkg_small-backward_1-complex-r2n-amie-1-100
+pharmkg_small-backward_2-complex-no_reasoner-amie-1-100
+pharmkg_small-backward_2-complex-sbr-amie-1-100
+pharmkg_small-backward_2-complex-rnm-amie-1-100
+pharmkg_small-backward_2-complex-dcr-amie-1-100
+pharmkg_small-backward_2-complex-r2n-amie-1-100
+pharmkg_small-backward_3-complex-no_reasoner-amie-1-100
+pharmkg_small-backward_3-complex-sbr-amie-1-100
+pharmkg_small-backward_3-complex-rnm-amie-1-100
+pharmkg_small-backward_3-complex-dcr-amie-1-100
+pharmkg_small-backward_3-complex-r2n-amie-1-100
+nations-backward_1-complex-no_reasoner-amie-1-100
+nations-backward_1-complex-sbr-amie-1-100
+nations-backward_1-complex-rnm-amie-1-100
+nations-backward_1-complex-dcr-amie-1-100
+nations-backward_1-complex-r2n-amie-1-100
+nations-backward_2-complex-no_reasoner-amie-1-100
+nations-backward_2-complex-sbr-amie-1-100
+nations-backward_2-complex-rnm-amie-1-100
+nations-backward_2-complex-dcr-amie-1-100
+nations-backward_2-complex-r2n-amie-1-100
+nations-backward_3-complex-no_reasoner-amie-1-100
+nations-backward_3-complex-sbr-amie-1-100
+nations-backward_3-complex-rnm-amie-1-100
+nations-backward_3-complex-dcr-amie-1-100
+nations-backward_3-complex-r2n-amie-1-100
+>>>>>>> 61d3aa7d5901ccd8cc39391ec33c151e0b9228c6
