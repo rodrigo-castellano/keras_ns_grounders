@@ -25,7 +25,7 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['kinship_family_reason_2','countries_s2','countries_s3'] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s2_3rules','countries_s3','kinship_family','pharmkg_small'] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
     GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['no_reasoner','sbr','rnm','dcr','r2n']  
@@ -138,8 +138,8 @@ if __name__ == '__main__':
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
         args.loss = "binary_crossentropy"
         args.weight_loss = w_loss
-        args.batch_size = -1 # Full batch only for explain.
-        args.val_batch_size = -1
+        args.batch_size = 128 # Full batch only for explain.
+        args.val_batch_size = 128
         args.test_batch_size = 64
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
@@ -175,14 +175,14 @@ if __name__ == '__main__':
         print("\nRun vars:", args.run_signature+'\n')
         # LOGGER
         # Results for every epoch will be saved in a folder 
-        log_folder :str = "results"
+        log_folder :str = "results/batched/"
         log_folder_run = os.path.join(log_folder,'indiv_runs')
         log_folder_experiments = os.path.join(log_folder,'experiments')
         # Check if the logger exists, if so, skip the experiment, otherwise run it. Logger exists if all the arguments inside each file in the folder are the same as the current args
         logger = ns.utils.FileLogger(log_folder,log_folder_experiments,log_folder_run)
         if logger.exists_experiment(args.__dict__):
             print("Skipping training, it has been already done for", args.run_signature, "\n")
-            return
+            # return
 
         date = logger.get_date()
         for seed in args.seed:
@@ -191,7 +191,7 @@ if __name__ == '__main__':
             log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
             if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
                 print("Seed number ", seed, " in ", args.seed,'already done')
-                continue
+                # continue
             # else:
                 # print("Seed number ", seed, " not done. Exit")
                 # continue
