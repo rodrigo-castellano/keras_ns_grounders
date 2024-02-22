@@ -112,7 +112,7 @@ if __name__ == '__main__':
         else: # raise an error if the rule miner is not recognized
             raise ValueError('Rule miner not recognized for ', dataset_name)
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
-            # print('skipping, rules not existing', run_vars)
+            # print('skipping, rules not existing', run_vars) 
             continue
 
         # Data params
@@ -139,7 +139,7 @@ if __name__ == '__main__':
         args.loss = "binary_crossentropy"
         args.weight_loss = w_loss
         args.batch_size = 128 # Full batch only for explain.
-        args.val_batch_size = 128
+        args.val_batch_size = -1
         args.test_batch_size = 64
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
