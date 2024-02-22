@@ -140,7 +140,7 @@ if __name__ == '__main__':
         args.weight_loss = w_loss
         args.batch_size = -1 # Full batch only for explain.
         args.val_batch_size = -1
-        args.test_batch_size = 256
+        args.test_batch_size = 64
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
         args.valid_frequency = 3
