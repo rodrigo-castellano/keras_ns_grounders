@@ -25,10 +25,10 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s2_3rules','countries_s3','kinship_family','pharmkg_small'] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
-    GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','FB15K',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
+    GROUNDER = ['domainbody','full'] #['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME =  ['no_reasoner','sbr','rnm','dcr','r2n']  
+    MODEL_NAME =  ['sbr','no_reasoner','sbr','rnm','dcr','r2n']  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
@@ -119,7 +119,7 @@ if __name__ == '__main__':
         args.num_negatives = neg  
         args.valid_negatives = 100  
         args.test_negatives = None  # all possible negatives
-        if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family':
+        if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family' or 'FB15K' in dataset_name:
             args.test_negatives = 1000
         args.ragged = True
         args.format = "functional"
@@ -138,9 +138,9 @@ if __name__ == '__main__':
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
         args.loss = "binary_crossentropy"
         args.weight_loss = w_loss
-        args.batch_size = 128 # Full batch only for explain.
+        args.batch_size = -1 # 128 # Full batch only for explain.
         args.val_batch_size = -1
-        args.test_batch_size = 64
+        args.test_batch_size = 256 #64
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
         args.valid_frequency = 3
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         print("\nRun vars:", args.run_signature+'\n')
         # LOGGER
         # Results for every epoch will be saved in a folder 
-        log_folder :str = "results/batched/"
+        log_folder :str = "results/"
         log_folder_run = os.path.join(log_folder,'indiv_runs')
         log_folder_experiments = os.path.join(log_folder,'experiments')
         # Check if the logger exists, if so, skip the experiment, otherwise run it. Logger exists if all the arguments inside each file in the folder are the same as the current args

@@ -1,0 +1,40 @@
+Number of atoms removed: 26
+Problematic atoms:
+set()
+Number of times a predicate appears in the head of rules (in train facts): {'locatedInCR': 2}
+locatedInCR, (Fraction of) Atoms from facts to be deleted with this predicate: 0.133. 26/195
+Atoms removed:
+('locatedInCR', 'sint_maarten', 'americas')
+('locatedInCR', 'macedonia', 'europe')
+('locatedInCR', 'ethiopia', 'africa')
+('locatedInCR', 'central_african_republic', 'africa')
+('locatedInCR', 'angola', 'africa')
+('locatedInCR', 'south_africa', 'africa')
+('locatedInCR', 'austria', 'europe')
+('locatedInCR', 'brazil', 'americas')
+('locatedInCR', 'india', 'asia')
+('locatedInCR', 'senegal', 'africa')
+('locatedInCR', 'namibia', 'africa')
+('locatedInCR', 'botswana', 'africa')
+('locatedInCR', 'uzbekistan', 'asia')
+('locatedInCR', 'china', 'asia')
+('locatedInCR', 'guinea', 'africa')
+('locatedInCR', 'costa_rica', 'americas')
+('locatedInCR', 'lebanon', 'asia')
+('locatedInCR', 'israel', 'asia')
+('locatedInCR', 'uganda', 'africa')
+('locatedInCR', 'zambia', 'africa')
+('locatedInCR', 'kenya', 'africa')
+('locatedInCR', 'albania', 'europe')
+('locatedInCR', 'montenegro', 'europe')
+('locatedInCR', 'malawi', 'africa')
+('locatedInCR', 'dr_congo', 'africa')
+('locatedInCR', 'colombia', 'americas')
+Total number of unique groundings with original dataset:787
+Number of groundings per level with original dataset:
+Level 0. Number of groundings: 787
+Level 1. Number of groundings: 0
+Total number of unique groundings with new dataset:685
+Number of groundings per level with new dataset:
+Level 0. Number of groundings: 601
+Level 1. Number of groundings: 84
