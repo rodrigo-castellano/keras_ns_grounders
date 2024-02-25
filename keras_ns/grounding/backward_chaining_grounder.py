@@ -350,12 +350,12 @@ class BackwardChainingGrounder(Engine):
         # the other are not reset as they are incrementally added.
         for rule in self.rules:
             # VERSION WITH WICH I GOT ALL THE RESULTS
-            # if rule.name not in self.rule2groundings:
-            #     self.rule2groundings[rule.name] = set()
-            # if rule.name not in self.rule2proofs:
-            #     self.rule2proofs[rule.name] = []
-            self.rule2groundings[rule.name] = set()
-            self.rule2proofs[rule.name] = []
+            if rule.name not in self.rule2groundings:
+                self.rule2groundings[rule.name] = set()
+            if rule.name not in self.rule2proofs:
+                self.rule2proofs[rule.name] = []
+            # self.rule2groundings[rule.name] = set()
+            # self.rule2proofs[rule.name] = []
 
     # Ground a batch of queries, the result is cached for speed.
     def ground(self,
@@ -419,7 +419,7 @@ class BackwardChainingGrounder(Engine):
             # Here we update the queries to process in the next iteration, we only keep the new ones.
             self._init_internals(list(new_queries))
 
-        # print('Num groundings',sum([len(v) for k, v in self.rule2groundings.items()]))
+        print('Num groundings',sum([len(v) for k, v in self.rule2groundings.items()]))
         if self.prune_incomplete_proofs:
             # check all the groundings with at least 1 atom missing, to see if they are proved (all atoms present in the facts)
             # print('\nstarting PruneIncompleteProofs')
@@ -427,7 +427,7 @@ class BackwardChainingGrounder(Engine):
                                                          self.rule2proofs,
                                                          self._fact_index,
                                                          self.num_steps)
-            # print('Num groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
+            print('Num groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
         # print('\nFinal groundings\n')
         # for k,v in self.rule2groundings.items():
             # print('rule2groundings', k, len(v),v)
