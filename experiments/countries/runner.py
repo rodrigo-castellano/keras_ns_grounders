@@ -84,7 +84,9 @@ if __name__ == '__main__':
             # for each file in the directory, print all the files in the directory
             for file in os.listdir(base_path):
                 print()
-                print(os.listdir(os.path.join(base_path, file)))
+                print(file)
+                if os.path.isdir(os.path.join(base_path, file)):
+                    print(os.listdir(os.path.join(base_path, file)))
             continue
 
         if 'countries' in dataset_name:
