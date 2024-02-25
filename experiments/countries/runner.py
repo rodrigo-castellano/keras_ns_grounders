@@ -80,7 +80,7 @@ if __name__ == '__main__':
             print('skipping, dataset not existing', run_vars)
             print(os.path.join(base_path, dataset_name))
             # show the files in the directory
-            print(os.listdir(os.path.join(base_path, dataset_name)))
+            print(os.listdir(base_path))
             continue
 
         if 'countries' in dataset_name:
