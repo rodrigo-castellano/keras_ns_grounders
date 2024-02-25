@@ -85,6 +85,7 @@ if __name__ == '__main__':
             for file in os.listdir(base_path):
                 print()
                 print(file)
+                print(os.path.join(base_path, file))
                 if os.path.isdir(os.path.join(base_path, file)):
                     print(os.listdir(os.path.join(base_path, file)))
             continue
