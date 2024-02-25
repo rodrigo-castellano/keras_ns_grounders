@@ -2,7 +2,6 @@ import sys
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\keras_ns_grounders')
 sys.path.append('/home/castellanoontiv/keras_ns_grounders')
 sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
-sys.path.append('/home/castellanoontiv/keras_ns_grounders/experiments/countries')
 import os
 import copy
 import os
@@ -23,10 +22,10 @@ import argparse
 if __name__ == '__main__':
 
 
-    base_path :str = "./data"
+    base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['FB15K']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
+    DATASET_NAME = ['FB15k']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
     GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['no_reasoner','sbr','dcr','r2n','rnm',]  
@@ -68,36 +67,26 @@ if __name__ == '__main__':
         run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
         if 'reason' in dataset_name:
             if 'backward' not in grounder:
-                print('skipping, no backward', run_vars)
+                # print('skipping, no backward', run_vars)
                 continue
             else:
                 backward_level = grounder[-1]
                 dataset_level = dataset_name[-1]
                 if int(backward_level) > int(dataset_level):
-                    print('skipping, backward level higher than dataset level', run_vars)
+                    # print('skipping, backward level higher than dataset level', run_vars)
                     continue
         if not os.path.exists(os.path.join(base_path, dataset_name)):
-            print('skipping, dataset not existing', run_vars)
-            print(os.path.join(base_path, dataset_name))
-            # show the files in the directory
-            print(os.listdir(base_path))
-            # for each file in the directory, print all the files in the directory
-            for file in os.listdir(base_path):
-                print()
-                print(file)
-                print(os.path.join(base_path, file))
-                if os.path.isdir(os.path.join(base_path, file)):
-                    print(os.listdir(os.path.join(base_path, file)))
+            # print('skipping, dataset not existing', run_vars)
             continue
 
         if 'countries' in dataset_name:
             # task is the last two letters of the dataset name
             task = dataset_name[-2:]
             if grounder == 'full' and (task != 's1'):
-                print('skipping, grounder too heavy', run_vars)
+                # print('skipping, grounder too heavy', run_vars)
                 continue
             if grounder == 'domainbody' and (task == 's3' or task == 'pharmkg_full' or task == 'FB15K'):
-                print('skipping, grounder too heavy', run_vars)
+                # print('skipping, grounder too heavy', run_vars)
                 continue
 
         args.dataset_name = dataset_name
@@ -123,7 +112,7 @@ if __name__ == '__main__':
         else: # raise an error if the rule miner is not recognized
             raise ValueError('Rule miner not recognized for ', dataset_name)
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
-            print('skipping, rules not existing', run_vars) 
+            # print('skipping, rules not existing', run_vars) 
             continue
 
         # Data params
