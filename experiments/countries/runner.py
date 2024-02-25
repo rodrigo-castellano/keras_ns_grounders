@@ -78,6 +78,7 @@ if __name__ == '__main__':
                     continue
         if not os.path.exists(os.path.join(base_path, dataset_name)):
             print('skipping, dataset not existing', run_vars)
+            print(os.path.join(base_path, dataset_name))
             continue
 
         if 'countries' in dataset_name:
