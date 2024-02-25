@@ -67,26 +67,26 @@ if __name__ == '__main__':
         run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
         if 'reason' in dataset_name:
             if 'backward' not in grounder:
-                # print('skipping, no backward', run_vars)
+                print('skipping, no backward', run_vars)
                 continue
             else:
                 backward_level = grounder[-1]
                 dataset_level = dataset_name[-1]
                 if int(backward_level) > int(dataset_level):
-                    # print('skipping, backward level higher than dataset level', run_vars)
+                    print('skipping, backward level higher than dataset level', run_vars)
                     continue
         if not os.path.exists(os.path.join(base_path, dataset_name)):
-            # print('skipping, dataset not existing', run_vars)
+            print('skipping, dataset not existing', run_vars)
             continue
 
         if 'countries' in dataset_name:
             # task is the last two letters of the dataset name
             task = dataset_name[-2:]
             if grounder == 'full' and (task != 's1'):
-                # print('skipping, grounder too heavy', run_vars)
+                print('skipping, grounder too heavy', run_vars)
                 continue
             if grounder == 'domainbody' and (task == 's3' or task == 'pharmkg_full' or task == 'FB15K'):
-                # print('skipping, grounder too heavy', run_vars)
+                print('skipping, grounder too heavy', run_vars)
                 continue
 
         args.dataset_name = dataset_name
@@ -112,7 +112,7 @@ if __name__ == '__main__':
         else: # raise an error if the rule miner is not recognized
             raise ValueError('Rule miner not recognized for ', dataset_name)
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
-            # print('skipping, rules not existing', run_vars) 
+            print('skipping, rules not existing', run_vars) 
             continue
 
         # Data params
