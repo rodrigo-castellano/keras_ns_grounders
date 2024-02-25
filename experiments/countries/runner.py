@@ -25,10 +25,10 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
-    GROUNDER = ['domainbody','full'] #['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
+    DATASET_NAME = ['FB15K']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
+    GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME =  ['sbr','no_reasoner','sbr','rnm','dcr','r2n']  
+    MODEL_NAME =  ['no_reasoner','sbr','dcr','r2n','rnm',]  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
@@ -138,9 +138,9 @@ if __name__ == '__main__':
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
         args.loss = "binary_crossentropy"
         args.weight_loss = w_loss
-        args.batch_size = -1 # 128 # Full batch only for explain.
+        args.batch_size = 128 # 128 # Full batch only for explain.
         args.val_batch_size = -1
-        args.test_batch_size = -1 #64
+        args.test_batch_size = 64 #64
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
         args.valid_frequency = 3
