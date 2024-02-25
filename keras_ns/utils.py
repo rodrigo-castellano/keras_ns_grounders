@@ -18,7 +18,6 @@ def get_arg(args, name: str, default=None, assert_defined=False):
     return value
 
 def read_rules(path,args):
-    print('Reading rules')
     rules = []
     with open(path, 'r') as f:
         for line in f:
@@ -67,6 +66,9 @@ def read_rules(path,args):
                     # var_names = {"a": "cte", "b": "cte","c": "cte","d": "cte", "h": "cte", "g": "cte"}
                     for var in variables:
                         var_names[var] = "cte" 
+                elif 'FB15K' in args.dataset_name:
+                    for var in variables:
+                        var_names[var] = "cte"
             # print all the info
             # if len(rules) < 1001:
             #     print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
