@@ -2,6 +2,7 @@ import sys
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\keras_ns_grounders')
 sys.path.append('/home/castellanoontiv/keras_ns_grounders')
 sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
+sys.path.append('/home/castellanoontiv/keras_ns_grounders/experiments/countries')
 import os
 import copy
 import os
