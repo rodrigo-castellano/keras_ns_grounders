@@ -485,12 +485,14 @@ class FileLogger():
                             pos = headers.index('run_signature')
                         continue
                     else:# if the line is not empty
-                        if line == '\n':
-                            continue
+                        if line == '\n' or line == '' or line.startswith(';;;;;'):
+                            continue 
+                        # print('line',line)
                         file_signature = line.split(';')[pos]
                         # print('signature', args['run_signature'])
                         # print('file_signature', file_signature)
                         if file_signature in args['run_signature']:
+                            # print('file_signature',file_signature)
                             return True
         return False
 
