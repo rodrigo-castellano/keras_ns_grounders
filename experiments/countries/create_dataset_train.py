@@ -57,7 +57,8 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
             # WE CHECK IF ALL THE ATOMS IN THE HEAD ARE PROVED
             if all([(atom2proved.get(a, False) or
                      fact_index._index.get(a, None) is not None)
-                    for a in head_atoms]):                pruned_groundings.append(g)
+                    for a in head_atoms]):                
+                pruned_groundings.append(g)
         pruned_rule2groundings[rule_name] = set(pruned_groundings)
     return pruned_rule2groundings
 
@@ -70,7 +71,7 @@ def Prune_groundings_per_level(groundings_per_level,
     # Here we will keep all the proves that are complete, i.e. all the atoms
     atom2proved: Dist[Tuple[str, str, str], bool] = {}
     # go through every atom to prove from all queries
-    for i in range(num_steps ):
+    for i in range(num_steps):
         for rule_name,proofs in rule2proofs.items():
             for query_and_proof in proofs:
                 query, proof = query_and_proof[0], query_and_proof[1]
@@ -86,7 +87,8 @@ def Prune_groundings_per_level(groundings_per_level,
         head_atoms = g[0]
         if all([(atom2proved.get(a, False) or
                     fact_index._index.get(a, None) is not None)
-                for a in head_atoms]):                pruned_groundings.append(g)
+                for a in head_atoms]):                
+            pruned_groundings.append(g)
     pruned_groundings_per_level = set(pruned_groundings)
     return pruned_groundings_per_level
 
@@ -204,7 +206,7 @@ def backward_chaining_grounding_one_rule_with_domains(
                     if build_proofs:
                         proofs.append((q, body_grounding_to_prove))
                     # CHECK IF ALL THE ATOMS ARE KNOWN. IF YES, CHOOSE ONE OF THEM TO REMOVE. CHOOSE ONLY THE ONES THAT ARE HEAD OF RULES
-                    if unknown_fact_count == 0:
+                    if unknown_fact_count == 0 and step != n_steps-1:
                         # print('\nALL ATOMS KNOWN', body_grounding) if cont< lim else None
                         possible_atoms = [atom for atom in body_grounding if atom[0] in pred_counts]
                         # print('POSSIBLE ATOMS', possible_atoms) if cont< lim else None
@@ -335,8 +337,8 @@ class BackwardChainingGrounder(Engine):
                     # Output added here.
                     res=self.rule2groundings[rule.name],
                     # Proofs added here.
-                    proofs=(self.rule2proofs[rule.name]
-                            if self.prune_incomplete_proofs else None),step=step, n_steps =self.num_steps)
+                    proofs=(self.rule2proofs[rule.name] if self.prune_incomplete_proofs else None),
+                    step=step, n_steps=self.num_steps)
                 print('Total  groundings in res after rule',j,'/',len(self.rules),', step',step,sum([len(v) for k, v in self.rule2groundings.items()])) # IS IS MORE THAN THE GROUNDINGS_per_level BECAUSE THERE ARE DUPLICATES
                 # Update the list of processed rules.
                 self._rule2processed_queries[rule.name].update(queries_per_rule)
@@ -513,7 +515,6 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         rules = []
         engine = None
  
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! SHOULDNT IT BE TRAIN???????????????????
     queries, labels = dataset_test[0:len(dataset_test)]
     facts = fol.facts
     rules = engine.rules
@@ -532,6 +533,15 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     groundings,atoms_remove_per_level,groundings_per_level= engine.ground(pred_head_facts_counts,tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
 
+    # filters: 
+    # dont remove atoms if they are in the body in the last level
+    # dont remove atoms if at any level (except for the first one), there are more than 1 atom to remove in the body of a grounding
+    # dont remove atoms if they are in the query of a grounding in the last level 
+    # NEED TO BE CAREFUL, BECAUSE IF I REMOVE, EVEN THOUGH IT IS NOT IN THE LAST LEVEL, IT MIGHT BE IN THE LEVEL BEFORE AND BECAUSE OF THAT ATOM, IT CAN MAKE 
+    # A TOTAL OF 2 BODY ATOMS MISSING AND THEREFORE THE GROUNDING IS NOT PROVED. What I should do is, for every atom to remove, check if that atom in present in 
+    # any grounding that goes up to the last level. If it is, then I should not remove it.
+
+
     if num_steps == 2:
         print('take into account atoms from level 0 ') 
         remove_levels =[0]
@@ -543,7 +553,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     print()
 
 
-    # Take only the levels we are interested in and append the atoms into final atoms. Filter the atoms that are not in the proved groundings.  
+    # Take only atoms from  the levels we are interested in
+    # Filter the atoms that are not in the proved groundings.  
     atoms_remove = set()
     print ('ATOMS TO REMOVE:')
     for k,v in atoms_remove_per_level.items():
@@ -553,7 +564,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
             for atom in set(v):
                 # check if the atom is in the pruned groundings of that level, because otherwise that body atom is not proved, and we have to remove the atom 
                 atom_found = find_atom_in_groundings(atom, groundings_per_level[k])
-                print('  Atom', atom,  '     in body of groundings, level',k,'       ',atom_found)
+                # print('  Atom', atom,  '     in body of groundings, level',k,'       ',atom_found)
                 if atom_found:
                     count += 1
                     atoms_remove.add(atom)
@@ -567,18 +578,19 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     max_atoms_allowed,pred_cutoff,pred_counts_to_remove,pred_counts_facts = find_cutoff(atoms_remove,data_handler,threshold=0.4)
 
     # from atoms_remove, check how many atoms are in the body of the grounding of the last level 
+    # I SHOULD ALSO CHECK IF THEY ARE ANY THE QUERY
     atoms_problem = set()
     if num_steps-1 in groundings_per_level and len(groundings_per_level[num_steps-1])!=0 :
         for grounding in groundings_per_level[num_steps-1]:
             for body_atom in grounding[1]:
                 if body_atom in atoms_remove:
-                    print('atom', atom, 'is in the body of a grounding in the last level. Added to problematic atoms')
+                    # print('atom', atom, 'is in the body of a grounding in the last level. Added to problematic atoms')
                     atoms_problem.add(atom)
-    else:
-        print('No groundings in the last level')
+    # else:
+        # print('No groundings in the last level')
 
 
-    # How many groundings for all the levels except the last one, have nmore than 1 atoms to remove in the body
+    # How many groundings for all the levels except the last one, have more than 1 atoms to remove in the body
     # If it is more than 1, we are not going to the next level because we are not admitting the subsitution   
     for level,groundings_level_i in groundings_per_level.items():
         if level != num_steps-1:
@@ -598,14 +610,60 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
                         atoms_problematic.add(atom)
                 if cuenta > 1:
                     atoms_problem.update(atoms_problematic)
-                    print('grounding has more than 1 atom to removed in the body because of', atoms_problematic,'. Added to problematic atoms')
+                    # print('grounding level',level,' has more than 1 atom to removed in the body because of', atoms_problematic,'. Added to problematic atoms')
 
 
-    print('problematic atoms:',atoms_problem)
+ 
+
+
+    # hipothetically, check how many groundings there are in the new dataset by not counting groundings with atoms to remove
+    # Select the grounding from level 0:
+    
+    check_list_atoms = list()#set()
+    for grounding_0 in groundings_per_level[0]:
+        if num_steps == 2:
+        # Take the body atoms of the grounding, if any body atom is the head of a grounding in the next level, append it in a list
+            body_atoms_0 = grounding_0[1]
+            for body_atom_0 in body_atoms_0:
+                # if atom is in the head of a grounding in the next level, then we have to remove it
+                for grounding_1 in groundings_per_level[1]:
+                    if body_atom_0 in grounding_1[0]:
+                        # if body_atom_0 in atoms_remove:
+                        # add every from grounding_0 and grounding_1 to the set
+                        # check_list_atoms.update((atom for atom in grounding_0[1]))
+                        # check_list_atoms.add(grounding_0[0]) 
+                        # check_list_atoms.update((atom for atom in grounding_1[1]))
+                        # check_list_atoms.add(grounding_1[0])
+                        # check_list_atoms.append(grounding_0[0])
+                        # check_list_atoms.extend(atom for atom in grounding_0[1])
+                        # check_list_atoms.append(grounding_1[0])
+                        # check_list_atoms.extend(atom for atom in grounding_1[1])
+                        print('groudnding 0',grounding_0[0],grounding_0[1])
+                        print('groudnding 1',grounding_1[0],grounding_1[1])
+                        check_list_atoms.append(grounding_0)
+    print('number of groundings to check:',len(check_list_atoms))                           
+
+
+
+
+    print(' atoms found: ',len(check_list_atoms))
     print('Number of atoms to remove:', len(atoms_remove))
     # Exclude problematic atoms from atoms_remove
     atoms_remove -= atoms_problem
+    print('problematic atoms:',atoms_problem)
     print('Number of atoms to remove after excluding porblematic:', len(atoms_remove)) 
+
+
+    total_groundings = set()
+    for level,groundings_level_i in groundings_per_level.items():
+        for grounding in groundings_level_i:
+            total_groundings.add(grounding)
+    print('Total number of unique groundings with original dataset:'+ str(len(total_groundings)))
+    print('\nNumber of groundings per level with original dataset:\n')
+    for level in range(num_steps):
+        print('Level {}. Number of groundings: {}\n'.format(level,len(groundings_per_level[level])) if level in groundings_per_level else 'level {}. No groundings in this level\n'.format(level))
+
+
 
 
     # # Remove atoms randomly if there are more than the max allowed
@@ -652,8 +710,24 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
             for level in range(num_steps):
                 f.write('Level {}. Number of groundings: {}\n'.format(level,len(groundings_per_level[level])) if level in groundings_per_level else 'level {}. No groundings in this level\n'.format(level))
 
-    # something interesting to do is to check, with the new dataset, how many new groudnings we have in the last level
     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    # something interesting to do is to check, with the new dataset, how many new groudnings we have in the last level
 
     # Data Loading
     data_handler = KGCDataHandler(
@@ -690,18 +764,25 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
             pred_head_facts_counts[pred] = 0
         pred_head_facts_counts[pred] += 1
 
-    groundings,atoms_remove_per_level,groundings_per_level= engine.ground(pred_head_facts_counts,tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
+    groundings,atoms_remove_per_level,groundings_per_level_new= engine.ground(pred_head_facts_counts,tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
 
 
     # in the output file, print the number of groundings in every level
     with open(output_file, 'a') as f:
 
         total_groundings = set()
-        for level,groundings_level_i in groundings_per_level.items():
+        for level,groundings_level_i in groundings_per_level_new.items():
             for grounding in groundings_level_i:
                 total_groundings.add(grounding)
         f.write('Total number of unique groundings with new dataset:'+ str(len(total_groundings)))
 
         f.write('\nNumber of groundings per level with new dataset:\n')
         for level in range(num_steps):
-            f.write('Level {}. Number of groundings: {}\n'.format(level,len(groundings_per_level[level])) if level in groundings_per_level else 'level {}. No groundings in this level\n'.format(level))
+            f.write('Level {}. Number of groundings: {}\n'.format(level,len(groundings_per_level_new[level])) if level in groundings_per_level_new else 'level {}. No groundings in this level\n'.format(level))
+
+
+    print('Total number of unique groundings with new dataset:'+ str(len(total_groundings)))
+
+    print('\nNumber of groundings per level with new dataset:\n')
+    for level in range(num_steps):
+        print('Level {}. Number of groundings: {}\n'.format(level,len(groundings_per_level_new[level])) if level in groundings_per_level_new else 'level {}. No groundings in this level\n'.format(level))
