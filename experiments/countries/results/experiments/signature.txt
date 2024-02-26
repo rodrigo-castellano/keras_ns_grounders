@@ -93,3 +93,5 @@ kinship_family-backward_2-complex-sbr-amie-1-100
 kinship_family-backward_2-complex-rnm-amie-1-100
 kinship_family-backward_2-complex-dcr-amie-1-100
 kinship_family-backward_2-complex-r2n-amie-1-100
+kinship_family_reason_2-backward_2-complex-dcr-amie-1-100
+kinship_family_reason_2-backward_2-complex-rnm-amie-1-100

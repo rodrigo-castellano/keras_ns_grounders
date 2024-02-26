@@ -287,12 +287,11 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
                 query, proof = query_and_proof[0], query_and_proof[1]
                 if query not in atom2proved or not atom2proved[query]:
                     atom2proved[query] = all(
-                        [atom2proved.get(a, False) 
-                        # Should be useless as atoms added in the proofs are
-                        # by definition not proved already in the data.
-                        # or fact_index._index.get(a, None) is not None)
-                        # or  fact_index._index.get(a, None) is not None)
-                        for a in proof])
+                        [atom2proved.get(a, False)
+                         # This next check is useless as atoms added in the proofs
+                         # are by definition not proved already in the data.
+                         # or fact_index._index.get(a, None) is not None)
+                         for a in proof])
 
     # Now atom2proved has all proved atoms. Scan the groundings and keep only
     # the ones that have been proved within num_steps:
@@ -306,7 +305,8 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
             # or they are provable using the rules,
             if all([(atom2proved.get(a, False) or
                      fact_index._index.get(a, None) is not None)
-                    for a in head_atoms]):                pruned_groundings.append(g)
+                    for a in head_atoms]):                
+                pruned_groundings.append(g)
         pruned_rule2groundings[rule_name] = set(pruned_groundings)
     #for rn,g in pruned_rule2groundings.items():
     #    print('ROUT', rn, g)
@@ -349,10 +349,13 @@ class BackwardChainingGrounder(Engine):
 
         # the other are not reset as they are incrementally added.
         for rule in self.rules:
+            # VERSION WITH WICH I GOT ALL THE RESULTS
             if rule.name not in self.rule2groundings:
                 self.rule2groundings[rule.name] = set()
             if rule.name not in self.rule2proofs:
                 self.rule2proofs[rule.name] = []
+            # self.rule2groundings[rule.name] = set()
+            # self.rule2proofs[rule.name] = []
 
     # Ground a batch of queries, the result is cached for speed.
     def ground(self,
@@ -416,7 +419,7 @@ class BackwardChainingGrounder(Engine):
             # Here we update the queries to process in the next iteration, we only keep the new ones.
             self._init_internals(list(new_queries))
 
-        # print('Num groundings',sum([len(v) for k, v in self.rule2groundings.items()]))
+        print('Num groundings',sum([len(v) for k, v in self.rule2groundings.items()]))
         if self.prune_incomplete_proofs:
             # check all the groundings with at least 1 atom missing, to see if they are proved (all atoms present in the facts)
             # print('\nstarting PruneIncompleteProofs')
@@ -424,7 +427,7 @@ class BackwardChainingGrounder(Engine):
                                                          self.rule2proofs,
                                                          self._fact_index,
                                                          self.num_steps)
-            # print('Num groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
+            print('Num groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
         # print('\nFinal groundings\n')
         # for k,v in self.rule2groundings.items():
             # print('rule2groundings', k, len(v),v)

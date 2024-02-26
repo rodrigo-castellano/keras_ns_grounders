@@ -1,5 +1,14 @@
 import tensorflow as tf
+
+if tf.test.is_gpu_available():
+    # Get the name of the current GPU
+    gpu_name = tf.test.gpu_device_name()
+    print(f"Training on GPU: {gpu_name}")
+else:
+    print("Training on CPU")
+
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
 
 
 import torch
