@@ -25,7 +25,7 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['pharmkg_full']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
+    DATASET_NAME = ['FB15k']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
     GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['no_reasoner','sbr','dcr','r2n','rnm']  
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         args.kge_atom_embedding_size = e
         args.batch_size = -1 # 128 # Full batch only for explain.
         args.val_batch_size = -1
-        args.test_batch_size = 256 #64
+        args.test_batch_size = 64 #64
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
@@ -166,7 +166,7 @@ if __name__ == '__main__':
         # args.relation_entity_grounder_max_elements = 20
         # args.semiring = "product"
         run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg, e)
-        args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e']
+        args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e',]
         args.run_signature = '-'.join(f'{v}' for v in run_vars)     
         # append a hard copy of the args to the list of all_args
         all_args.append(copy.deepcopy(args)) 
