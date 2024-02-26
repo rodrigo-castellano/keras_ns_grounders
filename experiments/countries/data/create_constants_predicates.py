@@ -1,6 +1,6 @@
 # take all the constants from train.txt for every line, with format predicate(constant1,constant2).
 # write the unique constants to domain2constants.txt
-dataset = 'FB15K'
+dataset = 'FB15k'
 # dataset = 'kinship_family'
 # path = './train.txt'
 # ctes_path = './domain2constants.txt'
@@ -28,6 +28,7 @@ predicates = sorted(predicates, key=lambda x: int(x) if x.isdigit() else x)
 print(constants)
 
 with open(ctes_path, 'w') as f:
+    f.write('cte ' )
     for cte in constants:
         f.write(cte + ' ')
 
