@@ -107,7 +107,7 @@ if __name__ == '__main__':
         args.domain_file = 'domain2constants.txt'
         args.rules_file = 'rules.txt'
 
-        if dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name:
+        if dataset_name == 'pharmkg_full' or 'FB15k' in dataset_name:
             args.test_batch_size = 64
 
         if rule_miner == 'amie':
