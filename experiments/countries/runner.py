@@ -25,10 +25,10 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['kinship_family_reason_2','countries_s2','countries_s3'] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
+    DATASET_NAME = ['pharmkg_full']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
     GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME =  ['no_reasoner','sbr','rnm','dcr','r2n']  
+    MODEL_NAME =  ['no_reasoner','sbr','dcr','r2n','rnm']  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
@@ -75,19 +75,20 @@ if __name__ == '__main__':
                 if int(backward_level) > int(dataset_level):
                     # print('skipping, backward level higher than dataset level', run_vars)
                     continue
+                
         if not os.path.exists(os.path.join(base_path, dataset_name)):
             # print('skipping, dataset not existing', run_vars)
             continue
 
-        if 'countries' in dataset_name:
-            # task is the last two letters of the dataset name
-            task = dataset_name[-2:]
-            if task == 's2' and (grounder == 'full'): # or grounder == 'domainbody'): domainbody sometimes gives problems
-                # print('skipping, grounder too heavy', run_vars)
-                continue
-            elif task == 's3' and (grounder == 'full' or grounder == 'domainbody'):
-                # print('skipping, grounder too heavy', run_vars)
-                continue
+        if grounder == 'full' and (dataset_name != 'countries_s1'):
+            # print('skipping, grounder too heavy', run_vars)
+            continue
+        if grounder == 'domainbody' and (dataset_name == 'countries_s3' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K'):
+            # print('skipping, grounder too heavy', run_vars)
+            continue
+        if model_name == 'no_reasoner' and (grounder == 'backward2' or grounder == 'backward3') and (dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name):
+            # print('no need to calculate reasoner again', run_vars)
+            continue
 
         args.dataset_name = dataset_name
         args.grounder = grounder
@@ -96,12 +97,18 @@ if __name__ == '__main__':
         args.rule_miner = rule_miner 
         args.seed = seed
         args.kge_atom_embedding_size = e
+        args.batch_size = -1 # 128 # Full batch only for explain.
+        args.val_batch_size = -1
+        args.test_batch_size = 256 #64
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
         args.test_file = 'test.txt'
         args.domain_file = 'domain2constants.txt'
         args.rules_file = 'rules.txt'
+
+        if dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name:
+            args.test_batch_size = 64
 
         if rule_miner == 'amie':
             args.rules_file = 'rules_amie.txt'
@@ -112,14 +119,14 @@ if __name__ == '__main__':
         else: # raise an error if the rule miner is not recognized
             raise ValueError('Rule miner not recognized for ', dataset_name)
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
-            # print('skipping, rules not existing', run_vars)
+            # print('skipping, rules not existing', run_vars) 
             continue
 
         # Data params
         args.num_negatives = neg  
         args.valid_negatives = 100  
         args.test_negatives = None  # all possible negatives
-        if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family':
+        if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family' or 'FB15K' in dataset_name:
             args.test_negatives = 1000
         args.ragged = True
         args.format = "functional"
@@ -138,9 +145,6 @@ if __name__ == '__main__':
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
         args.loss = "binary_crossentropy"
         args.weight_loss = w_loss
-        args.batch_size = -1 # Full batch only for explain.
-        args.val_batch_size = -1
-        args.test_batch_size = 256
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
         args.valid_frequency = 3
@@ -175,7 +179,7 @@ if __name__ == '__main__':
         print("\nRun vars:", args.run_signature+'\n')
         # LOGGER
         # Results for every epoch will be saved in a folder 
-        log_folder :str = "results"
+        log_folder :str = "results/"
         log_folder_run = os.path.join(log_folder,'indiv_runs')
         log_folder_experiments = os.path.join(log_folder,'experiments')
         # Check if the logger exists, if so, skip the experiment, otherwise run it. Logger exists if all the arguments inside each file in the folder are the same as the current args
@@ -193,8 +197,8 @@ if __name__ == '__main__':
                 print("Seed number ", seed, " in ", args.seed,'already done')
                 continue
             # else:
-                # print("Seed number ", seed, " not done. Exit")
-                # continue
+            #     print("Seed number ", seed, " not done. Exit")
+            #     continue
 
             print("Seed number ", seed, " in ", args.seed)
             with open(log_filename_tmp, 'w') as f:
