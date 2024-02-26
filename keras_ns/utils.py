@@ -66,7 +66,7 @@ def read_rules(path,args):
                     # var_names = {"a": "cte", "b": "cte","c": "cte","d": "cte", "h": "cte", "g": "cte"}
                     for var in variables:
                         var_names[var] = "cte" 
-                elif 'FB15K' in args.dataset_name:
+                elif 'FB15k' in args.dataset_name:
                     for var in variables:
                         var_names[var] = "cte"
             # print all the info
