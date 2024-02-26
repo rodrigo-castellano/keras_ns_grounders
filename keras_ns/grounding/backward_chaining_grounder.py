@@ -350,12 +350,12 @@ class BackwardChainingGrounder(Engine):
         # the other are not reset as they are incrementally added.
         for rule in self.rules:
             # VERSION WITH WICH I GOT ALL THE RESULTS
-            # if rule.name not in self.rule2groundings:
-            #     self.rule2groundings[rule.name] = set()
-            # if rule.name not in self.rule2proofs:
-            #     self.rule2proofs[rule.name] = []
-            self.rule2groundings[rule.name] = set()
-            self.rule2proofs[rule.name] = []
+            if rule.name not in self.rule2groundings:
+                self.rule2groundings[rule.name] = set()
+            if rule.name not in self.rule2proofs:
+                self.rule2proofs[rule.name] = []
+            # self.rule2groundings[rule.name] = set()
+            # self.rule2proofs[rule.name] = []
 
     # Ground a batch of queries, the result is cached for speed.
     def ground(self,
