@@ -26,9 +26,9 @@ if __name__ == '__main__':
     epochs: int = 100
     assert epochs > 0
     DATASET_NAME = ['FB15k']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
-    GROUNDER = ['backward_1','backward_2','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
+    GROUNDER = ['backward_2','backward_1','backward_3']  #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME =  ['no_reasoner','sbr','dcr','r2n','rnm']  
+    MODEL_NAME =  ['dcr','no_reasoner','sbr','dcr','r2n','rnm']  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         args.kge_atom_embedding_size = e
         args.batch_size = -1 # 128 # Full batch only for explain.
         args.val_batch_size = -1
-        args.test_batch_size = 64 #64
+        args.test_batch_size = -1 #64
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
