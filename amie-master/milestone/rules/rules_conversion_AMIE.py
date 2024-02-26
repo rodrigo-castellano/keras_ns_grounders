@@ -6,15 +6,15 @@ import re
 import sys
 
 std_confidence_threshold = 0.0
-max_rules = 100
+max_rules = 5000
 
-path = './pharmkg_supersmall'
+path = './FB15K'
 save_path = path+'_filtered'
 
 rules = []
 
 with open(path+'.txt', 'r') as f:
-    for line in f:
+    for k,line in enumerate(f):
         # split by '=>'
         line = line.split('=>')
         body = line[0].strip()
@@ -67,7 +67,9 @@ with open(save_path+'.txt', 'w') as f:
         predicates = ', '.join(rule[1])
         std_confidence = rule[2]
         pca_confidence = rule[3]
+        head_coverage = rule[4]
         string = 'r' + str(i) + ':' + str(std_confidence) + ':' + str(predicates) + ' -> ' + str(head)+'\n'
         f.write(string)
+        print('rule number:',i, 'std_confidence:', std_confidence, 'pca_confidence:', pca_confidence, 'head_coverage:', head_coverage)
         # print(rule)
         # print(string)

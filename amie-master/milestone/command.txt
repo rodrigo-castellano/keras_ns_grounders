@@ -1,1 +1,1 @@
-java -jar amie-milestone-intKB.jar data/train_pharmkg_supersmall.tsv >> rules/full.txt
+java -jar amie-milestone-intKB.jar data/train_FB15K.tsv >> rules/full.txt
