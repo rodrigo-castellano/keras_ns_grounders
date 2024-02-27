@@ -25,8 +25,8 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['FB15k']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
-    GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full']  
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
+    GROUNDER = ['backward_1','backward_2','backward_3'] #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['dcr','no_reasoner','sbr','dcr','r2n','rnm']  
     RULE_MINER = ['amie','None'] 
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         args.kge_atom_embedding_size = e
         args.batch_size = -1 # 128 # Full batch only for explain.
         args.val_batch_size = -1
-        args.test_batch_size = 256 #64
+        args.test_batch_size = 64 #64
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
@@ -107,8 +107,8 @@ if __name__ == '__main__':
         args.domain_file = 'domain2constants.txt'
         args.rules_file = 'rules.txt'
 
-        if dataset_name == 'pharmkg_full' or 'FB15k' in dataset_name:
-            args.test_batch_size = 64
+        # if dataset_name == 'pharmkg_full' or 'FB15k' in dataset_name:
+        #     args.test_batch_size = 64
 
         if rule_miner == 'amie':
             args.rules_file = 'rules_amie.txt'
@@ -179,7 +179,7 @@ if __name__ == '__main__':
         print("\nRun vars:", args.run_signature+'\n')
         # LOGGER
         # Results for every epoch will be saved in a folder 
-        log_folder :str = "results/"
+        log_folder :str = "results/countries_test64/"
         log_folder_run = os.path.join(log_folder,'indiv_runs')
         log_folder_experiments = os.path.join(log_folder,'experiments')
         # Check if the logger exists, if so, skip the experiment, otherwise run it. Logger exists if all the arguments inside each file in the folder are the same as the current args
