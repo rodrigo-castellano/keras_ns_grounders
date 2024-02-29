@@ -39,13 +39,13 @@ explain_enabled: bool = False
  
 def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
-    # Check if GPU is available
-    if tf.test.is_gpu_available():
-        # Get the name of the current GPU
-        gpu_name = tf.test.gpu_device_name()
-        print(f"Training on GPU: {gpu_name}")
-    else:
-        print("Training on CPU")
+    # # Check if GPU is available
+    # if tf.test.is_gpu_available():
+    #     # Get the name of the current GPU
+    #     gpu_name = tf.test.gpu_device_name()
+    #     print(f"Training on GPU: {gpu_name}")
+    # else:
+    #     print("Training on CPU")
 
     # csv_logger = ns.utils.CustomCallback(log_filename)
     csv_logger = ns.utils.CustomCSVLogger(log_filename, append=True, separator=';') 
