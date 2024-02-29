@@ -356,8 +356,8 @@ class BackwardChainingGrounder(Engine):
         for rule in self.rules:
             if clean or rule.name not in self.rule2groundings:
                 self.rule2groundings[rule.name] = set()
-	        # if clean or rule.name not in self.rule2proofs:
-        self.rule2proofs[rule.name] = []
+            # if clean or rule.name not in self.rule2proofs:
+                self.rule2proofs[rule.name] = []
 
     # Ground a batch of queries, the result is cached for speed.
     def ground(self,
