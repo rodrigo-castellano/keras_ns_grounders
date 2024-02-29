@@ -551,7 +551,7 @@ class FileLogger():
                         d[-1] = d[-1][:-1]
                         info_exp = {el.split(':')[0] : ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] in ['train_acc', 'valid_acc', 'test_acc','time_run']}
                         # add also time_run
-                        info_exp['time'] = [float(el.split(':')[1]) for el in d if el.split(':')[0] == 'time']
+                        info_exp['time'] = [float(el.split(':')[1]) for el in d if el.split(':')[0] in ['time_train','train_inference','time_ground_train','time_ground_valid','time_ground_test']]
                         # print('info_exp',info_exp)
                         # get the names of the metrics from the element 'metrics'
                         metrics_names = [ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] == 'metrics'][0]
@@ -586,7 +586,7 @@ class FileLogger():
         # take the metric elements until one element starts with 'val'
         names_metrics = [str(metric) for metric in list(metrics_name) if not metric.startswith('val')]
         metrics =  [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in names_metrics]
-        metrics += ['time']
+        metrics += ['time_train','train_inference','time_ground_train','time_ground_valid','time_ground_test']
         # metrics = [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in list(metrics_name)]
         combined_names = ';'.join(list(args_dict.keys()) + [str(metric) for metric in metrics] )
         values_args = [str(v) for k,v in args_dict.items()] 

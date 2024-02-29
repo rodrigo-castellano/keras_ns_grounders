@@ -65,6 +65,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     # Params
     ragged = get_arg(args, 'ragged', None, True)
 
+    start_train = time.time()
+
     # Data Loading
     data_handler = KGCDataHandler(
         dataset_name=args.dataset_name,
@@ -85,10 +87,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     dataset_valid = data_handler.get_dataset(
        split="valid",number_negatives=args.valid_negatives, corrupt_mode='TAIL')
     print('test negatives:',args.test_negatives)
-    dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL',number_negatives=args.test_negatives)
-    if explain_enabled and enable_rules and (args.model_name == 'dcr' or args.model_name == 'cdcr'):
-        dataset_test_positive_only = data_handler.get_dataset(
-            split="test", number_negatives=0, corrupt_mode='TAIL')
+
+
     fol = data_handler.fol
     domain2adaptive_constants: Dict[str, List[str]] = None
     num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
@@ -152,6 +152,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         dataset_train, fol, serializer, engine,
         batch_size=args.batch_size, ragged=ragged)
     end = time.time()
+    args.time_ground_train = np.round(end - start,2)
     print("Time to create data generator train: ", np.round(end - start,2))
     # print('batch 0 from data_gen_train', data_gen_train[0][0])
     # print('batch 0 from data_gen_train',data_gen_train.__getitem__(0))
@@ -160,13 +161,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
        dataset_valid, fol, serializer, engine,
        batch_size=args.val_batch_size, ragged=ragged)
     end = time.time()
+    args.time_ground_valid = np.round(end - start,2)
     print("Time to create data generator valid: ",  np.round(end - start,2))
-    start = time.time()
-    data_gen_test = ns.dataset.DataGenerator(
-        dataset_test, fol, serializer, engine,
-        batch_size=args.test_batch_size, ragged=ragged)
-    end = time.time()
-    print("Time to create data generator test: ",  np.round(end - start,2))
 
 
     # KGE
@@ -229,6 +225,10 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
               validation_data=data_gen_valid,
               validation_freq=args.valid_frequency
               )
+    
+    end_train = time.time()
+    args.time_train = np.round(end_train - start_train,2)
+    print('Training time:', np.round(end_train - start_train,2), 'seconds')
     best_model_callback.restore_weights()
 
     if output_filename is not None:
@@ -240,8 +240,25 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     print("\nEvaluation val", flush=True)
     valid_accuracy =  model.evaluate(data_gen_valid) 
     # valid_accuracy = list(np.zeros(len(train_accuracy)))
+
     print("\nEvaluation test", flush=True)
+    start_inf = time.time()
+    dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL',number_negatives=args.test_negatives)
+    if explain_enabled and enable_rules and (args.model_name == 'dcr' or args.model_name == 'cdcr'):
+        dataset_test_positive_only = data_handler.get_dataset(
+            split="test", number_negatives=0, corrupt_mode='TAIL')
+        
+    start = time.time()
+    data_gen_test = ns.dataset.DataGenerator(
+        dataset_test, fol, serializer, engine,
+        batch_size=args.test_batch_size, ragged=ragged)
+    end = time.time()
+    args.time_ground_test = np.round(end- start,2)
+    print("Time to create data generator test: ",  np.round(end - start,2))
     test_accuracy  =  model.evaluate(data_gen_test)
+    end_inf = time.time()
+    args.time_inference = np.round(end_inf - start_inf,2)
+    print('Inference time:', np.round(end_inf - start_inf,2), 'seconds')
 
     print('Metrics,loss:',history.history.keys()) 
     print('\nResults',

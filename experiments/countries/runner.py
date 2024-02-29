@@ -21,14 +21,14 @@ import argparse
 
 if __name__ == '__main__':
 
-
+    log_folder :str = "results/"
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
+    DATASET_NAME = ['FB15k']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
     GROUNDER = ['backward_1','backward_2','backward_3'] #['backward_1','backward_2','backward_3','domainbody','full']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME =  ['dcr','no_reasoner','sbr','dcr','r2n','rnm']  
+    MODEL_NAME =  ['dcr','sbr','dcr','r2n','no_reasoner','rnm']  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         args.kge_atom_embedding_size = e
         args.batch_size = -1 # 128 # Full batch only for explain.
         args.val_batch_size = -1
-        args.test_batch_size = 64 #64
+        args.test_batch_size = 512 #64
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
@@ -126,8 +126,8 @@ if __name__ == '__main__':
         args.num_negatives = neg  
         args.valid_negatives = 100  
         args.test_negatives = None  # all possible negatives
-        if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family' or 'FB15K' in dataset_name:
-            args.test_negatives = 1000
+        # if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family' or 'FB15K' in dataset_name:
+        #     args.test_negatives = 1000
         args.ragged = True
         args.format = "functional"
         args.engine_num_negatives = 0
@@ -174,12 +174,11 @@ if __name__ == '__main__':
 
 
 
-    def main_wrapper(args): 
+    def main_wrapper(args,log_folder): 
 
         print("\nRun vars:", args.run_signature+'\n')
         # LOGGER
         # Results for every epoch will be saved in a folder 
-        log_folder :str = "results/countries_test64/"
         log_folder_run = os.path.join(log_folder,'indiv_runs')
         log_folder_experiments = os.path.join(log_folder,'experiments')
         # Check if the logger exists, if so, skip the experiment, otherwise run it. Logger exists if all the arguments inside each file in the folder are the same as the current args
@@ -190,7 +189,6 @@ if __name__ == '__main__':
 
         date = logger.get_date()
         for seed in args.seed:
-            start = time.time()
             args.seed_run_i = seed
             log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
             if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
@@ -208,15 +206,17 @@ if __name__ == '__main__':
             except Exception as e:
                 print('Error in experiment', args.run_signature, 'seed', seed, 'error:', e, '. Try again!')
                 train_acc,valid_acc, test_acc,training_info = main(base_path,None,None,log_filename_tmp,args)
-            end = time.time()
-            time_run = end - start
             # The reuslts of the training have been written to tmp. write them as an individual run
             logged_data = copy.deepcopy(args)
             logged_data.train_acc = train_acc
             logged_data.valid_acc = valid_acc
             logged_data.test_acc = test_acc
             logged_data.metrics = list(training_info.keys())
-            logged_data.time = time_run
+            logged_data.time_train = args.time_train
+            logged_data.time_inference = args.time_inference
+            logged_data.time_ground_train = args.time_ground_train
+            logged_data.time_ground_valid = args.time_ground_valid
+            logged_data.time_ground_test = args.time_ground_test
 
             # write the info about the results in the tmp file 
             logger.log(logged_data.__dict__, log_filename_tmp)
@@ -237,4 +237,4 @@ if __name__ == '__main__':
         print('Experiment',l,':',args.run_signature)
     for args in all_args:
         print('Experiment number ', all_args.index(args), ' out of ', len(all_args), ' experiments.')
-        main_wrapper(args)
+        main_wrapper(args,log_folder)

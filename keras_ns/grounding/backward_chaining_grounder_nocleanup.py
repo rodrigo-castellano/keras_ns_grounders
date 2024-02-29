@@ -320,16 +320,11 @@ class BackwardChainingGrounder(Engine):
                  max_unknown_fact_count: int=1,
                  max_unknown_fact_count_last_step: int=0,
                  num_steps: int=1,
-                 max_groundings_per_rule: int=-1,  # to speedup the computation.
-                 # Whether the groundings should be accumulated across calls.
-                 accumulate_groundings: bool=False,
                  prune_incomplete_proofs: bool=True):
         self.max_unknown_fact_count = max_unknown_fact_count
         self.max_unknown_fact_count_last_step = max_unknown_fact_count_last_step
         self.num_steps = num_steps
-        self.accumulate_groundings = accumulate_groundings
         self.prune_incomplete_proofs = prune_incomplete_proofs
-        self.max_groundings_per_rule = max_groundings_per_rule
         self.rules = rules
         self.domains = domains
         self.facts = [a if isinstance(a,Tuple) else a.toTuple()
@@ -344,7 +339,7 @@ class BackwardChainingGrounder(Engine):
         self.rule2groundings = {}
         self.rule2proofs = {}
 
-    def _init_internals(self, queries: List[Tuple], clean: bool):
+    def _init_internals(self, queries: List[Tuple]):
         # this tell us the queries for each relation to analyse.
         self.relation2queries = {}  # reset
         for q in queries:
@@ -352,12 +347,15 @@ class BackwardChainingGrounder(Engine):
                 self.relation2queries[q[0]] = set()
             self.relation2queries[q[0]].add(q)
 
-        # If clean=False, groundings are incrementally added.
+        # the other are not reset as they are incrementally added.
         for rule in self.rules:
-            if clean or rule.name not in self.rule2groundings:
+            # VERSION WITH WICH I GOT ALL THE RESULTS
+            if rule.name not in self.rule2groundings:
                 self.rule2groundings[rule.name] = set()
-	        # if clean or rule.name not in self.rule2proofs:
-        self.rule2proofs[rule.name] = []
+            if rule.name not in self.rule2proofs:
+                self.rule2proofs[rule.name] = []
+            # self.rule2groundings[rule.name] = set()
+            # self.rule2proofs[rule.name] = []
 
     # Ground a batch of queries, the result is cached for speed.
     def ground(self,
@@ -370,9 +368,7 @@ class BackwardChainingGrounder(Engine):
         # # To debug: order the queries by the head, and then by body.if the len of the queries is less than 100
         # queries = sorted(queries, key=lambda x: (x[0], x[1:])) if len(queries) < 50 else queries
         # print('\nQUERIES\n', queries, '\n')
-        # When accumulating groundings, we keep a single large set of
-        # groundings that are reused over all batches.
-        self._init_internals(queries, clean=(not self.accumulate_groundings))
+        self._init_internals(queries)
         # order also the relation2queries
         # for k,v in self.relation2queries.items():
         #     self.relation2queries[k] = sorted(list(v), key=lambda x: (x[0], x[1:])) if len(v) < 50 else v
@@ -421,7 +417,7 @@ class BackwardChainingGrounder(Engine):
                      self._fact_index._index.get(a, None) is None])
             # print('\nNEW Q',len(new_queries),'\n', list(new_queries), ' FROM groundings', len(groundings))
             # Here we update the queries to process in the next iteration, we only keep the new ones.
-            self._init_internals(list(new_queries), clean=False)
+            self._init_internals(list(new_queries))
 
         print('Num groundings',sum([len(v) for k, v in self.rule2groundings.items()]))
         if self.prune_incomplete_proofs:
@@ -433,12 +429,6 @@ class BackwardChainingGrounder(Engine):
                                                          self.num_steps)
             print('Num groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
         # print('\nFinal groundings\n')
-        # This should be done after sorting the groundings to ensure the output
-        # to be deterministic.
-        if self.max_groundings_per_rule > 0:
-            self.rule2groundings = {rule_name:set(list(groundings)[:self.max_groundings_per_rule])
-                                    for rule_name,groundings in self.rule2groundings.items()}
-
         # for k,v in self.rule2groundings.items():
             # print('rule2groundings', k, len(v),v)
         if 'deterministic' in kwargs and kwargs['deterministic']:
