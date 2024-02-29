@@ -99,7 +99,7 @@ if __name__ == '__main__':
         args.kge_atom_embedding_size = e
         args.batch_size = -1 # 128 # Full batch only for explain.
         args.val_batch_size = -1
-        args.test_batch_size = 512 #64
+        args.test_batch_size = 256 #64
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
