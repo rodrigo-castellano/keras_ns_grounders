@@ -55,6 +55,8 @@ if __name__ == '__main__':
         MODEL_NAME = args.m
     if args.d is not None:
         DATASET_NAME = args.d
+    if args.g is not None:
+        GROUNDER = args.g
 
     print('Running experiments for the following parameters:', 'SEED:', SEED, 'MODEL_NAME:', MODEL_NAME, 'DATASET_NAME:', DATASET_NAME)
     
