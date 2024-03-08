@@ -119,9 +119,9 @@ class Rule(object):
             self.head = [Atom(s=atom_str, format=format).toTuple()
                          for atom_str in head]
 
-        vars = sorted(list(set([v for a in (self.head + self.body) for v in a[1:]])))
+        self.vars = sorted(list(set([v for a in (self.head + self.body) for v in a[1:]])))
         self.vars2domain = OrderedDict()
-        for v in vars:
+        for v in self.vars:
             self.vars2domain[v] = (Rule.default_domain() if var2domain is None else
                                    var2domain.get(v, None))
             assert self.vars2domain[v] is not None, ('Missing var %s from var2domain.' % v)
