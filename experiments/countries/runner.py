@@ -25,8 +25,8 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['wn18rr']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
-    GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full']  #['backward_1','backward_2','backward_3'] #
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','pharmkg_small']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
+    GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full'] # 'relationentity' #['backward_1','backward_2','backward_3'] #
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
@@ -42,19 +42,22 @@ if __name__ == '__main__':
     NUM_RULES = [1] 
     VALID_SIZE = [None]
 
-    parser = argparse.ArgumentParser(description='Description of your script') 
-    parser.add_argument('-s', '--seed',nargs='+', type=int, default = None, help='Description of seed') 
-    parser.add_argument('-m', '--model_name', nargs='+', type=str, default = None, help='Description of model')
-    parser.add_argument('-d', '--dataset_name', nargs='+', type=str, default = None, help='Description of dataset')
+    parser = argparse.ArgumentParser(description='Description of your script')  
+    parser.add_argument("--d", default = None, help="dataset",nargs='+')
+    parser.add_argument("--m", default = None, help="model",nargs='+')
+    parser.add_argument("--g", default = None, help="grounder",nargs='+')
+    parser.add_argument("--s", default = None, help="seed",nargs='+', type = int)
+
     args = parser.parse_args()
-    if args.seed is not None:
-        SEED = [args.seed]
-    if args.model_name is not None:
-        MODEL_NAME = args.model_name
-    if args.dataset_name is not None:
-        DATASET_NAME = args.dataset_name
+    if args.s is not None:
+        SEED = [args.s]
+    if args.m is not None:
+        MODEL_NAME = args.m
+    if args.d is not None:
+        DATASET_NAME = args.d
 
     print('Running experiments for the following parameters:', 'SEED:', SEED, 'MODEL_NAME:', MODEL_NAME, 'DATASET_NAME:', DATASET_NAME)
+    
     all_args = []
 
     for dataset_name,grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, rr in product(
@@ -80,7 +83,7 @@ if __name__ == '__main__':
             # print('skipping, dataset not existing', run_vars)
             continue
 
-        if grounder == 'full' and (dataset_name != 'countries_s1'):
+        if grounder == 'full' and (dataset_name != 'countries_s1' or dataset_name != 'countries_s2' or dataset_name != 'countries_s3' or dataset_name != 'nations'):
             # print('skipping, grounder too heavy', run_vars)
             continue
         if grounder == 'domainbody' and (dataset_name == 'countries_s3' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K'):

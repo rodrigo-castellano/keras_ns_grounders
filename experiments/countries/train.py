@@ -2,26 +2,6 @@ import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import tensorflow as tf
 from typing import Dict, List
-#import tensorflow_ranking as tfr
-# gpus = tf.config.experimental.list_physical_devices('GPU')
-# if gpus:
-#     for gpu in gpus:
-#         tf.config.experimental.set_memory_growth(gpu, True)
-
-########to limit the numbers of CORE
-# num_threads = 5
-# os.environ["OMP_NUM_THREADS"] = "5"
-# os.environ["TF_NUM_INTRAOP_THREADS"] = "5"
-# os.environ["TF_NUM_INTEROP_THREADS"] = "5"
-#
-# tf.config.threading.set_inter_op_parallelism_threads(
-#     num_threads
-# )
-# tf.config.threading.set_intra_op_parallelism_threads(
-#     num_threads
-# )
-# tf.config.set_soft_device_placement(True)
-
 import time
 import keras_ns as ns
 import numpy as np
@@ -36,6 +16,42 @@ from keras_ns.utils import MMapModelCheckpoint, KgeLossFactory, read_file_as_lin
 from keras_ns.utils import get_arg
 
 explain_enabled: bool = False
+
+def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
+
+    if args.grounder == 'full':
+        engine = ns.grounding.PlaceholderGeneratorFullGrounder(
+            domains={d.name:d for d in fol.domains},
+            rules=rules,
+            domain2adaptive_constants=domain2adaptive_constants,
+            exclude_symmetric=True,
+            exclude_query=False)
+    elif args.grounder == 'domain':
+        engine = ns.grounding.DomainFullGrounder(domains={d.name:d for d in fol.domains},
+                                                rules=rules,
+                                                exclude_symmetric=True,
+                                                exclude_query=False)
+    elif args.grounder == 'known':
+        engine = ns.grounding.KnownBodyGrounder(rules, facts=facts)
+    
+    elif 'backward' in args.grounder:
+        num_steps = int(args.grounder.split('_')[-1])
+        prune_backward = True # if ( ('backward' in args.grounder) and ('prune'in args.grounder) ) else False
+        print('Grounder: ',args.grounder,'Number of steps:', num_steps, 'Prune:', prune_backward)
+        engine = ns.grounding.BackwardChainingGrounder(rules, facts=facts,
+                                                    domains={d.name:d for d in fol.domains},
+                                                    num_steps=num_steps, prune_incomplete_proofs=prune_backward)
+    elif args.grounder == 'domainbody':
+        engine = ns.grounding.DomainBodyGrounder(domains={d.name:d for d in fol.domains},
+                                                rules=rules,
+                                                exclude_symmetric=True,
+                                                exclude_query=False)
+    elif args.grounder == 'relationentity':
+        engine = ns.grounding.RelationEntityGraphGrounder(
+            rules, facts=facts,
+            build_cartesian_product=True,
+            max_elements=20)
+    return engine
  
 def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
@@ -47,7 +63,6 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     # else:
     #     print("Training on CPU")
 
-    # csv_logger = ns.utils.CustomCallback(log_filename)
     csv_logger = ns.utils.CustomCSVLogger(log_filename, append=True, separator=';') 
     print('\nARGS', args,'\n')
 
@@ -55,12 +70,6 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     random.seed(seed)
     np.random.seed(seed)
     tf.random.set_seed(seed)
-
-    # Enable this to find to debug NANs.
-    #tf.debugging.experimental.enable_dump_debug_info(
-    #    "/tmp/tfdbg2_logdir",
-    #    tensor_debug_mode="FULL_HEALTH",
-    #    circular_buffer_size=-1)
 
     # Params
     ragged = get_arg(args, 'ragged', None, True)
@@ -100,42 +109,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
     if enable_rules: 
         rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
-        # For KGEs with no domains.
-        # domains = {Rule.default_domain(): fol.domains[0]}
-
-        domain2adaptive_constants = {
-            d.name : ['__adaptive_%s_%d' % (d.name, i)
-                    for i in range(num_adaptive_constants)]
-            for d in fol.domains
-            }
-
-        if args.grounder == 'full':
-            engine = ns.grounding.PlaceholderGeneratorFullGrounder(
-                domains={d.name:d for d in fol.domains},
-                rules=rules,
-                domain2adaptive_constants=domain2adaptive_constants,
-                exclude_symmetric=True,
-                exclude_query=False)
-        elif args.grounder == 'domain':
-            engine = ns.grounding.DomainFullGrounder(domains={d.name:d for d in fol.domains},
-                                                    rules=rules,
-                                                    exclude_symmetric=True,
-                                                    exclude_query=False)
-        elif args.grounder == 'known':
-            engine = ns.grounding.KnownBodyGrounder(rules, facts=list(data_handler.train_known_facts_set))
-        
-        elif 'backward' in args.grounder:
-            num_steps = int(args.grounder.split('_')[-1])
-            prune_backward = True # if ( ('backward' in args.grounder) and ('prune'in args.grounder) ) else False
-            print('Grounder: ',args.grounder,'Number of steps:', num_steps, 'Prune:', prune_backward)
-            engine = ns.grounding.BackwardChainingGrounder(rules, facts=list(data_handler.train_known_facts_set),
-                                                        domains={d.name:d for d in fol.domains},
-                                                        num_steps=num_steps, prune_incomplete_proofs=prune_backward)
-        elif args.grounder == 'domainbody':
-            engine = ns.grounding.DomainBodyGrounder(domains={d.name:d for d in fol.domains},
-                                                    rules=rules,
-                                                    exclude_symmetric=True,
-                                                    exclude_query=False)
+        facts=list(data_handler.train_known_facts_set)
+        engine = BuildGrounder(args, fol, rules, facts, domain2adaptive_constants)
     else:
         rules = []
         engine = None
@@ -204,7 +179,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     metrics = [ns.utils.MRRMetric(),
                ns.utils.HitsMetric(1),
                ns.utils.HitsMetric(3),
-            #    ns.utils.HitsMetric(10)
+               ns.utils.HitsMetric(10)
                ]
     model.compile(optimizer=optimizer,
                     loss=loss,
