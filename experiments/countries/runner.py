@@ -25,10 +25,10 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','pharmkg_small']#['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations',] #['countries_s1','countries_s2','countries_s3','pharmkg_small','pharmkg_small_reason_2','pharmkg_full','nations','kinship_family_small','kinship_family','kinship_family_reason_2' ] 
-    GROUNDER = ['backward_1','backward_2','backward_3','domainbody','full'] # 'relationentity' #['backward_1','backward_2','backward_3'] #
+    DATASET_NAME = ['countries_s2','countries_s3'],#['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','FB15k237','wn18rr']
+    GROUNDER = ['backward_1','backward_2','backward_3']#,'domainbody','full'] # 'relationentity' #['backward_1','backward_2','backward_3'] #
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME =  ['dcr','sbr','r2n','no_reasoner']  
+    MODEL_NAME =  ['no_reasoner','dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
@@ -58,7 +58,12 @@ if __name__ == '__main__':
     if args.g is not None:
         GROUNDER = args.g
 
-    print('Running experiments for the following parameters:', 'SEED:', SEED, 'MODEL_NAME:', MODEL_NAME, 'DATASET_NAME:', DATASET_NAME)
+    del args.s
+    del args.m
+    del args.d  
+    del args.g
+
+    print('Running experiments for the following parameters:','DATASET_NAME:',DATASET_NAME,'GROUNDER:',GROUNDER,'MODEL_NAME:',MODEL_NAME,'SEED:',SEED)
     
     all_args = []
 
@@ -101,6 +106,8 @@ if __name__ == '__main__':
         args.model_name = model_name 
         args.rule_miner = rule_miner 
         args.seed = seed
+        if dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237':
+            args.seed = [0]
         args.kge_atom_embedding_size = e
         args.batch_size = -1 # 128 # Full batch only for explain.
         args.val_batch_size = -1
@@ -232,10 +239,10 @@ if __name__ == '__main__':
             os.rename(log_filename_tmp, log_filename_run)
   
         # write the average results if we need to average over experiments
-        if len(args.seed) > 1:
-            info_metrics,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
-            if info_metrics is not None:
-                logger.write_avg_results(args.__dict__,info_metrics,metrics_name)
+        # if len(args.seed) > 1:
+        info_metrics,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
+        if info_metrics is not None:
+            logger.write_avg_results(args.__dict__,info_metrics,metrics_name)
 
                 
     for l,args in enumerate(all_args):
