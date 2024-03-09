@@ -20,11 +20,11 @@ import argparse
 
 if __name__ == '__main__':
 
-    log_folder :str = "results/"
+    log_folder :str = "results/full_test_batch"
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s2','countries_s3','kinship_family'],#['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','FB15k237','wn18rr']
+    DATASET_NAME = ['countries_s2','countries_s3','kinship_family']#['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1','backward_2','backward_3']#,'domainbody','full'] # 'relationentity' #['backward_1','backward_2','backward_3'] #
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['no_reasoner','dcr','sbr','r2n','no_reasoner']  
