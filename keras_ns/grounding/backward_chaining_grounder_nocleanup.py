@@ -313,7 +313,7 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
     return pruned_rule2groundings
 
 
-class BackwardChainingGrounder(Engine):
+class BackwardChainingGrounder_nocleanup(Engine):
 
     def __init__(self, rules: List[Rule], facts: List[Union[Atom, str, Tuple]],
                  domains: Dict[str, Domain],
@@ -399,8 +399,8 @@ class BackwardChainingGrounder(Engine):
                 self._rule2processed_queries[rule.name].update(queries_per_rule)
                 # print('\nqueries processed:, _rule2processed_queries\n', len(self._rule2processed_queries[rule.name]),self._rule2processed_queries[rule.name])
                 # print()
-                for k,v in self.rule2groundings.items():
-                    print('rule2groundings', k, len(v))#,v)
+                # for k,v in self.rule2groundings.items():
+                #     print('rule2groundings', k, len(v))#,v)
  
             if step == self.num_steps - 1:
                 break

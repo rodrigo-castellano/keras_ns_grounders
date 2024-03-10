@@ -14,6 +14,7 @@ from keras_ns.logic.commons import Atom, Domain, Rule, RuleLoader
 from keras_ns.nn.kge import KGEFactory
 from keras_ns.utils import MMapModelCheckpoint, KgeLossFactory, read_file_as_lines
 from keras_ns.utils import get_arg
+from keras_ns.grounding.backward_chaining_grounder_nocleanup import BackwardChainingGrounder_nocleanup
 
 explain_enabled: bool = False
 
@@ -39,6 +40,10 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
         prune_backward = True # if ( ('backward' in args.grounder) and ('prune'in args.grounder) ) else False
         print('Grounder: ',args.grounder,'Number of steps:', num_steps, 'Prune:', prune_backward)
         engine = ns.grounding.BackwardChainingGrounder(rules, facts=facts,
+                                                    domains={d.name:d for d in fol.domains},
+                                                    num_steps=num_steps, prune_incomplete_proofs=prune_backward)
+        if '_nocleanup' in args.grounder:
+            engine = BackwardChainingGrounder_nocleanup(rules, facts=facts,
                                                     domains={d.name:d for d in fol.domains},
                                                     num_steps=num_steps, prune_incomplete_proofs=prune_backward)
     elif args.grounder == 'domainbody':

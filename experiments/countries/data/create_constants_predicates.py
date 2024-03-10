@@ -1,6 +1,6 @@
 # take all the constants from train.txt for every line, with format predicate(constant1,constant2).
 # write the unique constants to domain2constants.txt
-dataset = 'wn18rr'
+dataset = 'FB15k237'
 # dataset = 'kinship_family'
 # path = './train.txt'
 # ctes_path = './domain2constants.txt'
