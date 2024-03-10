@@ -41,6 +41,10 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
         engine = ns.grounding.BackwardChainingGrounder(rules, facts=facts,
                                                     domains={d.name:d for d in fol.domains},
                                                     num_steps=num_steps, prune_incomplete_proofs=prune_backward)
+        if '_nocleanup' in args.grounder:
+            engine = ns.grounding.BackwardChainingGrounder_nocleanup(rules, facts=facts,
+                                                    domains={d.name:d for d in fol.domains},
+                                                    num_steps=num_steps, prune_incomplete_proofs=prune_backward)
     elif args.grounder == 'domainbody':
         engine = ns.grounding.DomainBodyGrounder(domains={d.name:d for d in fol.domains},
                                                 rules=rules,
