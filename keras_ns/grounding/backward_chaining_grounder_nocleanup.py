@@ -313,7 +313,7 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
     return pruned_rule2groundings
 
 
-class BackwardChainingGrounder(Engine):
+class BackwardChainingGrounder_nocleanup(Engine):
 
     def __init__(self, rules: List[Rule], facts: List[Union[Atom, str, Tuple]],
                  domains: Dict[str, Domain],
