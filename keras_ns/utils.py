@@ -563,7 +563,7 @@ class FileLogger():
                                 else:
                                     info[key] = [np.round(info_exp[key],3)]
         #print a message also
-        assert len(seeds_found) == len(seeds), 'The number of seeds found in the experiments is different from the number of seeds'
+        assert len(seeds_found) == len(seeds), 'The number of seeds found in the experiments folder is different from the number of seeds you set in the code'
         if len(seeds_found) != len(seeds):
             print('The number of seeds found in the experiments is different from the number of seeds!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         # for every key in the dictionary, take the average and the std
