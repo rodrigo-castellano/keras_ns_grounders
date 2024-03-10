@@ -20,12 +20,12 @@ import argparse
 
 if __name__ == '__main__':
 
-    log_folder :str = "results/full_test_batch"
+    log_folder :str = "results/full_test_batch_nocleanup"
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
     DATASET_NAME = ['countries_s2','countries_s3','kinship_family']#['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','FB15k237','wn18rr']
-    GROUNDER = ['backward_1','backward_2','backward_3']#,'domainbody','full'] # 'relationentity' #['backward_1','backward_2','backward_3'] #
+    GROUNDER = ['backward_1_nocleanup','backward_2_nocleanup','backward_3_nocleanup']#,'domainbody','full'] # 'relationentity' #['backward_1','backward_2','backward_3'] #
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['no_reasoner','dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
@@ -110,7 +110,7 @@ if __name__ == '__main__':
         args.kge_atom_embedding_size = e
         args.batch_size = -1 # 128 # Full batch only for explain.
         args.val_batch_size = -1
-        args.test_batch_size = -1 #64
+        args.test_batch_size = 256 #64
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
