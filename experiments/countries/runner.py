@@ -2,9 +2,11 @@ import sys
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\keras_ns_grounders')
 sys.path.append('/home/castellanoontiv/keras_ns_grounders')
 sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
+sys.path.append('/home2/castellanoontiv/keras_ns_grounders/')
+
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import copy
-import os
 from itertools import product
 from train import main
 import shutil as sh
@@ -20,6 +22,7 @@ import argparse
 
 if __name__ == '__main__':
 
+    # print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
     log_folder :str = "results/full_test_batch_nocleanup"
     base_path :str = "data"
     epochs: int = 100
@@ -60,8 +63,7 @@ if __name__ == '__main__':
     del args.s
     del args.m
     del args.d  
-    del args.g
-
+    del args._get_args
     print('Running experiments for the following parameters:','DATASET_NAME:',DATASET_NAME,'GROUNDER:',GROUNDER,'MODEL_NAME:',MODEL_NAME,'SEED:',SEED)
     
     all_args = []
@@ -89,13 +91,13 @@ if __name__ == '__main__':
             # print('skipping, dataset not existing', run_vars)
             continue
 
-        if grounder == 'full' and (dataset_name != 'countries_s1' or dataset_name != 'countries_s2' or dataset_name != 'countries_s3' or dataset_name != 'nations'):
+        if grounder == 'full' and (dataset_name != 'countries_s1'):
             # print('skipping, grounder too heavy', run_vars)
             continue
-        if grounder == 'domainbody' and (dataset_name == 'countries_s3' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K'):
+        if grounder == 'domainbody' and (dataset_name == 'wn18rr' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K'):
             # print('skipping, grounder too heavy', run_vars)
             continue
-        if model_name == 'no_reasoner' and (grounder == 'backward2' or grounder == 'backward3') and (dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name):
+        if model_name == 'no_reasoner' and (grounder == 'backward2' or grounder == 'backward3') and (dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name or 'wn18rr' in dataset_name):
             # print('no need to calculate reasoner again', run_vars)
             continue
 
