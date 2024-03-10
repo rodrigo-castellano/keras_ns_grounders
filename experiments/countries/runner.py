@@ -25,7 +25,7 @@ if __name__ == '__main__':
     epochs: int = 100
     assert epochs > 0
     DATASET_NAME = ['countries_s2','countries_s3','kinship_family']#['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','FB15k237','wn18rr']
-    GROUNDER = ['backward_1_nocleanup','backward_2_nocleanup','backward_3_nocleanup']#,'domainbody','full'] # 'relationentity' #['backward_1','backward_2','backward_3'] #
+    GROUNDER = ['backward_nocleanup_1','backward_nocleanup_2','backward_nocleanup_3']#,'domainbody','full'] # 'relationentity' #['backward_1','backward_2','backward_3'] #
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['no_reasoner','dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
