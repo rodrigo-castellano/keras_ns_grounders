@@ -12,6 +12,7 @@ class DomainFullGrounder(Engine):
                  exclude_symmetric: bool=False,
                  exclude_query: bool=False,
                  limit: int=None):
+
         self.rules = rules
         # The flat grounder is not query oriented.
         self.domains = domains
@@ -111,8 +112,8 @@ class DomainBodyGrounder(Engine):
 
         self.rule2groundings = {}
         for rule in self.rules:
-            if rule.name not in self.rule2groundings:
-                self.rule2groundings[rule.name] = set()
+            #if rule.name not in self.rule2groundings:
+            self.rule2groundings[rule.name] = set()
 
     #@lru_cache
     def ground(self,

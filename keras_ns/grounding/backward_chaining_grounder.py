@@ -1,4 +1,5 @@
 #! /bin/python3
+#from memory_profiler import profile
 import copy
 import time
 from typing import List, Set, Tuple, Dict, Union
@@ -124,6 +125,7 @@ def backward_chaining_grounding_one_rule(
         res.update(new_ground_atoms)
 
 # res is a Set of (Tuple_head_groundings, Tuple_body_groundings)
+#@profile
 def backward_chaining_grounding_one_rule_with_domains(
     domains: Dict[str, Domain],
     rule: Rule,
@@ -138,7 +140,6 @@ def backward_chaining_grounding_one_rule_with_domains(
     # atom -> list of atoms needed to be proved in the application of the rule.
     proofs: Dict[Tuple[Tuple, Tuple], List[Tuple[Tuple, Tuple]]]=None) -> Union[
         None, Set[Tuple[Tuple, Tuple]]]:
-    
     start = time.time()
     # We have a rule like A(x,y) B(y,z) => C(x,z)
     assert len(rule.head) == 1, (
@@ -305,11 +306,11 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
             # or they are provable using the rules,
             if all([(atom2proved.get(a, False) or
                      fact_index._index.get(a, None) is not None)
-                    for a in head_atoms]):                
+                    for a in head_atoms]):
                 pruned_groundings.append(g)
         pruned_rule2groundings[rule_name] = set(pruned_groundings)
     #for rn,g in pruned_rule2groundings.items():
-    #    print('ROUT', rn, g)
+    #    print('ROUT', rn, len(g))
     return pruned_rule2groundings
 
 
