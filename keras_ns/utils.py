@@ -532,7 +532,7 @@ class FileLogger():
         # print('n_files',n_files,'seeds',seeds)
         # print('run_files',run_files)
         if n_files < len(seeds):
-            print('The number of files',n_files,' found in the experiments is different from the number of seeds',seeds,'!!!!!!!')
+            print('The number of files',n_files,' found in the experiments is different from the number of seeds',len(seeds),'(',seeds,')!!!!!!!')
             return None,None
         # for every file, read all the lines and if the line starts with 'all_data', take the values and add them to the array
         info = {}   
@@ -548,7 +548,7 @@ class FileLogger():
                         d[-1] = d[-1][:-1]
                         info_exp = {el.split(':')[0] : ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] in ['train_acc', 'valid_acc', 'test_acc','time_run']}
                         # add also time_run
-                        info_exp['time'] = [float(el.split(':')[1]) for el in d if el.split(':')[0] in ['time_train','train_inference','time_ground_train','time_ground_valid','time_ground_test']]
+                        info_exp['time'] = [float(el.split(':')[1]) for el in d if el.split(':')[0] in ['time_train','time_inference','time_ground_train','time_ground_valid','time_ground_test']]
                         # print('info_exp',info_exp)
                         # get the names of the metrics from the element 'metrics'
                         metrics_names = [ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] == 'metrics'][0]
@@ -562,6 +562,8 @@ class FileLogger():
                                     info[key].append(np.round(info_exp[key],3))
                                 else:
                                     info[key] = [np.round(info_exp[key],3)]
+        for key in info_exp.keys():
+            print('key',key,'info_exp[key]',info[key])
         #print a message also
         assert len(seeds_found) == len(seeds), 'The number of seeds found in the experiments folder is different from the number of seeds you set in the code'
         if len(seeds_found) != len(seeds):
@@ -571,8 +573,8 @@ class FileLogger():
             avg = np.mean(info[key],axis=0)
             std = np.std(info[key],axis=0)
             info[key] = [list(avg),list(std)]
-        # for key in info.keys():
-        #     print('names',metrics_names,'\nkey',key,'info[key]',info[key])
+        for key in info.keys():
+            print('names',metrics_names,'\nkey',key,'info[key]',info[key])
         return info,metrics_names
 
     def write_avg_results(self,args_dict,info_metrics,metrics_name):
@@ -583,7 +585,7 @@ class FileLogger():
         # take the metric elements until one element starts with 'val'
         names_metrics = [str(metric) for metric in list(metrics_name) if not metric.startswith('val')]
         metrics =  [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in names_metrics]
-        metrics += ['time_train','train_inference','time_ground_train','time_ground_valid','time_ground_test']
+        metrics += ['time_ground_train','time_ground_valid','time_train','time_ground_test','time_inference']
         # metrics = [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in list(metrics_name)]
         combined_names = ';'.join(list(args_dict.keys()) + [str(metric) for metric in metrics] )
         values_args = [str(v) for k,v in args_dict.items()] 

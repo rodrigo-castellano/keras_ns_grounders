@@ -29,7 +29,27 @@ class ConstantEmbeddings(Layer):
                 domain_inputs[domain.name])
         return domain_features
 
+class PredicateEmbeddings(Layer):
+    """Calls the predicate embedders."""
+    def __init__(self, predicates: List[str],
+                 predicate_embedding_size: int,
+                 regularization: float=0.0):
+        super().__init__()
+        #self.predicates = predicates
+        # self.predicate2index = {p:i for i,p in enumerate(predicates)}
+        #self.table = tf.lookup.StaticHashTable(
+        #    tf.lookup.KeyValueTensorInitializer(self.predicate2index.keys(),
+        #                                        self.predicate2index.values()),
+        #    default_value=-1)
+        #self.regularization = regularization
+        self.embedder = Embedding(len(predicates), predicate_embedding_size,
+                                  embeddings_regularizer=L2(regularization))
 
+    # Inputs is tensor of predicate idx.
+    # Output is tensor of embeddings of each predicate.
+    def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
+        return self.embedder(inputs)  #BE
+    
 class AdaptiveConstantEmbeddings(Layer):
     def __init__(self, domains: List[Domain],
                  constant_embedder: ConstantEmbeddings,

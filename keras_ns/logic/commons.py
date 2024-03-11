@@ -318,6 +318,7 @@ class FOL():
                  constant2domain_name: Dict[str, str]=None):
         self.predicates = predicates
         self.name2predicate = {p.name:p for p in predicates}
+        self.name2predicate_idx = {p.name:i for i,p in enumerate(predicates)}
         self.domains = domains
         self.name2domain = {d.name:d for d in self.domains}
         _facts = facts if facts is not None else []
