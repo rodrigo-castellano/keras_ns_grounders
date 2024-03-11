@@ -8,7 +8,7 @@ import sys
 std_confidence_threshold = 0.0
 max_rules = 5000
 
-path = './wn18rr'
+path = './pharmkgfull'
 save_path = path+'_filtered'
 
 rules = []
