@@ -81,12 +81,11 @@ class LogicSerializerFast(IndexerBase):
                                    for predicate in self.predicates}
         for atom in all_atoms:
             all_atoms_per_predicate[atom[0]].append(atom)
-        # print('all_atoms_per_predicate',all_atoms_per_predicate)
+
         # Create the index following the bucketed order
         atom_to_index = {}
         count = 0
         for predicate in self.predicates:
-            # print('predicate',predicate)
             constant_tuples = []
             for atom in all_atoms_per_predicate[predicate.name]:
                 ## HERE IT ASSIGNS AN INDEX TO EVERY ATOM (FOR EVERY PREDICATE)
@@ -102,8 +101,6 @@ class LogicSerializerFast(IndexerBase):
                               if c in self.constant2domain_name else
                               self.adaptive_constant2domain[c])
                     constant_index = domain_to_local_constant_index[domain]
-                    # print('domain',domain)
-                    # print('constant_index',constant_index)
                     if c not in constant_index:
                         constant_index[c] = len(constant_index)
                         domain_to_global[domain].append(

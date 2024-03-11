@@ -28,11 +28,10 @@ class PlaceholderGeneratorFullGrounder(Engine):
         self.exclude_query = exclude_query
 
     def _init_internals(self, queries: List[Tuple]):
-
         self.rule2groundings = {}
         for rule in self.rules:
-            if rule.name not in self.rule2groundings:
-                self.rule2groundings[rule.name] = set()
+            #if rule.name not in self.rule2groundings:
+            self.rule2groundings[rule.name] = set()
 
     #@lru_cache
     def ground(self,

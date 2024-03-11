@@ -1,0 +1,2 @@
+model_checkpoint_path: "kge_model__epoch17.ckpt"
+all_model_checkpoint_paths: "kge_model__epoch17.ckpt"
