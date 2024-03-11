@@ -1,0 +1,2 @@
+model_checkpoint_path: "countries_s1-backward_1-complex-dcr-None-1-100__epoch11.ckpt"
+all_model_checkpoint_paths: "countries_s1-backward_1-complex-dcr-None-1-100__epoch11.ckpt"
