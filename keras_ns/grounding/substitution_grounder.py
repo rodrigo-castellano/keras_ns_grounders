@@ -39,8 +39,10 @@ class SubstitutionGrounder(Engine):
                     assert all(ground_atom), 'Unresolved %s' % str(ground_atom)
                     head_atoms.append(ground_atom)
                 groundings.append((tuple(head_atoms), tuple(body_atoms)))
-
+            # print('Groundings', groundings[:10])
+            # groundings = groundings[:10]
             res[rule.name] = RuleGroundings(rule.name, groundings=groundings)
+        # total number of groundings
         return res
 
 #############################################

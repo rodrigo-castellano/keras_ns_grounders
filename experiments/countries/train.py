@@ -176,7 +176,6 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         cdcr_num_formulas=get_arg(args, 'cdcr_num_formulas', 3),
     )
 
-
     #Loss
     loss_name = get_arg(args, 'loss', 'binary_crossentropy')
     loss = KgeLossFactory(loss_name)

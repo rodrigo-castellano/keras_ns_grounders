@@ -47,7 +47,7 @@ def _from_strings_to_tensors(fol, serializer,
         rules = []
     # print('\n')
     # for k,v in ground_formulas.items():
-    #     print('rulee ',k,v)
+    #     print('rule ',k,v)
     #     print('\n') 
     # print('\n\n\n\n\n\nground_formulas', len(ground_formulas),ground_formulas)
     # print('queries at the end', len(queries), queries)
@@ -135,6 +135,11 @@ class Dataset():
         return len(self.queries)
 
 
+    def _get_batch(self, i, b):
+
+        return self.queries[b*i:b*(i+1)], self.labels[b*i:b*(i+1)], 
+
+
 class DataGenerator(tf.keras.utils.Sequence):
 
     def __init__(self,
@@ -181,9 +186,11 @@ class DataGenerator(tf.keras.utils.Sequence):
         return self._num_batches
 
 
-    def _get_batch(self, i, b): 
-        queries, labels = self.dataset[b*i:b*(i+1)] 
-        constants_features = self.dataset.constants_features 
+    def _get_batch(self, i, b):
+
+        queries, labels = self.dataset[b*i:b*(i+1)]
+        constants_features = self.dataset.constants_features
+
         ((X_domains_data, A_predicates_data, A_rules_data, Q), y) = _from_strings_to_tensors(
             fol=self.fol,
             serializer=self.serializer,

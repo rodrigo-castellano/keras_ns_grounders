@@ -22,15 +22,17 @@ import argparse
 
 if __name__ == '__main__':
 
+    # rerun for hits10: countries, pharmkg_small, fb15k237, wn18, kinship (do it with michlangelo changes and write in signature the test results)
+
     # print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
-    log_folder :str = "results/full_test_batch_nocleanup"
+    log_folder :str = "results/"
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s2','countries_s3','kinship_family']#['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','FB15k237','wn18rr']
-    GROUNDER = ['backward_nocleanup_1','backward_nocleanup_2','backward_nocleanup_3']#,'domainbody','full'] # 'relationentity' #['backward_1','backward_2','backward_3'] #
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small'] #'nations', ,'pharmkg_full','FB15k237','wn18rr'
+    GROUNDER = ['relationentity' ,'backward_1','backward_2','backward_3','domainbody','full'] # 'relationentity'  'relationentity' ,
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME =  ['no_reasoner','dcr','sbr','r2n','no_reasoner']  
+    MODEL_NAME =  ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
@@ -63,7 +65,7 @@ if __name__ == '__main__':
     del args.s
     del args.m
     del args.d  
-    del args._get_args
+    del args.g
     print('Running experiments for the following parameters:','DATASET_NAME:',DATASET_NAME,'GROUNDER:',GROUNDER,'MODEL_NAME:',MODEL_NAME,'SEED:',SEED)
     
     all_args = []
@@ -72,9 +74,6 @@ if __name__ == '__main__':
             DATASET_NAME,GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
             LR, NUM_RULES, RR ):  
 
-        # Base parameters
-        # parser = NSParser()
-        # args = parser.parse_args()
         run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
         if 'reason' in dataset_name:
             if 'backward' not in grounder:
@@ -107,7 +106,7 @@ if __name__ == '__main__':
         args.model_name = model_name 
         args.rule_miner = rule_miner 
         args.seed = seed
-        if dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237':
+        if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'):# and model_name != 'no_reasoner' :
             args.seed = [0]
         args.kge_atom_embedding_size = e
         args.batch_size = -1 # 128 # Full batch only for explain.
@@ -148,6 +147,10 @@ if __name__ == '__main__':
         args.constant_embedding_size = (
             2 * args.kge_atom_embedding_size
             if args.kge == "complex" or args.kge == "rotate"
+            else args.kge_atom_embedding_size)
+        args.predicate_embedding_size = (
+            2 * args.kge_atom_embedding_size
+            if args.kge == 'complex'
             else args.kge_atom_embedding_size)
         # KGE params
         args.dropout_rate_embedder = dropout
@@ -208,8 +211,8 @@ if __name__ == '__main__':
                 print("Seed number ", seed, " in ", args.seed,'already done')
                 continue
             # else:
-            #     print("Seed number ", seed, " not done. Exit")
-            #     continue
+                # print("Seed number ", seed, " not done. Exit")
+                # continue
 
             print("Seed number ", seed, " in ", args.seed)
             with open(log_filename_tmp, 'w') as f:
