@@ -2,14 +2,18 @@ import os.path
 import sys
 import ast
 import pandas as pd
+from collections.abc import Iterable
 import tensorflow as tf
 import argparse
 import numpy as np
+import sys
 from typing import Dict
 import datetime
 from tensorflow_ranking.python.utils import sort_by_scores, ragged_to_dense
 from keras_ns.logic.commons import Atom, Domain, Rule, RuleLoader
 
+#######################################
+# Utils.
 
 def get_arg(args, name: str, default=None, assert_defined=False):
     value = getattr(args, name) if hasattr(args, name) else default
@@ -74,18 +78,32 @@ def read_rules(path,args):
     print('number of rules: ', len(rules))
     return rules
 
-def add_if_not_in(to_insert: list, full_list:list, reference_set: set):
-    for a in to_insert:
-        if a not in reference_set:
-            reference_set.add(a)
-            full_list.append(a)
+# Recursive flattening to a 1D Iterable. TODO(check if this works).
+# Example usages:
+# Flatten([[1,2,3], 2, ['a','b']], tuple) -> (1,2,3,2,'a','b')
+# Flatten([[1,2,3], 2, ['a','b']], list) -> [1,2,3,2,'a','b']
+# Flatten(([1,2,3], 2, ('a','b')), list) -> [1,2,3,2,'a','b']
+# Flatten(([1,2,3], 2, ('a','b')), np.array) -> np.array(1,2,3,2,'a','b')
+def Flatten(lst: Iterable, flattening_function=tuple) -> Iterable:
+    return flattening_function(Flatten(i, flattening_function)
+                               if (not isinstance(elem, str) and
+                                   isinstance(i, Iterable))
+                               else i for i in lst)
 
-@tf.custom_gradient
-def differentiable_sign(x):
-    sign = tf.sign(x)
-    def grad(x):
-        return tf.gradients(tf.sigmoid(x), x)
-    return sign, grad
+# Can we just use the one above? Or this one? TODO cleanup.
+def to_flat(nestedList):
+    ''' Converts a nested list to a flat list '''
+    flatList = []
+    # Iterate over all the elements in given list
+    for elem in nestedList:
+        # Check if type of element is list
+        if not isinstance(elem, str) and isinstance(elem, list):
+            # Extend the flat list by adding contents of this element (list)
+            flatList.extend(to_flat(elem))
+        else:
+            # Append the element to the list
+            flatList.append(elem)
+    return flatList
 
 # Skips lines starting with comment_start, otherwise all lines are kept.
 def read_file_as_lines(file, allow_empty=True, comment_start='#'):
@@ -101,6 +119,7 @@ def read_file_as_lines(file, allow_empty=True, comment_start='#'):
             return []
         raise IOError("Couldn't open file (%s)" % file)
 
+# Used by operation, TODO move to logic/commons.py
 def parse_atom(atom):
     spls = atom.split("(")
     atom_str = spls[0].strip()
@@ -108,21 +127,9 @@ def parse_atom(atom):
 
     return [atom_str] + [c.strip() for c in constant_str]
 
-def to_flat(nestedList):
-    ''' Converts a nested list to a flat list '''
-    flatList = []
-    # Iterate over all the elements in given list
-    for elem in nestedList:
-        # Check if type of element is list
-        if not isinstance(elem, str) and isinstance(elem, list):
-            # Extend the flat list by adding contents of this element (list)
-            flatList.extend(to_flat(elem))
-        else:
-            # Append the elemengt to the list
-            flatList.append(elem)
-    return flatList
 
-
+################################
+# Callbacks.
 class ActivateFlagAt(tf.keras.callbacks.Callback):
     """Activate a boolean tf.Variable at the beginning of a specific epoch"""
 
@@ -147,146 +154,76 @@ class PrintEachEpochCallback(tf.keras.callbacks.Callback):
         print(self.fun(self.model))
 
 
-
-
-
+# Checkpointer that allows both in-memory and filename checkpointing.
+# This extends the functionalities of tf.keras.callbacks.ModelCheckpoint,
+# which can save only to file and it is much slower for small
+# non-persistent tests.
 class MMapModelCheckpoint(tf.keras.callbacks.Callback):
-  """Save models to Memory as a Keras callback."""
+  """Save models to Memory or files as a Keras callback."""
 
   def __init__(self, model: tf.keras.Model,
                monitor: str='val_loss',
                maximize: bool=True,
                verbose: bool=True,
+               filepath: str=None,
                frequency: int = 1):
 
-    self.model = model
+    self._model = model
     self.best_val = -sys.float_info.max if maximize else sys.float_info.max
     self.monitor = monitor
-    self.best_weights = None
+    self._weights_saved: bool = False
+    self._best_weights = None
     self.best_epoch = None
     self.maximize = maximize
     self.verbose = verbose
     self.frequency = frequency
-
-  def restore_weights(self):
-    if self.best_weights is None:
-        print('Can not restore the weights as they have not been saved yet')
-        return
-
-    if self.verbose:
-        print('Restoring weights from epoch', self.best_epoch)
-
-    assert self.model is not None
-    self.model.set_weights(self.best_weights)
+    # Basepath where checkpoints are saved.
+    self._filepath: str = filepath
+    self._last_checkpoint_filename: str = None
 
   def on_epoch_end(self, epoch, logs):
     if (epoch+1) % self.frequency != 0:
         return
 
-    assert self.monitor  in logs, 'Unknown metric %s at epoch %d. Use the MMapModelCheckpoint.frequency if you are not validating at each step' % (self.monitor,epoch)
+    assert self.monitor  in logs, (
+        'Unknown metric %s at epoch %d. Use the MMapModelCheckpoint.frequency if you are not validating at each step' % (self.monitor, epoch))
     val = logs[self.monitor]
     if (self.maximize and val >= self.best_val) or (
         not self.maximize and val <= self.best_val):
       self.best_val = val
-      self.best_weights = self.model.get_weights()
       self.best_epoch = epoch
       if self.verbose:
-        print('\n%s New best val (%.3f)' % (self.monitor, val), flush=True)
+        print('Checkpointing %s: new best val (%.3f)' % (self.monitor, val), flush=True)
+      if self._filepath is not None:
+          filename = '%s__epoch%d.ckpt' % (self._filepath, epoch)
+          self._model.save_weights(filename)
+          if self.verbose:
+              print('Weights stored to %s' % filename, flush=True)
+          self._last_checkpoint_filename = filename
+      else:
+          self._best_weights = self._model.get_weights()
+      self._weights_saved = True
 
 
-def to_tuple(lst):
-    return tuple(to_tuple(i) if isinstance(i, list) else i for i in lst)
+  def restore_weights(self):
+    if not self._weights_saved:
+        print('Can not restore the weights as they have not been saved yet')
+        return
 
+    assert self._model is not None
+    if self.verbose:
+        print('Restoring weights from epoch', self.best_epoch)
 
-import sys
-import select
+    if self._last_checkpoint_filename is not None:
+        print('Restoring from file %s' % self._last_checkpoint_filename)
+        self._model.load_weights(self._last_checkpoint_filename)
+    else:
+        # In memory restoring.
+        assert self._best_weights is not None
+        self._model.set_weights(self._best_weights)
 
-def heardEnter():
-    i,o,e = select.select([sys.stdin],[],[],0.0001)
-    for s in i:
-        if s == sys.stdin:
-            input = sys.stdin.readline()
-            return True
-    return False
-
-
-def generate_countries_data(path_kb):
-    regions = ['europe', 'asia', 'africa', 'americas', 'oceania']
-
-    subregions = ["northern_america",
-                  "eastern_europe",
-                  "australia_and_new_zealand",
-                  "melanesia",
-                  "micronesia",
-                  "eastern_africa",
-                  "southern_asia",
-                  "eastern_asia",
-                  "south_america",
-                  "central_europe",
-                  "western_asia",
-                  "northern_africa",
-                  "western_africa",
-                  "northern_europe",
-                  "middle_africa",
-                  "caribbean",
-                  "polynesia",
-                  "western_europe",
-                  "southern_europe",
-                  "central_america",
-                  "southern_africa",
-                  "central_asia",
-                  "south_eastern_asia"
-                  ]
-
-    states = {'moldova', 'serbia', 'bulgaria', 'zimbabwe', 'madagascar', 'southern_africa', 'portugal',
-              'united_states_minor_outlying_islands', 'northern_america', 'kyrgyzstan', 'somalia', 'samoa',
-              'canada', 'guam', 'indonesia', 'venezuela', 'paraguay', 'croatia', 'syria', 'andorra',
-              'saint_martin', 'japan', 'greenland', 'lithuania', 'czechia', 'guadeloupe', 'iceland', 'italy',
-              'cuba', 'marshall_islands', 'australia', 'mayotte', 'svalbard_and_jan_mayen', 'nauru',
-              'guatemala', 'panama', 'uruguay', 'liberia', 'iran', 'south_korea', 'north_korea',
-              'british_indian_ocean_territory', 'nepal', 'saint_vincent_and_the_grenadines', 'seychelles',
-              'slovakia', 'south_georgia', 'libya', 'cameroon', 'uganda', 'belarus', 'aland_islands', 'chad',
-              'oman', 'eritrea', 'botswana', 'mexico', 'saint_barthelemy', 'cambodia', 'turkmenistan',
-              'timor_leste', 'saint_pierre_and_miquelon', 'british_virgin_islands', 'martinique', 'slovenia',
-              'kenya', 'bahamas', 'fiji', 'guinea', 'zambia', 'hong_kong', 'angola', 'honduras', 'namibia',
-              'middle_africa', 'curacao', 'pakistan', 'northern_africa', 'greece', 'sudan', 'jamaica',
-              'dominican_republic', 'armenia', 'el_salvador', 'yemen', 'turks_and_caicos_islands', 'hungary',
-              'qatar', 'saudi_arabia', 'jersey', 'thailand', 'tonga', 'comoros', 'rwanda', 'liechtenstein',
-              'luxembourg', 'argentina', 'singapore', 'sint_maarten', 'ethiopia', 'djibouti', 'finland',
-              'caribbean', 'south_america', 'kiribati', 'cocos_keeling_islands', 'bangladesh', 'chile', 'iraq',
-              'africa', 'kazakhstan', 'micronesia', 'macedonia', 'eastern_europe', 'tanzania', 'maldives',
-              'southern_europe', 'barbados', 'south_africa', 'mauritania', 'uzbekistan', 'san_marino',
-              'malawi', 'french_polynesia', 'sweden', 'macau', 'grenada', 'western_africa', 'cook_islands',
-              'christmas_island', 'myanmar', 'colombia', 'belgium', 'united_arab_emirates', 'montenegro',
-              'poland', 'sierra_leone', 'romania', 'bermuda', 'tajikistan', 'montserrat', 'south_eastern_asia',
-              'guinea_bissau', 'central_america', 'swaziland', 'netherlands', 'new_caledonia',
-              'solomon_islands', 'taiwan', 'anguilla', 'haiti', 'saint_lucia', 'australia_and_new_zealand',
-              'nigeria', 'antigua_and_barbuda', 'austria', 'nicaragua', 'vatican_city', 'united_kingdom',
-              'costa_rica', 'palau', 'india', 'niger', 'afghanistan', 'isle_of_man', 'guernsey', 'mongolia',
-              'togo', 'dominica', 'kuwait', 'norfolk_island', 'cayman_islands', 'denmark', 'reunion',
-              'faroe_islands', 'mozambique', 'papua_new_guinea', 'central_europe', 'tokelau',
-              'equatorial_guinea', 'switzerland', 'norway', 'sao_tome_and_principe', 'tuvalu', 'lebanon',
-              'burkina_faso', 'new_zealand', 'latvia', 'suriname', 'saint_kitts_and_nevis', 'benin',
-              'wallis_and_futuna', 'brunei', 'northern_mariana_islands', 'georgia', 'bolivia', 'ireland',
-              'french_guiana', 'niue', 'american_samoa', 'ivory_coast', 'burundi', 'cyprus',
-              'bosnia_and_herzegovina', 'northern_europe', 'south_sudan', 'france', 'western_asia', 'europe',
-              'mali', 'china', 'eastern_africa', 'puerto_rico', 'estonia', 'vanuatu', 'asia', 'philippines',
-              'western_sahara', 'algeria', 'americas', 'russia', 'jordan', 'palestine', 'vietnam',
-              'trinidad_and_tobago', 'lesotho', 'falkland_islands', 'gabon', 'morocco', 'israel', 'guyana',
-              'laos', 'turkey', 'malta', 'monaco', 'polynesia', 'republic_of_the_congo', 'dr_congo', 'egypt',
-              'germany', 'pitcairn_islands', 'united_states_virgin_islands', 'kosovo', 'ecuador', 'azerbaijan',
-              'gambia', 'melanesia', 'central_asia', 'oceania', 'bhutan', 'spain', 'ghana', 'malaysia',
-              'sri_lanka', 'belize', 'cape_verde', 'ukraine', 'united_states', 'eastern_asia', 'mauritius',
-              'central_african_republic', 'albania', 'southern_asia', 'gibraltar', 'aruba', 'brazil',
-              'western_europe', 'bahrain', 'peru', 'tunisia',
-              'senegal'}.difference(subregions).difference(regions)
-    states = list(states)
-
-    atoms = read_file_as_lines(path_kb)
-    atoms = set([a.replace(".", "") for a in atoms])
-
-    return states, subregions, regions, atoms
-
+#############################################
+# Runtime utils.
 class NSParser(argparse.ArgumentParser):
 
     def __init__(self):
@@ -304,58 +241,6 @@ class NSParser(argparse.ArgumentParser):
                             help="Seed for random generators.")
         self.add_argument("-lr", "--learning_rate", default=0.01, type=float,
                             help="Learning rate.")
-
-
-from functools import wraps
-import pickle
-
-
-def list2tuple(t):
-    if type(t) == list:
-        return tuple([list2tuple(f) for f in t])
-    return t
-
-
-
-def cached(func):
-    cache_filename = "global_cache.dat"
-    if os.path.exists(cache_filename):
-        with open(cache_filename, 'rb') as f:
-            cache = pickle.load(f)
-    else:
-        cache = {}
-    @wraps(func)
-    def wrapper(*args):
-        try:
-            return cache[args]
-        except KeyError:
-            cache[args] = result = func(*args)
-            with open(cache_filename, 'wb') as f:
-                pickle.dump(cache, f)
-            return result
-    return wrapper
-
-def persist_to_file(file_name):
-
-    def decorator(original_func):
-
-        try:
-            with open(file_name, 'rb') as f:
-                cache = pickle.load(f)
-        except (IOError, ValueError):
-            cache = {}
-
-        def new_func(*param):
-            if param not in cache:
-                cache[param] = original_func(*param)
-                pickle.dump(cache, open(file_name, 'wb'))
-            return cache[param]
-
-        return new_func
-
-    return decorator
-
-
 
 class Logger():
 
@@ -694,6 +579,8 @@ class CategoricalCrossEntropyRagged(tf.keras.losses.Loss):
         return tf.keras.losses.categorical_crossentropy(
             y_true, y_pred, from_logits=self.from_logits)
 
+######################################
+# KGE utils and metrics, this is application dependent, TODO move to kge.py?
 def KgeLossFactory(name: str) -> tf.keras.losses.Loss:
     if name == 'hinge':
         return HingeLossRagged(gamma=1.0)
@@ -791,6 +678,7 @@ class HitsMetric(tf.keras.metrics.Metric):
       config = { 'n': self._n, }
       return {**base_config, **config}
 
+
 def get_model_memory_usage(batch_size, model):
     import numpy as np
     try:
@@ -828,8 +716,8 @@ def get_model_memory_usage(batch_size, model):
     return gbytes
 
 
-class NTPMRR():
-    def __call__(self, y_true, y_pred, *args, **kwargs):
-        rank_l = 1. + tf.cast(tf.argsort(tf.argsort(- y_pred))[:, 0], tf.float32)
-        mrr =  1.0 / rank_l
-        return np.mean(mrr, axis=0)
+#class NTPMRR():
+#    def __call__(self, y_true, y_pred, *args, **kwargs):
+#        rank_l = 1. + tf.cast(tf.argsort(tf.argsort(- y_pred))[:, 0], tf.float32)
+#        mrr =  1.0 / rank_l
+#        return np.mean(mrr, axis=0)

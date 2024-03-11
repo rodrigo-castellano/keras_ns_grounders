@@ -26,8 +26,8 @@ class KnownBodyGrounder(Engine):
 
         self.rule2groundings = {}
         for rule in self.rules:
-            if rule.name not in self.rule2groundings:
-                self.rule2groundings[rule.name] = set()
+            #if rule.name not in self.rule2groundings:
+            self.rule2groundings[rule.name] = set()
 
     def ground(self,
                facts: List[Tuple],
@@ -36,9 +36,7 @@ class KnownBodyGrounder(Engine):
 
         if self.rules is None or len(self.rules) == 0:
             return []
-        # To debug: order the queries by the head, and then by body.if the len of the queries is less than 100
-        queries = sorted(queries, key=lambda x: (x[0], x[1:])) if len(queries) < 50 else queries
-        print('\nQUERIES\n', queries, '\n')
+
         self._init_internals(queries)
         # order also the relation2queries
         for k,v in self.relation2queries.items():
@@ -58,12 +56,12 @@ class KnownBodyGrounder(Engine):
                 else:
                     self.ground_one_rule(rule, rel_queries)
         if 'deterministic' in kwargs and kwargs['deterministic']:
-            ret = {rule.name:
+            ret = {rule_name:
                    RuleGroundings(rule_name, sorted(list(groundings),
                                                     key=lambda x : x.__repr__()))
                    for rule_name,groundings in self.rule2groundings.items()}
         else:
-            ret = {rule.name:
+            ret = {rule_name:
                    RuleGroundings(rule_name, list(groundings))
                    for rule_name,groundings in self.rule2groundings.items()}
         return ret
