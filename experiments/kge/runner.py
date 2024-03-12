@@ -53,11 +53,12 @@ if __name__ == '__main__':
     parser.add_argument("--d", default = None, help="dataset",nargs='+')
     parser.add_argument("--m", default = None, help="model",nargs='+')
     parser.add_argument("--g", default = None, help="grounder",nargs='+')
-    parser.add_argument("--s", default = None, help="seed",nargs='+', type = int)
+    parser.add_argument("--s", default = None, help="seed")
 
     args = parser.parse_args()
     if args.s is not None:
-        SEED = [args.s]
+        SEED = ast.literal_eval(args.s) 
+        assert isinstance(SEED, list) 
     if args.m is not None:
         MODEL_NAME = args.m
     if args.d is not None:
