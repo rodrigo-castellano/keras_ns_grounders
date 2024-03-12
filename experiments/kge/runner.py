@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     if args.s is not None:
-        SEED = ast.literal_eval(args.s) 
+        SEED = [ast.literal_eval(args.s) ]
         assert isinstance(SEED, list) 
     if args.m is not None:
         MODEL_NAME = args.m
