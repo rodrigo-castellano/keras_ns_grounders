@@ -364,33 +364,28 @@ class FileLogger():
                         else:
                             headers = line.split(';')
                             pos_1 = headers.index('run_signature')
-                            # pos_2 = headers.index('seed_run_i')
                         continue
 
                     if j == 1:
                         if headers is None:
                             headers = line.split(';')
                             pos_1 = headers.index('run_signature')
-                            # pos_2 = headers.index('seed_run_i')
                         continue
                     else:# if the line is not empty
                         if line == '\n' or line == '' or line.startswith(';;;;;'):
                             continue 
                         file_signature = line.split(';')[pos_1]
-                        # seed_run_i = line.split(';')[pos_2]
                         if file_signature in args['run_signature']:
                             return True
-                        # print('seed_run_i',seed_run_i, 'args[seed_run_i]',args['seed_run_i'])
-                        # if int(seed_run_i) in args['seed_run_i']:
-                        #     return True
         return False
 
     def exists_run(self, args:dict,log_filename_tmp,seed):
         # Check if the training has already been done for this seed
         # in log_filename_tmp,to not take into account the time, split by ';'  and take up to the last two elements 
-        sub_signature = log_filename_tmp.split('-')[1:-2]
+        sub_signature = log_filename_tmp.split('-')[1:-3]
         # addd the seed
         sub_signature.append(str('seed_'+str(seed)))
+        print('------------------------------------sub_signature',sub_signature)
         # read all the files
         all_files = os.listdir(self.folder_run)
         for file in all_files:
