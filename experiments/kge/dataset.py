@@ -255,11 +255,12 @@ class KGCDataHandler():
         train_path = join(base_path, train_file)
         valid_path = join(base_path, valid_file)
         test_path = join(base_path, test_file)
-        fact_path = join(base_path, fact_file)
+        fact_path = join(base_path, fact_file) if fact_file else None
 
-        constants, predicates = read_ontology(
-            # [train_path, valid_path, test_path], format)
-            [train_path, valid_path, test_path, fact_path], format)
+        all_paths = [train_path, valid_path, test_path]
+        if fact_path is not None:
+            all_paths.append(fact_path)
+        constants, predicates = read_ontology(all_paths, format)
 
         self.constants = sorted(list(constants.keys()))
         predicates = sorted(list(predicates.keys()))
@@ -267,16 +268,20 @@ class KGCDataHandler():
         # Transformation from strings to atoms.
         self.train_facts = [Atom(s=s, format=format).toTuple()
                             for s in read_file_as_lines(train_path)]
-        self.valid_facts = [Atom(s=s, format=format).toTuple()
+        self.all_valid_facts = [Atom(s=s, format=format).toTuple()
                             for s in read_file_as_lines(valid_path)]
         self.test_facts = [Atom(s=s, format=format).toTuple()
                            for s in read_file_as_lines(test_path)]
-        self.known_facts = [Atom(s=s, format=format).toTuple()
-                            for s in read_file_as_lines(fact_path)]
+        if fact_path is not None:
+            self.known_facts = [Atom(s=s, format=format).toTuple()
+                                for s in read_file_as_lines(fact_path)]
+        else:
+            self.known_facts = []
 
         if valid_size is not None:
-            self.valid_facts = self.valid_facts[:valid_size]
-            self.train_facts = self.train_facts + self.valid_facts[valid_size:]
+            self.valid_facts = self.all_valid_facts[:valid_size]
+        else:
+            self.valid_facts = self.all_valid_facts
 
         self.train_facts_set = set(self.train_facts)
         self.valid_facts_set = set(self.valid_facts)
@@ -285,7 +290,7 @@ class KGCDataHandler():
 
         self.train_known_facts_set = set(self.train_facts + self.known_facts)
         self.ground_facts_set = set(self.train_facts +
-                                    self.valid_facts +
+                                    self.all_valid_facts +
                                     self.test_facts +
                                     self.known_facts)
 
@@ -364,6 +369,7 @@ class KGCDataHandler():
         # print("Creating all the corruptions for batch...")
         # start = timeit.default_timer()
         Q=[]
+
         for i, q in enumerate(queries):
             if  len(q) > 2:
                 ret1=[]
@@ -440,18 +446,19 @@ class KGCDataHandler():
                     if a2 not in known_facts:
                         ret2.append(a2)
                         num_corruptions_tail += 1
+
             Q.append(Corruption(head=ret1, tail=ret2))
+
         return Q
 
     def get_dataset(self, split:str, number_negatives:int=None,
                     corrupt_mode: str='HEAD_AND_TAIL') -> Union[
         KGCTrainingDataset, KGCEvalDataset]:
-        train_known_facts = self.train_facts_set
         if split == "train":
             queries, labels = [[q] for q in self.train_facts], [[1] for _ in self.train_facts]
             return KGCTrainingDataset(queries=queries, labels=labels,
                                       num_negatives=number_negatives,
-                                      known_facts=self.train_known_facts_set,
+                                      known_facts=self.ground_facts_set,
                                       constant2domain=self.constant2domain,
                                       domain2constants=self.domain2constants,
                                       corrupt_mode=corrupt_mode)
