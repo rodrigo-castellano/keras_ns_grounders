@@ -242,11 +242,11 @@ if __name__ == '__main__':
             logged_data.time_ground_train = args.time_ground_train
             logged_data.time_ground_valid = args.time_ground_valid
             logged_data.time_ground_test = args.time_ground_test
-
             # write the info about the results in the tmp file 
             logger.log(logged_data.__dict__, log_filename_tmp)
             # Rename to not be temporal anymore
-            log_filename_run = os.path.join(log_folder,'indiv_runs', '_ind_log-{}-{}-seed_{}.csv'.format(args.run_signature,date, seed))
+            log_filename_run = os.path.join(log_folder,'indiv_runs', '_ind_log-{}-{}-{}-seed_{}.csv'.format(
+                                                        args.run_signature,date,np.round(test_acc[-4],3),seed))
             if os.path.exists(log_filename_run):
                 os.remove(log_filename_run)
             os.rename(log_filename_tmp, log_filename_run)
