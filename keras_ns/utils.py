@@ -385,7 +385,6 @@ class FileLogger():
         sub_signature = log_filename_tmp.split('-')[1:-3]
         # addd the seed
         sub_signature.append(str('seed_'+str(seed)))
-        print('------------------------------------sub_signature',sub_signature)
         # read all the files
         all_files = os.listdir(self.folder_run)
         for file in all_files:
