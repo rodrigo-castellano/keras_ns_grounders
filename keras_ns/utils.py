@@ -78,32 +78,18 @@ def read_rules(path,args):
     print('number of rules: ', len(rules))
     return rules
 
-# Recursive flattening to a 1D Iterable. TODO(check if this works).
-# Example usages:
-# Flatten([[1,2,3], 2, ['a','b']], tuple) -> (1,2,3,2,'a','b')
-# Flatten([[1,2,3], 2, ['a','b']], list) -> [1,2,3,2,'a','b']
-# Flatten(([1,2,3], 2, ('a','b')), list) -> [1,2,3,2,'a','b']
-# Flatten(([1,2,3], 2, ('a','b')), np.array) -> np.array(1,2,3,2,'a','b')
-def Flatten(lst: Iterable, flattening_function=tuple) -> Iterable:
-    return flattening_function(Flatten(i, flattening_function)
-                               if (not isinstance(elem, str) and
-                                   isinstance(i, Iterable))
-                               else i for i in lst)
+def add_if_not_in(to_insert: list, full_list:list, reference_set: set):
+    for a in to_insert:
+        if a not in reference_set:
+            reference_set.add(a)
+            full_list.append(a)
 
-# Can we just use the one above? Or this one? TODO cleanup.
-def to_flat(nestedList):
-    ''' Converts a nested list to a flat list '''
-    flatList = []
-    # Iterate over all the elements in given list
-    for elem in nestedList:
-        # Check if type of element is list
-        if not isinstance(elem, str) and isinstance(elem, list):
-            # Extend the flat list by adding contents of this element (list)
-            flatList.extend(to_flat(elem))
-        else:
-            # Append the element to the list
-            flatList.append(elem)
-    return flatList
+@tf.custom_gradient
+def differentiable_sign(x):
+    sign = tf.sign(x)
+    def grad(x):
+        return tf.gradients(tf.sigmoid(x), x)
+    return sign, grad
 
 # Skips lines starting with comment_start, otherwise all lines are kept.
 def read_file_as_lines(file, allow_empty=True, comment_start='#'):
@@ -119,7 +105,6 @@ def read_file_as_lines(file, allow_empty=True, comment_start='#'):
             return []
         raise IOError("Couldn't open file (%s)" % file)
 
-# Used by operation, TODO move to logic/commons.py
 def parse_atom(atom):
     spls = atom.split("(")
     atom_str = spls[0].strip()
@@ -127,9 +112,21 @@ def parse_atom(atom):
 
     return [atom_str] + [c.strip() for c in constant_str]
 
+def to_flat(nestedList):
+    ''' Converts a nested list to a flat list '''
+    flatList = []
+    # Iterate over all the elements in given list
+    for elem in nestedList:
+        # Check if type of element is list
+        if not isinstance(elem, str) and isinstance(elem, list):
+            # Extend the flat list by adding contents of this element (list)
+            flatList.extend(to_flat(elem))
+        else:
+            # Append the elemengt to the list
+            flatList.append(elem)
+    return flatList
 
-################################
-# Callbacks.
+
 class ActivateFlagAt(tf.keras.callbacks.Callback):
     """Activate a boolean tf.Variable at the beginning of a specific epoch"""
 
@@ -229,6 +226,23 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
 
 #############################################
 # Runtime utils.
+
+
+def to_tuple(lst):
+    return tuple(to_tuple(i) if isinstance(i, list) else i for i in lst)
+
+
+import sys
+import select
+
+def heardEnter():
+    i,o,e = select.select([sys.stdin],[],[],0.0001)
+    for s in i:
+        if s == sys.stdin:
+            input = sys.stdin.readline()
+            return True
+    return False
+
 class NSParser(argparse.ArgumentParser):
 
     def __init__(self):
@@ -246,6 +260,58 @@ class NSParser(argparse.ArgumentParser):
                             help="Seed for random generators.")
         self.add_argument("-lr", "--learning_rate", default=0.01, type=float,
                             help="Learning rate.")
+
+
+from functools import wraps
+import pickle
+
+
+def list2tuple(t):
+    if type(t) == list:
+        return tuple([list2tuple(f) for f in t])
+    return t
+
+
+
+def cached(func):
+    cache_filename = "global_cache.dat"
+    if os.path.exists(cache_filename):
+        with open(cache_filename, 'rb') as f:
+            cache = pickle.load(f)
+    else:
+        cache = {}
+    @wraps(func)
+    def wrapper(*args):
+        try:
+            return cache[args]
+        except KeyError:
+            cache[args] = result = func(*args)
+            with open(cache_filename, 'wb') as f:
+                pickle.dump(cache, f)
+            return result
+    return wrapper
+
+def persist_to_file(file_name):
+
+    def decorator(original_func):
+
+        try:
+            with open(file_name, 'rb') as f:
+                cache = pickle.load(f)
+        except (IOError, ValueError):
+            cache = {}
+
+        def new_func(*param):
+            if param not in cache:
+                cache[param] = original_func(*param)
+                pickle.dump(cache, open(file_name, 'wb'))
+            return cache[param]
+
+        return new_func
+
+    return decorator
+
+
 
 class Logger():
 
@@ -679,7 +745,6 @@ class HitsMetric(tf.keras.metrics.Metric):
       config = { 'n': self._n, }
       return {**base_config, **config}
 
-
 def get_model_memory_usage(batch_size, model):
     import numpy as np
     try:
@@ -717,8 +782,8 @@ def get_model_memory_usage(batch_size, model):
     return gbytes
 
 
-#class NTPMRR():
-#    def __call__(self, y_true, y_pred, *args, **kwargs):
-#        rank_l = 1. + tf.cast(tf.argsort(tf.argsort(- y_pred))[:, 0], tf.float32)
-#        mrr =  1.0 / rank_l
-#        return np.mean(mrr, axis=0)
+class NTPMRR():
+   def __call__(self, y_true, y_pred, *args, **kwargs):
+       rank_l = 1. + tf.cast(tf.argsort(tf.argsort(- y_pred))[:, 0], tf.float32)
+       mrr =  1.0 / rank_l
+       return np.mean(mrr, axis=0)
