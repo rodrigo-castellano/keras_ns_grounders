@@ -139,7 +139,7 @@ if __name__ == '__main__':
             continue
 
         # Data params
-        args.corrupt_mode = 'TAIL' if 'countries' in dataset_name else 'HEAD_AND_TAIL'
+        args.corrupt_mode = 'HEAD_AND_TAIL' if dataset_name != 'countries' else 'TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 100  
         args.test_negatives = None  # all possible negatives
