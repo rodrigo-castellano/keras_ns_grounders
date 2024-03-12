@@ -2,9 +2,9 @@ from keras import Model
 from keras.layers import Dense, Layer
 import keras_ns as ns
 import tensorflow as tf
-from keras_ns.nn.constant_embedding import *
+from keras_ns.nn.constant_embedding import AdaptiveConstantEmbeddings, ConstantEmbeddings
 from keras_ns.nn.reasoning import *
-from keras_ns.nn.kge import KGEFactory, KGELayer
+from keras_ns.nn.kge import AtomEmbeddingLayer
 from keras_ns.logic import FOL, Rule
 from typing import Dict, List
 from keras_ns.logic.semantics import GodelTNorm
@@ -15,21 +15,14 @@ import tensorflow_probability as tfp
 class KGEModel(Model):
 
     def __init__(self, fol:FOL,
-                 kge: str,
-                 kge_regularization: float,
+                 kge_embedder,
+                 kge_regularization,
                  constant_embedding_size: int,
-                 predicate_embedding_size: int,
                  kge_atom_embedding_size: int,
-                 kge_dropout_rate: float,
-                 num_adaptive_constants: int=0):
+                 dropout_rate_embedder: float,
+                 num_adaptive_constants: int = 0):
         super().__init__()
         self.fol = fol
-        self.predicate_index_tensor = tf.constant(
-            [i for i in range(len(self.fol.predicates))], dtype=tf.int32)
-        self.predicate_embedder = PredicateEmbeddings(
-            fol.predicates,
-            predicate_embedding_size,
-            regularization=kge_regularization)
         self.constant_embedder = ConstantEmbeddings(
             domains=fol.domains,
             constant_embedding_sizes_per_domain={
@@ -44,49 +37,12 @@ class KGEModel(Model):
                 num_adaptive_constants=num_adaptive_constants)
         else:
             self.adaptive_constant_embedder = None
-
-        self.kge_embedder, self.output_layer = KGEFactory(
-            name=kge,
+        self.kge_embedder = AtomEmbeddingLayer(
+            embedder_class=kge_embedder,
             atom_embedding_size=kge_atom_embedding_size,
-            relation_embedding_size=kge_atom_embedding_size,
+            predicates=fol.predicates,
             regularization=kge_regularization,
-            dropout_rate=kge_dropout_rate)
-        assert self.kge_embedder is not None
-
-
-    def create_triplets(self,
-                        constant_embeddings: Dict[str, tf.Tensor],
-                        predicate_embeddings: tf.Tensor,
-                        A_predicates: Dict[str, tf.Tensor]):
-        predicate_embeddings_per_triplets = []
-        for p,indices in A_predicates.items():
-            idx = self.fol.name2predicate_idx[p]
-            p_embeddings = tf.expand_dims(predicate_embeddings[idx], axis=0)  # 1E
-            predicate_embeddings_per_triplets.append(
-                tf.repeat(p_embeddings, tf.shape(indices)[0], axis=0)  #PE
-            )
-        predicate_embeddings_per_triplets = tf.concat(predicate_embeddings_per_triplets,
-                                                      axis=0)
-
-        constant_embeddings_for_triplets = []
-        for p,constant_idx in A_predicates.items():
-            constant_idx = tf.cast(constant_idx, tf.int32)
-            predicate = self.fol.name2predicate[p]
-            one_predicate_constant_embeddings = []
-            for i,domain in enumerate(predicate.domains):
-                constants = tf.gather(constant_embeddings[domain.name],
-                                      constant_idx[..., i], axis=0)
-                one_predicate_constant_embeddings.append(constants)
-            # shape (predicate_batch_size, predicate_arity, constant_embedding_size)
-            one_predicate_constant_embeddings = tf.stack(one_predicate_constant_embeddings,
-                                                         axis=-2)
-            constant_embeddings_for_triplets.append(one_predicate_constant_embeddings)
-        constant_embeddings_for_triplets = tf.concat(constant_embeddings_for_triplets,
-                                                     axis=0)
-        tf.debugging.assert_equal(tf.shape(predicate_embeddings_per_triplets)[0],
-                                  tf.shape(constant_embeddings_for_triplets)[0])
-        # Shape TE, T2E with T number of triplets.
-        return predicate_embeddings_per_triplets, constant_embeddings_for_triplets
+            dropout_rate=dropout_rate_embedder)
 
     def call(self, inputs):
         # X_domains type is Dict[str, inputs]
@@ -104,7 +60,7 @@ class KGEModel(Model):
                 X_domains)
             constant_embeddings = {
                 name:tf.where(
-                    # Expand dim to broadcast to the embeddings size.
+                    # Expand dim to broadcast the where to the embeddings size.
                     tf.expand_dims(X_domains_fixed_mask[name], axis=-1),
                     constant_embeddings_fixed[name],
                     constant_embeddings_adaptive[name])
@@ -112,14 +68,7 @@ class KGEModel(Model):
         else:
             constant_embeddings = self.constant_embedder(X_domains)
 
-        predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor)
-        # Shape TE, T2E with T number of triplets.
-        predicate_embeddings_per_triplets, constant_embeddings_for_triplets = \
-            self.create_triplets(constant_embeddings, predicate_embeddings, A_predicates)
-
-        atom_embeddings = self.kge_embedder((predicate_embeddings_per_triplets,
-                                             constant_embeddings_for_triplets))
-        # Shape TE
+        atom_embeddings = self.kge_embedder([constant_embeddings, A_predicates])
         return atom_embeddings
 
 
@@ -128,13 +77,11 @@ class CollectiveModel(Model):
     def __init__(self,
                  fol: FOL,
                  rules: List[Rule],
-                 *,  # all named after this point
-                 kge: str,
+                 kge_embedder: tf.keras.layers.Layer,
                  kge_regularization: float,
                  constant_embedding_size: int,
-                 predicate_embedding_size: int,
                  kge_atom_embedding_size: int,
-                 kge_dropout_rate: float,
+                 dropout_rate_embedder: float,
                  # same model for all reasoning depths
                  reasoner_atom_embedding_size: int,
                  reasoner_formula_hidden_embedding_size: int,
@@ -162,17 +109,17 @@ class CollectiveModel(Model):
         self.resnet = resnet
         self.logic = GodelTNorm()
 
-        self.kge_model = KGEModel(fol, kge,
+        self.kge_model = KGEModel(fol,
+                                  kge_embedder,
                                   kge_regularization,
                                   constant_embedding_size,
-                                  predicate_embedding_size,
                                   kge_atom_embedding_size,
-                                  kge_dropout_rate,
+                                  dropout_rate_embedder,
                                   num_adaptive_constants)
         self.model_name = model_name
 
         # CONCEPT LAYER
-        self.output_layer = self.kge_model.output_layer
+        self.output_layer = kge_embedder.output_layer()
 
         # REASONING LAYER
         self.reasoning = None
@@ -248,15 +195,20 @@ class CollectiveModel(Model):
             assert self.reasoning is not None
             # Check that we are using an explainable model.
             assert self.model_name == 'dcr' or self.model_name == 'cdcr'
+        assert self.model_name == 'dcr' or self.model_name == 'cdcr' or self.model_name == 'r2n' or self.model_name == 'sbr' or self.model_name == 'gsbr' or self.model_name == 'rnm' or self.model_name == 'no_reasoner'
 
         # X_domains type is Dict[str, tensor[constant_indices_in_domain]]
         # A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
         #              e.g. mapping predicate_name -> tensor [num_groundings, arity]
         #                   with constant indices for each grounding.
         (X_domains, A_predicates, A_rules, Q) = inputs
+        # tf.print('X_domains', X_domains)
+        # tf.print('A_predicates', A_predicates)
         atom_embeddings = self.kge_model((X_domains, A_predicates))
+        # tf.print('atom_embeddings', atom_embeddings.shape, atom_embeddings)
 
         concept_output = tf.expand_dims(self.output_layer(atom_embeddings), -1)
+        # tf.print('concept_output', concept_output.shape, concept_output)
 
         explanations = None
         if self.reasoning is not None:
@@ -265,16 +217,30 @@ class CollectiveModel(Model):
                 if self._explain_mode and i == self.enabled_reasoner_depth - 1:
                     explanations = self.reasoning[i].explain(
                         [task_output, atom_embeddings, A_rules])
+                    # tf.print('explanations', explanations.shape, explanations)
+                # tf.print('reasoning', i)
+                # tf.print('task_output', task_output.shape, task_output)
+                # tf.print('atom_embeddings', atom_embeddings.shape, atom_embeddings)
+                # tf.print('A_rules',  A_rules)
+                # tf.print('reasoning', i)
+                # tf.print('task_output', task_output.shape )
+                # tf.print('atom_embeddings', atom_embeddings.shape )
+                # tf.print('A_rules',  A_rules)
                 task_output, atom_embeddings = self.reasoning[i]([
                     task_output, atom_embeddings, A_rules])
         else:
             task_output = tf.identity(concept_output)
+                # tf.print('task_output', task_output.shape, task_output)
+                # tf.print('atom_embeddings', atom_embeddings.shape, atom_embeddings)
 
         task_output = tf.gather(params=tf.squeeze(task_output, -1), indices=Q)
+        # tf.print('task_output after reasoning', task_output.shape, task_output)
         concept_output = tf.gather(params=tf.squeeze(concept_output, -1),
                                    indices=Q)
+        # tf.print('concept_output after reasoning', concept_output.shape, concept_output)
         if self.resnet and self.reasoning is not None:
             task_output = self.logic.disj_pair(task_output, concept_output)
+        # tf.print('task_output after resnet', task_output.shape, task_output )
 
         if self._explain_mode:
             return concept_output, task_output, explanations

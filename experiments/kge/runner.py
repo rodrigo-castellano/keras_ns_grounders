@@ -174,7 +174,6 @@ if __name__ == '__main__':
         args.reasoner_regularization_factor = rr
         args.reasoner_formula_hidden_embedding_size = args.kge_atom_embedding_size
         args.reasoner_dropout_rate = dropout
-        args.kge_dropout_rate = dropout
         args.reasoner_atom_embedding_size = args.kge_atom_embedding_size
         # DCR/R2N params
         args.signed = True

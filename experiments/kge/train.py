@@ -1,23 +1,20 @@
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import tensorflow as tf
+from typing import Dict, List
+import time
 import keras_ns as ns
-from itertools import product
 import numpy as np
 from os.path import join
 import random
-import pickle
-from typing import List, Tuple
-
 from dataset import KGCDataHandler, build_domains
 from model import CollectiveModel
 from keras.callbacks import CSVLogger
-from keras_ns.logic.commons import Atom, Domain, FOL, Rule, RuleLoader
+from keras_ns.logic.commons import Atom, Domain, Rule, RuleLoader
+from keras_ns.nn.kge import KGEFactory
 from keras_ns.utils import MMapModelCheckpoint, KgeLossFactory, read_file_as_lines
 from keras_ns.utils import get_arg
 from keras_ns.grounding.backward_chaining_grounder_nocleanup import BackwardChainingGrounder_nocleanup
-from typing import Dict, List
-import time
 
 explain_enabled: bool = False
 
@@ -138,17 +135,20 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     args.time_ground_valid = np.round(end - start,2)
     print("Time to create data generator valid: ",  np.round(end - start,2))
 
+
+    # KGE
+    kge_embedder = KGEFactory(args.kge)
+    assert kge_embedder is not None
+
     # The model can be built here or passed from the outside in case of
     # usage of a pre-trained one.
     model = CollectiveModel(
         fol, rules,
-        kge=args.kge,
-        kge_regularization=args.kge_regularization,
+        kge_embedder, args.kge_regularization,
         model_name=get_arg(args, 'model_name', 'dcr'),
         constant_embedding_size=args.constant_embedding_size,
-        predicate_embedding_size=args.predicate_embedding_size,
         kge_atom_embedding_size=args.kge_atom_embedding_size,
-        kge_dropout_rate=args.kge_dropout_rate,
+        dropout_rate_embedder=args.dropout_rate_embedder,
         reasoner_single_model=get_arg(args, 'reasoner_single_model', False),
         reasoner_atom_embedding_size=args.reasoner_atom_embedding_size,
         reasoner_formula_hidden_embedding_size=args.reasoner_formula_hidden_embedding_size,

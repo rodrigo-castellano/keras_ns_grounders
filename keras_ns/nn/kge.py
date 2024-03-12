@@ -39,6 +39,8 @@ class AtomEmbeddingLayer(Layer):
                       tuples_tensor, predicate_domains):
         tuple_features_per_predicate = []
         for i,domain in enumerate(predicate_domains):
+            # for each domain, take all the atoms in that predicate, where the constants are represented by indeces, 
+            # and substute the indeces of each cte by its embedding
             constants = tf.gather(constants_embeddings[domain.name],
                                   tf.cast(tuples_tensor[..., i], tf.int32),
                                   axis=0)
@@ -117,6 +119,10 @@ class DistMult(KGELayer, Layer):
         self.dropout_layer = tf.keras.layers.Dropout(rate=dropout_rate)
 
         self.atom_embedding_size = atom_embedding_size
+        init = tf.initializers.GlorotUniform()
+        self.R = tf.Variable(
+            initial_value=init(shape=[self.atom_embedding_size]),
+            name='DistMult')
 
     def input_size(self):
         return self.atom_embedding_size
@@ -125,12 +131,12 @@ class DistMult(KGELayer, Layer):
         return self.atom_embedding_size
 
     def call(self, inputs, **kwargs):
-        p_embeddings, c_embeddings = inputs
-        p_embeddings = self.dropout_layer(p_embeddings)
-        c_embeddings = self.dropout_layer(c_embeddings)
-        embeddings = p_embeddings * tf.reduce_prod(c_embeddings, axis=1)
+        inputs = self.dropout_layer(inputs)
+        R = self.dropout_layer(self.R)
+        predicate_prod = tf.reduce_prod(inputs, axis=1)
+        embeddings = R * predicate_prod
         if self.regularization > 0.0:
-            self.add_loss(self.regularization * tf.nn.l2_loss(embeddings))
+            self.add_loss(self.regularization * tf.nn.l2_loss(self.R))
         if self.regularization_n3 > 0.0:
             abs_embeddings = tf.math.abs(embeddings)
             self.add_loss(self.regularization_n3 *
@@ -165,7 +171,12 @@ class TransE(KGELayer, Layer):
         self.regularization = regularization
         self.regularization_n3 = regularization_n3
         self.dropout_layer = tf.keras.layers.Dropout(rate=dropout_rate)
+
         self.atom_embedding_size = atom_embedding_size
+        init = tf.initializers.GlorotUniform()
+        self.R = tf.Variable(
+            initial_value=init(shape=[self.atom_embedding_size]),
+            name='TransE')
 
     def input_size(self):
         return self.atom_embedding_size
@@ -174,23 +185,20 @@ class TransE(KGELayer, Layer):
         return self.atom_embedding_size
 
     def call(self, inputs, **kwargs):
-        p_embeddings, c_embeddings = inputs
-        p_embeddings = self.dropout_layer(p_embeddings)
-        c_embeddings = self.dropout_layer(c_embeddings)
+        inputs = self.dropout_layer(inputs)
+        R = self.dropout_layer(self.R)
 
-        #head = tf.squeeze(tf.gather(params=c_embeddings, indices=[0], axis=1),axis=1)
-        #tail = tf.squeeze(tf.gather(params=c_embeddings, indices=[1], axis=1), axis=1)
-        head = c_embeddings[..., 0, :]
-        tail = c_embeddings[..., 1, :]
-
-        embeddings = p_embeddings + head - tail
+        head = tf.squeeze(tf.gather(params=inputs, indices=[0], axis=1),axis=1)
+        tail = tf.squeeze(tf.gather(params=inputs, indices=[1], axis=1), axis=1)
 
         if self.regularization > 0.0:
-            self.add_loss(self.regularization * tf.nn.l2_loss(embeddings))
+            self.add_loss(self.regularization * tf.nn.l2_loss(self.R))
+
+        embeddings = R + head - tail
         if self.regularization_n3 > 0.0:
             abs_embeddings = tf.math.abs(embeddings)
-            self.add_loss(self.regularization_n3 *
-                          tf.nn.l2_loss(abs_embeddings))
+            self.add_loss(self.regularization_n3 * (
+                tf.nn.l2_loss(self.R) + tf.nn.l2_loss(head) + tf.nn.l2_loss(tail)))
         return embeddings
 
 ###########################################
@@ -212,6 +220,10 @@ class ModE(KGELayer, Layer):
         self.dropout_layer = tf.keras.layers.Dropout(rate=dropout_rate)
 
         self.atom_embedding_size = atom_embedding_size
+        init = tf.initializers.GlorotUniform()
+        self.R = tf.Variable(
+            initial_value=init(shape=[self.atom_embedding_size]),
+            name='ModE')
 
     def input_size(self):
         return self.atom_embedding_size
@@ -220,23 +232,20 @@ class ModE(KGELayer, Layer):
         return self.atom_embedding_size
 
     def call(self, inputs, **kwargs):
-        p_embeddings, c_embeddings = inputs
-        p_embeddings = self.dropout_layer(p_embeddings)
-        c_embeddings = self.dropout_layer(c_embeddings)
+        inputs = self.dropout_layer(inputs)
+        R = self.dropout_layer(self.R)
 
-        #head = tf.squeeze(tf.gather(params=c_embeddings, indices=[0], axis=1),axis=1)
-        #tail = tf.squeeze(tf.gather(params=c_embeddings, indices=[1], axis=1), axis=1)
-        head = c_embeddings[..., 0, :]
-        tail = c_embeddings[..., 1, :]
-
-        embeddings = p_embeddings * head - tail
+        head = tf.squeeze(tf.gather(params=inputs, indices=[0], axis=1),axis=1)
+        tail = tf.squeeze(tf.gather(params=inputs, indices=[1], axis=1), axis=1)
 
         if self.regularization > 0.0:
-            self.add_loss(self.regularization * tf.nn.l2_loss(embeddings))
+            self.add_loss(self.regularization * tf.nn.l2_loss(self.R))
+
+        embeddings = R * head - tail
         if self.regularization_n3 > 0.0:
             abs_embeddings = tf.math.abs(embeddings)
-            self.add_loss(self.regularization_n3 *
-                          tf.nn.l2_loss(abs_embeddings))
+            self.add_loss(self.regularization_n3 * (
+                tf.nn.l2_loss(self.R) + tf.nn.l2_loss(head) + tf.nn.l2_loss(tail)))
         return embeddings
 
 
@@ -253,11 +262,18 @@ class ComplEx(KGELayer, Layer):
     def __init__(self, atom_embedding_size,
                  regularization=0.0, regularization_n3=0.0,
                  dropout_rate=0.0, **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
         self.atom_embedding_size = atom_embedding_size
         self.regularization = regularization
         self.regularization_n3 = regularization_n3
         self.dropout_layer = tf.keras.layers.Dropout(rate=dropout_rate)
+        init = tf.initializers.GlorotUniform()
+        self.Rr = tf.Variable(
+            initial_value=init(shape=[self.atom_embedding_size]),
+            name='ComplExReal')
+        self.Ri = tf.Variable(
+            initial_value=init(shape=[self.atom_embedding_size]),
+            name='ComplExImm')
 
     def input_size(self):
         return 2 * self.atom_embedding_size
@@ -266,15 +282,16 @@ class ComplEx(KGELayer, Layer):
         return self.atom_embedding_size
 
     def call(self, inputs, **kwargs):
-        p_embeddings, c_embeddings = inputs
-        p_embeddings = self.dropout_layer(p_embeddings)
-        c_embeddings = self.dropout_layer(c_embeddings)
-        Rr, Ri = tf.split(p_embeddings, 2, axis=1)
+        inputs = self.dropout_layer(inputs)
+        Rr = self.dropout_layer(self.Rr)
+        Ri = self.dropout_layer(self.Ri)
 
-        tf.debugging.assert_equal(tf.shape(Ri)[-1], tf.shape(Rr)[-1])
+        assert inputs.shape[-1] == self.input_size(), (
+            'Wrong Shape (%s[-1] <=> %d', (inputs.shape,
+                                           self.input_size()))
 
-        head = c_embeddings[..., 0, :]
-        tail = c_embeddings[..., 1, :]
+        head = tf.squeeze(tf.gather(params=inputs, indices=[0], axis=1),axis=1)
+        tail = tf.squeeze(tf.gather(params=inputs, indices=[1], axis=1), axis=1)
 
         h_r, h_i = tf.split(head, 2, axis=1)
         t_r, t_i = tf.split(tail, 2, axis=1)
@@ -284,8 +301,8 @@ class ComplEx(KGELayer, Layer):
         e3 = h_r * t_i * Ri
         e4 = h_i * t_r * Ri
         embeddings = e1 + e2 + e3 - e4
-        if self.regularization > 0.0:
-             self.add_loss(self.regularization * (tf.nn.l2_loss(Rr) + tf.nn.l2_loss(Ri)))
+        # if self.regularization > 0.0:
+        #     self.add_loss(self.regularization * (tf.nn.l2_loss(self.Rr) + tf.nn.l2_loss(self.Ri)))
         if self.regularization_n3 > 0.0:
             abs_head = tf.math.abs(head)
             abs_tail = tf.math.abs(tail)
@@ -299,11 +316,11 @@ class ComplEx(KGELayer, Layer):
 
 class RotatE(KGELayer, Layer):
     """`RotatE: Knowledge Graph Embedding by Relational Rotation in Complex Space`_ (RotatE), which defines each relation as a rotation from the source entity to the target entity in the complex vector space.
-    https://openreview.net/forum?id=HkgEQnRqYQ
     Attributes:
         args: Model configuration parameters.
         epsilon: Calculate embedding_range.
         margin: Calculate embedding_range and loss.
+    .. _RotatE: Knowledge Graph Embedding by Relational Rotation in Complex Space: https://openreview.net/forum?id=HkgEQnRqYQ
     """
     # Class attributes.
     epsilon = 2.0
@@ -311,7 +328,7 @@ class RotatE(KGELayer, Layer):
 
     def __init__(self, atom_embedding_size, regularization=0.0,
                  regularization_n3=0.0,
-                 dropout_rate=0.0, **kwargs):
+                 dropout_rate=0.0):
         super().__init__()
         assert atom_embedding_size > 0
         self.regularization = regularization
@@ -324,15 +341,17 @@ class RotatE(KGELayer, Layer):
         self.atom_embedding_size = atom_embedding_size
         self.embedding_range = (self.margin + self.epsilon) / (
             atom_embedding_size)
+
+        init = tf.initializers.GlorotUniform()
+        #self.R = tf.Variable(initial_value=init(shape=[atom_embedding_size]),
+        #                     name='RotateERelation')
+        self.R = tf.constant(init(shape=[atom_embedding_size]))
         self.norm_factor = math.pi / self.embedding_range
 
     @classmethod
     def output_layer(cls):
         def __internal__(inputs):
-            # tf.norm has inf grad for 0, so we craft a numerically stable version here.
-            outputs = -(1e-9 + tf.reduce_sum(tf.square(inputs), axis=-1))  # B,1
-            # Outputs are in [-inf, 0], so that the sigmoid is in [0, 0.5], we re-map it.
-            outputs = 2.0 * tf.sigmoid(outputs)
+            outputs = 2.0 - tf.reduce_sum(inputs, axis=-1)
             return outputs
         return __internal__
 
@@ -352,117 +371,51 @@ class RotatE(KGELayer, Layer):
         Returns:
             embeddings: The output embeddings (B, atom_embedding_size)
         """
-        p_embeddings, c_embeddings = inputs
-        p_embeddings = self.dropout_layer(p_embeddings)
-        c_embeddings = self.dropout_layer(c_embeddings)
+        # tf.print('I', inputs)
+        inputs = self.dropout_layer(inputs)
+        assert inputs.shape[-1] == self.input_size()
 
-        head = c_embeddings[..., 0, :]
-        tail = c_embeddings[..., 1, :]
-
+        assert inputs.shape[1] == 2
+        head = tf.squeeze(tf.gather(params=inputs, indices=[0], axis=1),axis=1)
+        tail = tf.squeeze(tf.gather(params=inputs, indices=[1], axis=1), axis=1)
         if tf.shape(head)[0] == 0 or tf.shape(tail)[0] == 0:
             return tf.zeros([0, self.atom_embedding_size])
 
         re_head, im_head = tf.split(head, 2, axis=-1)
         re_tail, im_tail = tf.split(tail, 2, axis=-1)
 
-        phase_relation = p_embeddings * self.norm_factor
+        R = self.dropout_layer(self.R)
+        phase_relation = R * self.norm_factor
+        #tf.print('R', R)
         re_relation = tf.math.cos(phase_relation)
         im_relation = tf.math.sin(phase_relation)
-        #hadamard = tf.multiply(tf.complex(re_head, im_head),
-        #                       tf.complex(re_relation, im_relation))
-        #complex_tail = tf.complex(re_tail, im_tail)
+        #tf.print('CS', re_relation, im_relation)
         re_score = re_relation * re_tail + im_relation * im_tail
         im_score = re_relation * im_tail - im_relation * re_tail
         re_score = re_score - re_head
         im_score = im_score - im_head
-        embeddings = re_score - im_score  # (B,atom_emb_size)
-        # embeddings = hadamard - complex_tail
+
+        embeddings = tf.stack([re_score, im_score], axis=0) #(2,B,atom_emb_size)
+        # tf.norm has inf grad for 0, so we craft a numerically stable version here.
+        embeddings = tf.sqrt(1e-7 + tf.reduce_sum(tf.square(embeddings), axis=0))  #(B,atom_emb_size)
         #if self.regularization > 0.0:
-        #    self.add_loss(self.regularization * tf.nn.l2_loss(p_embeddings))
+        #    self.add_loss(self.regularization * tf.nn.l2_loss(self.R))
         #if self.regularization_n3 > 0.0:
         #    self.add_loss(self.regularization_n3 * tf.nn.l2_loss(embeddings))
         return embeddings
 
-############################################
-class Tucker(KGELayer, Layer):
-    def __init__(self, atom_embedding_size: int,
-                 relation_embedding_size: int=None,
-                 regularization: float=0.0,
-                 dropout_rate: float=0.0, **kwargs):
-        super().__init__()
-        self.regularization = regularization
-        self.dropout_layer = tf.keras.layers.Dropout(rate=dropout_rate)
-        self.atom_embedding_size = atom_embedding_size
-        self.relation_embedding_size = (atom_embedding_size
-                                        if relation_embedding_size is None else
-                                        relation_embedding_size)
-        init = tf.initializers.GlorotUniform()
-        self.W = tf.Variable(
-            initial_value=init(shape=[self.atom_embedding_size,
-                                      self.atom_embedding_size,
-                                      self.relation_embedding_size]),
-            name='Tucker')
-
-    def input_size(self):
-        return self.atom_embedding_size
-
-    def output_size(self):
-        return 1
-
-    def call(self, inputs, **kwargs):
-        p_embeddings, c_embeddings = inputs
-        p_embeddings = self.dropout_layer(p_embeddings)
-        c_embeddings = self.dropout_layer(c_embeddings)
-
-        head = c_embeddings[..., 0, :]  # BE
-        tail = c_embeddings[..., 1, :]  # BE
-        W = self.dropout_layer(self.W)  # EER
-        W1 = tf.einsum('bi,itr->btr', head, W)   # BER
-        W2 = tf.einsum('bi,bir->br', tail, W1)   # BR
-        embeddings = tf.expand_dims(tf.einsum('i,i->b', p_embeddings, W2), axis=-1)  # B1
-        if self.regularization > 0.0:
-            self.add_loss(self.regularization * tf.nn.l2_loss(self.W))
-        return embeddings
-
-    @classmethod
-    def output_layer(cls):
-        def __internal__(inputs):
-            outputs = tf.nn.sigmoid(outputs)
-            return outputs
-
-        return __internal__
-
 
 ####################################
-def KGEFactory(name: str,
-               atom_embedding_size: int,
-               regularization: float,
-               dropout_rate: float,
-               relation_embedding_size: int=None):
-
-  relation_embedding_size = (relation_embedding_size
-                             if relation_embedding_size is not None
-                             else atom_embedding_size)
+def KGEFactory(name):
   if name.casefold() == 'complex':
-    return ComplEx(atom_embedding_size, regularization, dropout_rate), ComplEx.output_layer()
-
+    return ComplEx
   elif name.casefold() == 'distmult':
-    return DistMult(atom_embedding_size, regularization, dropout_rate), \
-           DistMult.output_layer()
-
-  elif name.casefold() == 'tucker':
-    return Tucker(atom_embedding_size, relation_embedding_size,
-                  regularization, dropout_rate), Tucker.output_layer()
-
+    return DistMult
   elif name.casefold() == 'transe':
-    return TransE(atom_embedding_size, regularization, dropout_rate), TransE.output_layer()
-
+    return TransE
   elif name.casefold() == 'rotate':
-    return RotatE(atom_embedding_size, regularization, dropout_rate), RotatE.output_layer()
-
+    return RotatE
   elif name.casefold() == 'mode':
-    return ModE(atom_embedding_size, regularization, dropout_rate), ModE.output_layer()
-
-  else:
-    print('Unknown KGE', name, flush=True)
-    return None
+    return ModE
+  print('Unknown KGE', name, flush=True)
+  return None
