@@ -22,7 +22,8 @@ class ConstantEmbeddings(Layer):
                 constant_embedding_sizes_per_domain[domain.name],
                 embeddings_regularizer=L2(regularization))
 
-    def call(self, domain_inputs, **kwargs):
+    # domain_inputs is Dict domain->tensor of idx
+    def call(self, domain_inputs: Dict[str, tf.Tensor], **kwargs):
         domain_features = {}
         for domain in self.domains:
             domain_features[domain.name] = self.embedder[domain.name](
@@ -49,7 +50,7 @@ class PredicateEmbeddings(Layer):
     # Output is tensor of embeddings of each predicate.
     def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
         return self.embedder(inputs)  #BE
-    
+
 class AdaptiveConstantEmbeddings(Layer):
     def __init__(self, domains: List[Domain],
                  constant_embedder: ConstantEmbeddings,

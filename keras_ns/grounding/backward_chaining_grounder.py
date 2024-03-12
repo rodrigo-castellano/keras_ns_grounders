@@ -1,4 +1,5 @@
 #! /bin/python3
+#from memory_profiler import profile
 import copy
 import time
 from typing import List, Set, Tuple, Dict, Union
@@ -124,6 +125,7 @@ def backward_chaining_grounding_one_rule(
         res.update(new_ground_atoms)
 
 # res is a Set of (Tuple_head_groundings, Tuple_body_groundings)
+#@profile
 def backward_chaining_grounding_one_rule_with_domains(
     domains: Dict[str, Domain],
     rule: Rule,

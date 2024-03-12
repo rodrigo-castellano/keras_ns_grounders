@@ -139,7 +139,7 @@ if __name__ == '__main__':
             continue
 
         # Data params
-        args.corrupt_mode = 'TAIL' if 'countries' in dataset_name else 'HEAD_AND_TAIL'
+        args.corrupt_mode = 'HEAD_AND_TAIL' if 'countries' not in dataset_name else 'TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 100  
         args.test_negatives = None  # all possible negatives
@@ -174,6 +174,7 @@ if __name__ == '__main__':
         args.reasoner_regularization_factor = rr
         args.reasoner_formula_hidden_embedding_size = args.kge_atom_embedding_size
         args.reasoner_dropout_rate = dropout
+        args.kge_dropout_rate = dropout
         args.reasoner_atom_embedding_size = args.kge_atom_embedding_size
         # DCR/R2N params
         args.signed = True
