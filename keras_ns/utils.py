@@ -195,7 +195,12 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
       if self.verbose:
         print('Checkpointing %s: new best val (%.3f)' % (self.monitor, val), flush=True)
       if self._filepath is not None:
-          filename = '%s__epoch%d.ckpt' % (self._filepath, epoch)
+          # remove previous checkpoints. Remove all the files in self._filepath
+          print('path',self._filepath)
+          if os.path.exists(self._filepath):
+              for file in os.listdir(self._filepath):
+                  os.remove(os.path.join(self._filepath, file))
+          filename = '%s\epoch%d.ckpt' % (self._filepath, epoch)
           self._model.save_weights(filename)
           if self.verbose:
               print('Weights stored to %s' % filename, flush=True)

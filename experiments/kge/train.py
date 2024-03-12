@@ -204,15 +204,15 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         filepath=get_arg(args, 'ckpt_filepath', None))        
     callbacks.append(best_model_callback)
 
-    kge_filepath = get_arg(args, 'ckpt_filepath', None)
-    if kge_filepath is not None:
-        kge_filepath = os.path.join(kge_filepath, 'kge_model')
-    kge_best_model_callback = MMapModelCheckpoint(
-        model.kge_model, 'val_concept_mrr',
-        frequency=args.valid_frequency,
-        # if path is not None, checkpoint to file.
-        filepath=kge_filepath)
-    callbacks.append(kge_best_model_callback)
+    # kge_filepath = get_arg(args, 'ckpt_filepath', None)
+    # if kge_filepath is not None:
+    #     kge_filepath = os.path.join(kge_filepath, 'kge_model')
+    # kge_best_model_callback = MMapModelCheckpoint(
+    #     model.kge_model, 'val_concept_mrr',
+    #     frequency=args.valid_frequency,
+    #     # if path is not None, checkpoint to file.
+    #     filepath=kge_filepath)
+    # callbacks.append(kge_best_model_callback)
 
     history = model.fit(data_gen_train,
               epochs=args.epochs,
