@@ -32,32 +32,21 @@ AtomTuples = Union[List[List[AtomId]], Tensor] # a list of groundings (lists of 
 
 def _from_strings_to_tensors(fol, serializer,
                              queries, labels, engine, ragged,
-                             constants_features=None, deterministic=True): 
-    # print('queries at the beginning', len(queries), queries)
+                             constants_features=None, deterministic=True):
+
     # Symbolic step
-    facts = fol.facts
+    facts_tuple = tuple(fol.facts)
+    queries_tuple = tuple(ns.utils.to_flat(queries))
     if engine is not None:
         ground_formulas: Dict[str, RuleGroundings] = engine.ground(
-            tuple(facts),
-            tuple(ns.utils.to_flat(queries)),
-            deterministic=deterministic)
+            facts_tuple, queries_tuple, deterministic=deterministic)
         rules = engine.rules
     else:
         ground_formulas = {}
         rules = []
-    # print('\n')
-    # for k,v in ground_formulas.items():
-    #     print('rule ',k,v)
-    #     print('\n') 
-    # print('\n\n\n\n\n\nground_formulas', len(ground_formulas),ground_formulas)
-    # print('queries at the end', len(queries), queries)
     (domain_to_global, predicate_tuples, groundings, queries) = (
         serializer.serialize(queries=queries,
                              rule_groundings=ground_formulas))
-    # print('domain_to_global', domain_to_global)
-    # print('predicate_tuples', predicate_tuples)
-    # print('\n\n\n\n\ngroundings', groundings)
-    # print('queries', queries)
 
     # Creating numpy dictionaries for input
 
@@ -87,7 +76,7 @@ def _from_strings_to_tensors(fol, serializer,
         ai = len(rule.body)
         ao = len(rule.head)
         if rule.name in groundings and len(groundings[rule.name]) > 0:
-            # adding batch dimension  
+            # adding batch dimension
             input_formulas_tf[rule.name] = (
                 tf.constant(groundings[rule.name][0], dtype=tf.int32),
                 tf.constant(groundings[rule.name][1], dtype=tf.int32))
@@ -103,10 +92,7 @@ def _from_strings_to_tensors(fol, serializer,
     else:
         queries = tf.constant(queries, dtype=tf.int32)
         labels = tf.constant(labels, dtype=tf.float32)
-    # print('input_domains_tf', input_domains_tf)
-    # print('input_atoms_tuples_tf', input_atoms_tuples_tf)
-    # print('input_formulas_tf', input_formulas_tf)
-    # print('queries', queries)
+
     return (input_domains_tf, input_atoms_tuples_tf,
             input_formulas_tf, queries), labels
 
