@@ -190,8 +190,8 @@ if __name__ == '__main__':
         run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg, e)
         args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e',]
         args.run_signature = '-'.join(f'{v}' for v in run_vars)    
-        args.ckpt_filepath = (os.path.join(ckpt_folder, args.run_signature)
-                        if ckpt_folder else None) 
+        # args.ckpt_filepath = (os.path.join(ckpt_folder, args.run_signature)
+        #                 if ckpt_folder else None) 
         # append a hard copy of the args to the list of all_args
         all_args.append(copy.deepcopy(args)) 
 
