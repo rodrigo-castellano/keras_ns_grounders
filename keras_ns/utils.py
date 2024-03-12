@@ -346,7 +346,7 @@ class FileLogger():
         
         if not os.path.exists(os.path.join(self.folder_experiments,'experiments.csv')):
             return False
-        # if there are no csv files starting iwth experiments, return False
+        # if there are no csv files starting with experiments, return False
         experiments_files = [f for f in os.listdir(self.folder_experiments) if f.startswith('experiments')]
         if len(experiments_files) == 0:
             return False
@@ -363,24 +363,26 @@ class FileLogger():
                             continue
                         else:
                             headers = line.split(';')
-                            pos = headers.index('run_signature')
+                            pos_1 = headers.index('run_signature')
+                            # pos_2 = headers.index('seed_run_i')
                         continue
 
                     if j == 1:
                         if headers is None:
                             headers = line.split(';')
-                            pos = headers.index('run_signature')
+                            pos_1 = headers.index('run_signature')
+                            # pos_2 = headers.index('seed_run_i')
                         continue
                     else:# if the line is not empty
                         if line == '\n' or line == '' or line.startswith(';;;;;'):
                             continue 
-                        # print('line',line)
-                        file_signature = line.split(';')[pos]
-                        # print('signature', args['run_signature'])
-                        # print('file_signature', file_signature)
+                        file_signature = line.split(';')[pos_1]
+                        # seed_run_i = line.split(';')[pos_2]
                         if file_signature in args['run_signature']:
-                            # print('file_signature',file_signature)
                             return True
+                        # print('seed_run_i',seed_run_i, 'args[seed_run_i]',args['seed_run_i'])
+                        # if int(seed_run_i) in args['seed_run_i']:
+                        #     return True
         return False
 
     def exists_run(self, args:dict,log_filename_tmp,seed):
