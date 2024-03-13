@@ -2,7 +2,7 @@ import re
 import sys
  
 
-paths = ['./train_pharmkgfull']#, './train_nations','train_kinship_family']
+paths = ['./train_FB15k237']#, './train_nations','train_kinship_family']
 # save_path = path+'_triples'
 
 for path in paths:

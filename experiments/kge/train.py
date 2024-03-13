@@ -87,16 +87,11 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         test_file= args.test_file,
         fact_file= args.facts_file)
     
-    dataset_train = data_handler.get_dataset(
-        split="train",
-        number_negatives=args.num_negatives)
-    dataset_valid = data_handler.get_dataset(
-        split="valid",
-       number_negatives=args.valid_negatives, corrupt_mode=args.corrupt_mode)
-    
-    if explain_enabled:
-        dataset_test_positive_only = data_handler.get_dataset(
-            split="test", number_negatives=0, corrupt_mode=args.corrupt_mode)
+    dataset_train = data_handler.get_dataset(split="train",number_negatives=args.num_negatives)
+    dataset_valid = data_handler.get_dataset(split="valid",number_negatives=args.valid_negatives, corrupt_mode=args.corrupt_mode)
+    dataset_test = data_handler.get_dataset(split="test",  number_negatives=args.test_negatives,  corrupt_mode=args.corrupt_mode)
+    if explain_enabled and enable_rules and (args.model_name == 'dcr' or args.model_name == 'cdcr'):
+        dataset_test_positive_only = data_handler.get_dataset(split="test", number_negatives=0, corrupt_mode=args.corrupt_mode)
 
     fol = data_handler.fol
     domain2adaptive_constants: Dict[str, List[str]] = None
@@ -238,11 +233,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
-    dataset_test = data_handler.get_dataset(split="test", corrupt_mode=args.corrupt_mode,number_negatives=args.test_negatives)
-    if explain_enabled and enable_rules and (args.model_name == 'dcr' or args.model_name == 'cdcr'):
-        dataset_test_positive_only = data_handler.get_dataset(
-            split="test", number_negatives=0, corrupt_mode='TAIL')
-        
+       
     start = time.time()
     data_gen_test = ns.dataset.DataGenerator(
         dataset_test, fol, serializer, engine,
@@ -250,6 +241,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     end = time.time()
     args.time_ground_test = np.round(end- start,2)
     print("Time to create data generator test: ",  np.round(end - start,2))
+
     test_accuracy  =  model.evaluate(data_gen_test)
     end_inf = time.time()
     args.time_inference = np.round(end_inf - start_inf,2)
