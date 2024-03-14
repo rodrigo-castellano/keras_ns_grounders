@@ -32,7 +32,7 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','kinship_family','pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','pharmkg_small','nations','kinship_family','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['dcr','sbr','r2n','no_reasoner']  
@@ -95,12 +95,10 @@ if __name__ == '__main__':
             continue
 
         if grounder == 'full' and (dataset_name != 'countries_s1'):
-            # print('skipping, grounder too heavy', run_vars)
             continue
-        if grounder == 'domainbody' and (dataset_name == 'wn18rr' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K'):
-            # print('skipping, grounder too heavy', run_vars)
+        if (grounder == 'domainbody' or grounder == 'relationentity') and (dataset_name == 'wn18rr' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K' or dataset_name == 'kinshup_family'):
             continue
-        if model_name == 'no_reasoner' and (grounder == 'backward2' or grounder == 'backward3') and (dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name or 'wn18rr' in dataset_name):
+        if model_name == 'no_reasoner' and (grounder == 'backward2' or grounder == 'backward3' or grounder == 'relationentity') and (dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name or 'wn18rr' in dataset_name):
             # print('no need to calculate reasoner again', run_vars)
             continue
 
@@ -139,7 +137,7 @@ if __name__ == '__main__':
             continue
 
         # Data params
-        args.corrupt_mode = 'HEAD_AND_TAIL' if 'countries' not in dataset_name else 'TAIL'
+        args.corrupt_mode = 'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 100  
         args.test_negatives = None  # all possible negatives
@@ -210,7 +208,7 @@ if __name__ == '__main__':
         logger = ns.utils.FileLogger(log_folder,log_folder_experiments,log_folder_run)
         if logger.exists_experiment(args.__dict__):
             print("Skipping training, it has been already done for", args.run_signature, "\n")
-            # return
+            return
 
         date = logger.get_date()
         for seed in args.seed:
@@ -219,9 +217,9 @@ if __name__ == '__main__':
             if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
                 print("Seed number ", seed, " in ", args.seed,'already done')
                 continue
-            else:
-                print("Seed number ", seed, " not done. Exit")
-                continue
+            # else:
+            #     print("Seed number ", seed, " not done. Exit")
+            #     continue
 
             print("Seed number ", seed, " in ", args.seed)
             with open(log_filename_tmp, 'w') as f:

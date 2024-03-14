@@ -223,7 +223,9 @@ class KGCEvalDataset(Dataset):
         # Eval corruptions are split head and tail corruptions
         Q = []
         L = []
+        cont = 0
         for q,l,c in zip(queries, labels, corruptions_per_query):
+            cont += 1
             Q.append(q + c.head)
             Q.append(q + c.tail)
             L.append(l + [0] * len(c.head))
