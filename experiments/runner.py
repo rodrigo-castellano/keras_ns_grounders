@@ -98,7 +98,7 @@ if __name__ == '__main__':
             continue
         if (grounder == 'domainbody' or grounder == 'relationentity') and (dataset_name == 'wn18rr' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K' or dataset_name == 'kinshup_family'):
             continue
-        if  grounder == 'relationentity' and countries in dataset_name:
+        if  grounder == 'relationentity' and 'countries' in dataset_name:
             continue
         if model_name == 'no_reasoner' and (grounder == 'backward2' or grounder == 'backward3' or grounder == 'relationentity') and (dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name or 'wn18rr' in dataset_name):
             # print('no need to calculate reasoner again', run_vars)
