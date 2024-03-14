@@ -115,6 +115,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         constant2domain_name=fol.constant2domain_name,
         domain2adaptive_constants=domain2adaptive_constants)
 
+
     # Preparing data as generators for model fit
     print('Generating train data')
     start = time.time()
