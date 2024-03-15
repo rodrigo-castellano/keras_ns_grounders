@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
         if grounder == 'full' and (dataset_name != 'countries_s1'):
             continue
-        if (grounder == 'domainbody' or grounder == 'relationentity') and (dataset_name == 'wn18rr' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K' or dataset_name == 'kinshup_family'):
+        if (grounder == 'domainbody' or grounder == 'relationentity') and (dataset_name == 'countries_s3' or dataset_name == 'wn18rr' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K' or dataset_name == 'kinshup_family'):
             continue
         if  grounder == 'relationentity' and 'countries' in dataset_name:
             continue
