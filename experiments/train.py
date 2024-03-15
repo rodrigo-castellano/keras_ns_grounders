@@ -242,7 +242,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     end = time.time()
     args.time_ground_test = np.round(end- start,2)
     print("Time to create data generator test: ",  np.round(end - start,2))
-
+    print('Testing dataset:', args.dataset_name, 'grounder:', args.grounder, 'model:', args.model_name, 'seed:', seed)
     test_accuracy  =  model.evaluate(data_gen_test)
     end_inf = time.time()
     args.time_inference = np.round(end_inf - start_inf,2)
