@@ -168,7 +168,7 @@ if __name__ == '__main__':
         args.weight_loss = w_loss
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
-        args.valid_frequency = 3
+        args.valid_frequency = 5
         args.resnet = True
         args.reasoner_depth = dp if nr > 0 else 0
         args.reasoner_regularization_factor = rr
