@@ -210,7 +210,7 @@ if __name__ == '__main__':
         logger = ns.utils.FileLogger(log_folder,log_folder_experiments,log_folder_run)
         if logger.exists_experiment(args.__dict__):
             print("Skipping training, it has been already done for", args.run_signature, "\n")
-            return
+            # return
 
         date = logger.get_date()
         for seed in args.seed:
@@ -219,9 +219,9 @@ if __name__ == '__main__':
             if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
                 print("Seed number ", seed, " in ", args.seed,'already done')
                 continue
-            # else:
-            #     print("Seed number ", seed, " not done. Exit")
-            #     continue
+            else:
+                print("Seed number ", seed, " not done. Exit")
+                continue
 
             print("Seed number ", seed, " in ", args.seed)
             with open(log_filename_tmp, 'w') as f:
