@@ -49,6 +49,12 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
             engine = BackwardChainingGrounder_nocleanup(rules, facts=facts,
                                                     domains={d.name:d for d in fol.domains},
                                                     num_steps=num_steps, prune_incomplete_proofs=prune_backward)
+        
+        if 'original' in args.grounder:
+            print('Original grounder')
+            engine =  ns.grounding.OriginalBackwardChainingGrounder(
+                                                    rules, facts=facts, domains={d.name:d for d in fol.domains},
+                                                    num_steps=num_steps)
     elif args.grounder == 'domainbody':
         engine = ns.grounding.DomainBodyGrounder(domains={d.name:d for d in fol.domains},
                                                 rules=rules,
@@ -133,6 +139,10 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     end = time.time()
     args.time_ground_valid = np.round(end - start,2)
     print("Time to create data generator valid: ",  np.round(end - start,2))
+    
+    # data_gen_test = ns.dataset.DataGenerator(
+    # dataset_test, fol, serializer, engine,
+    # batch_size=args.test_batch_size, ragged=ragged)
 
     # The model can be built here or passed from the outside in case of
     # usage of a pre-trained one.
