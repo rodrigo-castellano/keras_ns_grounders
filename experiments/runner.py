@@ -28,12 +28,13 @@ if __name__ == '__main__':
     log_folder :str = "results/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
     # rewrite the line above
+    save_results = True
 
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s1_nodomain','countries_s2_nodomain','countries_s3_nodomain']#,['countries_s1','countries_s2','countries_s3','pharmkg_small','nations','kinship_family','pharmkg_full','FB15k237','wn18rr']
-    GROUNDER = ['relationentity']  #['backward_1','backward_2','backward_3','domainbody','relationentity']  
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','pharmkg_small','nations','kinship_family','pharmkg_full','FB15k237','wn18rr']
+    GROUNDER = ['backwardoriginal_1'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
@@ -208,20 +209,22 @@ if __name__ == '__main__':
         log_folder_experiments = os.path.join(log_folder,'experiments')
         # Check if the logger exists, if so, skip the experiment, otherwise run it. Logger exists if all the arguments inside each file in the folder are the same as the current args
         logger = ns.utils.FileLogger(log_folder,log_folder_experiments,log_folder_run)
-        if logger.exists_experiment(args.__dict__):
-            print("Skipping training, it has been already done for", args.run_signature, "\n")
-            return
+        if save_results:
+            if logger.exists_experiment(args.__dict__):
+                print("Skipping training, it has been already done for", args.run_signature, "\n")
+                # return
 
         date = logger.get_date()
         for seed in args.seed:
             args.seed_run_i = seed
             log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
-            if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
-                print("Seed number ", seed, " in ", args.seed,'already done')
-                continue
-            # else:
-            #     print("Seed number ", seed, " not done. Exit")
-            #     continue
+            if save_results:
+                if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
+                    print("Seed number ", seed, " in ", args.seed,'already done')
+                    continue
+                # else:
+                #     print("Seed number ", seed, " not done. Exit")
+                #     continue
 
             print("Seed number ", seed, " in ", args.seed)
             with open(log_filename_tmp, 'w') as f:
@@ -252,10 +255,11 @@ if __name__ == '__main__':
             os.rename(log_filename_tmp, log_filename_run)
   
         # write the average results if we need to average over experiments
-        # if len(args.seed) > 1:
-        info_metrics,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
-        if info_metrics is not None:
-            logger.write_avg_results(args.__dict__,info_metrics,metrics_name)
+        if save_results:
+            # if len(args.seed) > 1:
+            info_metrics,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
+            if info_metrics is not None:
+                logger.write_avg_results(args.__dict__,info_metrics,metrics_name)
 
                 
     for l,args in enumerate(all_args):
