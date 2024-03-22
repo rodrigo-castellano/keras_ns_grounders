@@ -33,7 +33,7 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s1']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
+    DATASET_NAME = ['countries_s2']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3','backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['dcr','sbr','r2n','no_reasoner']  
