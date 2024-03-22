@@ -55,6 +55,10 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
             engine =  ns.grounding.OriginalBackwardChainingGrounder(
                                                     rules, facts=facts, domains={d.name:d for d in fol.domains},
                                                     num_steps=num_steps)
+            if 'prune' in args.grounder:
+                engine = ns.grounding.OriginalBackwardChainingGrounder(
+                                                    rules, facts=facts, domains={d.name:d for d in fol.domains},
+                                                    num_steps=num_steps, prune_incomplete_proofs=True)
     elif args.grounder == 'domainbody':
         engine = ns.grounding.DomainBodyGrounder(domains={d.name:d for d in fol.domains},
                                                 rules=rules,
