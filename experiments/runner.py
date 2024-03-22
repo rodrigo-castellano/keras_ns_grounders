@@ -3,7 +3,7 @@ sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\keras_ns_gr
 sys.path.append('/home/castellanoontiv/keras_ns_grounders')
 sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
 sys.path.append('/home2/castellanoontiv/keras_ns_grounders/')
-
+sys.path.append('C:\\Users\\rodri\\OneDrive - Università degli Studi di Siena\\Documents\\PhD\\Review_grounders\\keras_ns_grounders')
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import copy
@@ -33,8 +33,8 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
-    GROUNDER = ['backwardoriginal_prune_1','backwardoriginal_prune_2','backwardoriginal_prune_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
+    DATASET_NAME = ['countries_s1']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
+    GROUNDER = ['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3','backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME =  ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
@@ -212,7 +212,7 @@ if __name__ == '__main__':
         if save_results:
             if logger.exists_experiment(args.__dict__):
                 print("Skipping training, it has been already done for", args.run_signature, "\n")
-                # return
+                return
 
         date = logger.get_date()
         for seed in args.seed:
