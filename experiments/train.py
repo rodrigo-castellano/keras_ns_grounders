@@ -41,24 +41,38 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
     elif 'backward' in args.grounder:
         num_steps = int(args.grounder.split('_')[-1])
         prune_backward = True # if ( ('backward' in args.grounder) and ('prune'in args.grounder) ) else False
-        print('Grounder: ',args.grounder,'Number of steps:', num_steps, 'Prune:', prune_backward)
+        if 'noprune' in args.grounder:
+            prune_backward = False
+
+        if 'unknown1' in args.grounder:
+            max_unknown_fact_count_last_step = max_unknown_fact_count = 1
+        elif 'unknown2' in args.grounder:
+            max_unknown_fact_count_last_step = max_unknown_fact_count = 2
+        elif 'unknown3' in args.grounder:
+            max_unknown_fact_count_last_step = max_unknown_fact_count = 3
+        elif 'unknown0' in args.grounder:
+            max_unknown_fact_count_last_step = max_unknown_fact_count = 0
+
+        print('Grounder: ',args.grounder,'Number of steps:', num_steps, 'Prune:', prune_backward, 'max_unknown_fact_count:', max_unknown_fact_count)
         engine = ns.grounding.BackwardChainingGrounder(rules, facts=facts,
                                                     domains={d.name:d for d in fol.domains},
-                                                    num_steps=num_steps, prune_incomplete_proofs=prune_backward)
+                                                    num_steps=num_steps, prune_incomplete_proofs=prune_backward,
+                                                    max_unknown_fact_count=max_unknown_fact_count, max_unknown_fact_count_last_step=max_unknown_fact_count_last_step)
+
+        if 'original' in args.grounder:
+            print('Original grounder')
+            engine =  ns.grounding.OriginalBackwardChainingGrounder(
+                                                    rules, facts=facts, domains={d.name:d for d in fol.domains},
+                                                    num_steps=num_steps, prune_incomplete_proofs=prune_backward,
+                                                    max_unknown_fact_count=max_unknown_fact_count, max_unknown_fact_count_last_step=max_unknown_fact_count_last_step) 
+
         if '_nocleanup' in args.grounder:
             engine = BackwardChainingGrounder_nocleanup(rules, facts=facts,
                                                     domains={d.name:d for d in fol.domains},
                                                     num_steps=num_steps, prune_incomplete_proofs=prune_backward)
         
-        if 'original' in args.grounder:
-            print('Original grounder')
-            engine =  ns.grounding.OriginalBackwardChainingGrounder(
-                                                    rules, facts=facts, domains={d.name:d for d in fol.domains},
-                                                    num_steps=num_steps)
-            if 'prune' in args.grounder:
-                engine = ns.grounding.OriginalBackwardChainingGrounder(
-                                                    rules, facts=facts, domains={d.name:d for d in fol.domains},
-                                                    num_steps=num_steps, prune_incomplete_proofs=True)
+
+            
     elif args.grounder == 'domainbody':
         engine = ns.grounding.DomainBodyGrounder(domains={d.name:d for d in fol.domains},
                                                 rules=rules,
