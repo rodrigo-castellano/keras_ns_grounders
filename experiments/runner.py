@@ -221,10 +221,10 @@ if __name__ == '__main__':
             if save_results:
                 if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
                     print("Seed number ", seed, " in ", args.seed,'already done')
-                    #continue
-                # else:
-                #     print("Seed number ", seed, " not done. Exit")
-                #     continue
+                    continue
+                else:
+                    print("Seed number ", seed, " not done. Exit")
+                    continue
 
             print("Seed number ", seed, " in ", args.seed)
             with open(log_filename_tmp, 'w') as f:
