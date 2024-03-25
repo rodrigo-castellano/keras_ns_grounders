@@ -357,6 +357,7 @@ class FileLogger():
         # open the experiments file. for every line, check if the signature is in the line
         headers = None
         for file in experiments_files:
+            # print('\nfile',file)
             with open(os.path.join(self.folder_experiments,file), 'r') as f:
                 lines = f.readlines()
                 for j,line in enumerate(lines):
@@ -375,9 +376,12 @@ class FileLogger():
                             pos_1 = headers.index('run_signature')
                         continue
                     else:# if the line is not empty
-                        if line == '\n' or line == '' or line.startswith(';;;;;'):
+                        if line == '\n' or line == '' or line.startswith(';;;;;') or line.startswith('<')  or line.startswith('='):
                             continue 
                         file_signature = line.split(';')[pos_1]
+                        # print('line',line)
+                        # print('file_signature',file_signature)
+                        # print('args[run_signature]',args['run_signature'])
                         if file_signature in args['run_signature']:
                             return True
         return False
@@ -390,7 +394,10 @@ class FileLogger():
         sub_signature.append(str('seed_'+str(seed)))
         # read all the files
         all_files = os.listdir(self.folder_run)
+        # print('sub_signature',sub_signature)
+        # print()
         for file in all_files:
+            # print('file',file)
             # if the file contains the sub_signature, then the training has been done
             if all(sub in file for sub in sub_signature):
                 return True
@@ -454,9 +461,9 @@ class FileLogger():
         for key in info_exp.keys():
             print('key',key,'info_exp[key]',info[key])
         #print a message also
-        assert len(seeds_found) == len(seeds), 'The number of seeds found in the experiments folder is different from the number of seeds you set in the code'
         if len(seeds_found) != len(seeds):
-            print('The number of seeds found in the experiments is different from the number of seeds!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('The number of seeds',seeds_found,' found in the experiments is different from the number of seeds',seeds,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        assert len(seeds_found) == len(seeds), 'The number of seeds found in the experiments folder is different from the number of seeds you set in the code'
         # for every key in the dictionary, take the average and the std
         for key in info.keys():
             avg = np.mean(info[key],axis=0)
