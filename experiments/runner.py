@@ -18,14 +18,14 @@ import numpy as np
 import ast
 import tensorflow as tf
 import argparse
-
+from model_utils import * 
 
 if __name__ == '__main__':
 
     # rerun for hits10: countries, pharmkg_small, fb15k237, wn18, kinship (do it with michlangelo changes and write in signature the test results)
 
     # print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
-    log_folder :str = "results/"
+    log_folder :str = "tests/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
     # rewrite the line above
     save_results = True
@@ -33,20 +33,22 @@ if __name__ == '__main__':
     base_path :str = "data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['countries_s2']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
-    GROUNDER = ['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
-    KGE = ['complex']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME =  ['dcr','sbr','r2n','no_reasoner']  
+    DATASET_NAME = ['countries_s3','nations','kinship_family']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
+    GROUNDER = ['backward_1'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
+    KGE = ['complex','rotate']  # ["distmult", "transe","complex", "rotate"]
+    MODEL_NAME = ['r2n','no_reasoner'] # ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
-    E = [100] 
-    DEPTH = [1]
-    SEED = [[0,1,2,3,4]]
+    E = [100,300] 
+    DEPTH = [1,3]
+    SEED = [[0,1,2]]
     NEG_PER_SIDE = [1]
     WEIGHT_LOSS = [.5]  
-    DROPOUT = [0.0]
+    DROPOUT = [0.0,0.1,0,2]
     R = [0.0]
     RR = [0.0]
     LR = [0.01]
+    LR_SCHEDULER = ['plateau']
+    OPTIMIZER = ['adam']
     NUM_RULES = [1] 
     VALID_SIZE = [None]
 
@@ -75,9 +77,9 @@ if __name__ == '__main__':
     
     all_args = []
 
-    for dataset_name,grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, rr in product(
+    for dataset_name,grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr,lr_sched,optimizer, nr, rr in product(
             DATASET_NAME,GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
-            LR, NUM_RULES, RR ):  
+            LR,LR_SCHEDULER,OPTIMIZER, NUM_RULES, RR ):  
 
         run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
         if 'reason' in dataset_name:
@@ -163,13 +165,16 @@ if __name__ == '__main__':
         args.kge_regularization = r
         # Model params
         args.learning_rate = lr
-        args.epochs = epochs
+        args.lr_sched = lr_sched
+        args.optimizer = 'adam'
+        args.early_stopping = True
+        args.epochs = epochs if not args.early_stopping else 1500
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
         args.loss = "binary_crossentropy"
         args.weight_loss = w_loss
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
-        args.valid_frequency = 5
+        args.valid_frequency = 1
         args.resnet = True
         args.reasoner_depth = dp if nr > 0 else 0
         args.reasoner_regularization_factor = rr
@@ -222,9 +227,9 @@ if __name__ == '__main__':
                 if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
                     print("Seed number ", seed, " in ", args.seed,'already done')
                     continue
-                else:
-                    print("Seed number ", seed, " not done. Exit")
-                    continue
+                # else:
+                #     print("Seed number ", seed, " not done. Exit")
+                #     continue
 
             print("Seed number ", seed, " in ", args.seed)
             with open(log_filename_tmp, 'w') as f:
