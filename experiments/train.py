@@ -1,5 +1,4 @@
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import tensorflow as tf
 import keras_ns as ns
 from itertools import product
@@ -18,6 +17,7 @@ from keras_ns.utils import get_arg
 from keras_ns.grounding.backward_chaining_grounder_nocleanup import BackwardChainingGrounder_nocleanup
 from typing import Dict, List
 import time
+from model_utils import * 
 
 explain_enabled: bool = False
 
@@ -44,6 +44,7 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
         if 'noprune' in args.grounder:
             prune_backward = False
 
+        max_unknown_fact_count_last_step = max_unknown_fact_count = 1
         if 'unknown1' in args.grounder:
             max_unknown_fact_count_last_step = max_unknown_fact_count = 1
         elif 'unknown2' in args.grounder:
@@ -195,12 +196,21 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     loss_name = get_arg(args, 'loss', 'binary_crossentropy')
     loss = KgeLossFactory(loss_name)
 
-    optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
-
     metrics = [ns.utils.MRRMetric(),
                ns.utils.HitsMetric(1),
                ns.utils.HitsMetric(3),
                ns.utils.HitsMetric(10)]
+
+    # optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
+
+    lr_scheduler = choose_lr_scheduler(args.lr_sched)
+    if args.lr_sched != 'plateau':
+        optimizer = choose_optimizer_with_scheduler(args.optimizer, lr_scheduler)
+    else:
+        optimizer = choose_optimizer(name_optimizer=args.optimizer,lr=args.learning_rate)
+
+    # optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
+
     model.compile(optimizer=optimizer,
                     loss=loss,
                     loss_weights = {
@@ -222,6 +232,17 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
     callbacks = []
     callbacks.append(csv_logger)
+    if args.lr_sched=='plateau':
+      callbacks += [lr_scheduler]
+    
+    if args.early_stopping:
+        early_stopping = keras.callbacks.EarlyStopping(
+            monitor="val_loss",
+            min_delta=0.0001,
+            patience=30,
+            verbose=1)
+        callbacks.append(early_stopping)
+    
 
     best_model_callback = MMapModelCheckpoint(model, 'val_task_mrr',frequency=args.valid_frequency,
         # if path is not None, checkpoint to file.
