@@ -1,10 +1,8 @@
-# coding=utf-8
 import sys
-sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\keras_ns_grounders')
+sys.path.append('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders')
 sys.path.append('/home/castellanoontiv/keras_ns_grounders')
 sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
 sys.path.append('/home2/castellanoontiv/keras_ns_grounders/')
-sys.path.append('C:\\Users\\rodri\\OneDrive - Università degli Studi di Siena\\Documents\\PhD\\Review_grounders\\keras_ns_grounders')
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import copy
@@ -36,7 +34,7 @@ if __name__ == '__main__':
     assert epochs > 0
     DATASET_NAME = ['countries_s3','nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1','backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
-    KGE = ['complex','rotate',"distmult", "transe"]  # ["distmult", "transe","complex", "rotate"]
+    KGE = ['complex','rotate']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['r2n','no_reasoner'] # ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
     E = [100,300] 
@@ -49,7 +47,7 @@ if __name__ == '__main__':
     RR = [0.0]
     LR = [0.01]
     LR_SCHEDULER = ['plateau']
-    OPTIMIZER = ['adam']
+    OPTIMIZER = ['None','adam']
     NUM_RULES = [1] 
     VALID_SIZE = [None]
 
