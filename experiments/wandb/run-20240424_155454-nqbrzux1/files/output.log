@@ -1,0 +1,59 @@
+
+Epoch 1/1500
+C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\tensorflow\python\framework\indexed_slices.py:444: UserWarning: Converting sparse IndexedSlices(IndexedSlices(indices=Tensor("Adam/gradients/concat_1:0", shape=(None,), dtype=int32), values=Tensor("Adam/gradients/concat:0", shape=(None, 200), dtype=float32), dense_shape=Tensor("gradient_tape/collective_model/kge_model/Cast:0", shape=(2,), dtype=int32))) to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  warnings.warn(
+C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\tensorflow\python\framework\indexed_slices.py:444: UserWarning: Converting sparse IndexedSlices(IndexedSlices(indices=Tensor("Adam/gradients/concat_3:0", shape=(None,), dtype=int32), values=Tensor("Adam/gradients/concat_2:0", shape=(None, 200), dtype=float32), dense_shape=Tensor("gradient_tape/collective_model/kge_model/Cast_1:0", shape=(2,), dtype=int32))) to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  warnings.warn(
+C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\tensorflow\python\framework\indexed_slices.py:444: UserWarning: Converting sparse IndexedSlices(IndexedSlices(indices=Tensor("Adam/gradients/concat_5:0", shape=(None,), dtype=int32), values=Tensor("Adam/gradients/concat_4:0", shape=(None, 200), dtype=float32), dense_shape=Tensor("gradient_tape/collective_model/kge_model/Cast_5:0", shape=(2,), dtype=int32))) to a dense Tensor of unknown shape. This may consume a large amount of memory.
+  warnings.warn(
+1/1 [==============================] - ETA: 0s - loss: 0.6931 - concept_loss: 0.6931 - task_loss: 0.6931 - concept_mrr: 0.6257 - concept_hits@1@1: 0.3541 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.6257 - task_hits@1@1: 0.3541 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000Checkpointing val_task_mrr: new best val (0.119)
+1/1 [==============================] - 3s 3s/step - loss: 0.6931 - concept_loss: 0.6931 - task_loss: 0.6931 - concept_mrr: 0.6257 - concept_hits@1@1: 0.3541 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.6257 - task_hits@1@1: 0.3541 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000 - val_loss: 0.6931 - val_concept_loss: 0.6931 - val_task_loss: 0.6931 - val_concept_mrr: 0.1192 - val_concept_hits@1@1: 0.0800 - val_concept_hits@3@3: 0.0800 - val_concept_hits@10@10: 0.1800 - val_task_mrr: 0.1192 - val_task_hits@1@1: 0.0800 - val_task_hits@3@3: 0.0800 - val_task_hits@10@10: 0.1800 - lr: 0.0100
+Epoch 2/1500
+1/1 [==============================] - ETA: 0s - loss: 0.6930 - concept_loss: 0.6930 - task_loss: 0.6930 - concept_mrr: 0.7785 - concept_hits@1@1: 0.6027 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.7785 - task_hits@1@1: 0.6027 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000Checkpointing val_task_mrr: new best val (0.207)
+1/1 [==============================] - 0s 112ms/step - loss: 0.6930 - concept_loss: 0.6930 - task_loss: 0.6930 - concept_mrr: 0.7785 - concept_hits@1@1: 0.6027 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.7785 - task_hits@1@1: 0.6027 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000 - val_loss: 0.6931 - val_concept_loss: 0.6931 - val_task_loss: 0.6931 - val_concept_mrr: 0.2068 - val_concept_hits@1@1: 0.1500 - val_concept_hits@3@3: 0.1900 - val_concept_hits@10@10: 0.2900 - val_task_mrr: 0.2068 - val_task_hits@1@1: 0.1500 - val_task_hits@3@3: 0.1900 - val_task_hits@10@10: 0.2900 - lr: 0.0100
+Epoch 3/1500
+1/1 [==============================] - ETA: 0s - loss: 0.6929 - concept_loss: 0.6929 - task_loss: 0.6929 - concept_mrr: 0.9185 - concept_hits@1@1: 0.8459 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.9185 - task_hits@1@1: 0.8459 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000Checkpointing val_task_mrr: new best val (0.305)
+1/1 [==============================] - 0s 103ms/step - loss: 0.6929 - concept_loss: 0.6929 - task_loss: 0.6929 - concept_mrr: 0.9185 - concept_hits@1@1: 0.8459 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.9185 - task_hits@1@1: 0.8459 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000 - val_loss: 0.6930 - val_concept_loss: 0.6930 - val_task_loss: 0.6930 - val_concept_mrr: 0.3049 - val_concept_hits@1@1: 0.2400 - val_concept_hits@3@3: 0.2800 - val_concept_hits@10@10: 0.4500 - val_task_mrr: 0.3049 - val_task_hits@1@1: 0.2400 - val_task_hits@3@3: 0.2800 - val_task_hits@10@10: 0.4500 - lr: 0.0100
+Epoch 4/1500
+1/1 [==============================] - ETA: 0s - loss: 0.6926 - concept_loss: 0.6926 - task_loss: 0.6926 - concept_mrr: 0.9793 - concept_hits@1@1: 0.9595 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.9793 - task_hits@1@1: 0.9595 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000Checkpointing val_task_mrr: new best val (0.421)
+1/1 [==============================] - 0s 101ms/step - loss: 0.6926 - concept_loss: 0.6926 - task_loss: 0.6926 - concept_mrr: 0.9793 - concept_hits@1@1: 0.9595 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.9793 - task_hits@1@1: 0.9595 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000 - val_loss: 0.6930 - val_concept_loss: 0.6930 - val_task_loss: 0.6930 - val_concept_mrr: 0.4207 - val_concept_hits@1@1: 0.3500 - val_concept_hits@3@3: 0.4100 - val_concept_hits@10@10: 0.5800 - val_task_mrr: 0.4207 - val_task_hits@1@1: 0.3500 - val_task_hits@3@3: 0.4100 - val_task_hits@10@10: 0.5800 - lr: 0.0100
+Epoch 5/1500
+Traceback (most recent call last):
+  File "C:\Users\rodri\Downloads\PhD_code\Review_grounders\keras_ns_grounders\experiments\runner.py", line 277, in <module>
+    main_wrapper(args,log_folder)
+  File "C:\Users\rodri\Downloads\PhD_code\Review_grounders\keras_ns_grounders\experiments\runner.py", line 241, in main_wrapper
+    train_acc,valid_acc, test_acc,training_info = main(base_path,None,log_filename_tmp,use_WB,args)
+  File "C:\Users\rodri\Downloads\PhD_code\Review_grounders\keras_ns_grounders\experiments\train.py", line 260, in main
+    history = model.fit(data_gen_train,
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\wandb\integration\keras\keras.py", line 176, in new_v2
+    return old_v2(*args, **kwargs)
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\wandb\integration\keras\keras.py", line 176, in new_v2
+    return old_v2(*args, **kwargs)
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\wandb\integration\keras\keras.py", line 176, in new_v2
+    return old_v2(*args, **kwargs)
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\keras\utils\traceback_utils.py", line 65, in error_handler
+    return fn(*args, **kwargs)
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\keras\engine\training.py", line 1606, in fit
+    val_logs = self.evaluate(
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\keras\utils\traceback_utils.py", line 65, in error_handler
+    return fn(*args, **kwargs)
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\keras\engine\training.py", line 1939, in evaluate
+    for _, iterator in data_handler.enumerate_epochs():  # Single epoch.
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\keras\engine\data_adapter.py", line 1312, in enumerate_epochs
+    data_iterator = iter(self._dataset)
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\tensorflow\python\data\ops\dataset_ops.py", line 499, in __iter__
+    return iterator_ops.OwnedIterator(self)
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\tensorflow\python\data\ops\iterator_ops.py", line 696, in __init__
+    self._create_iterator(dataset)
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\tensorflow\python\data\ops\iterator_ops.py", line 721, in _create_iterator
+    gen_dataset_ops.make_iterator(ds_variant, self._iterator_resource)
+  File "C:\Users\rodri\.conda\envs\py310_gpu\lib\site-packages\tensorflow\python\ops\gen_dataset_ops.py", line 3408, in make_iterator
+    _result = pywrap_tfe.TFE_Py_FastPathExecute(
+KeyboardInterrupt
+1/1 [==============================] - ETA: 0s - loss: 0.6922 - concept_loss: 0.6922 - task_loss: 0.6922 - concept_mrr: 0.9950 - concept_hits@1@1: 0.9901 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.9950 - task_hits@1@1: 0.9901 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000Checkpointing val_task_mrr: new best val (0.524)
+1/1 [==============================] - 0s 110ms/step - loss: 0.6922 - concept_loss: 0.6922 - task_loss: 0.6922 - concept_mrr: 0.9950 - concept_hits@1@1: 0.9901 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.9950 - task_hits@1@1: 0.9901 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000 - val_loss: 0.6929 - val_concept_loss: 0.6929 - val_task_loss: 0.6929 - val_concept_mrr: 0.5237 - val_concept_hits@1@1: 0.4500 - val_concept_hits@3@3: 0.5300 - val_concept_hits@10@10: 0.6800 - val_task_mrr: 0.5237 - val_task_hits@1@1: 0.4500 - val_task_hits@3@3: 0.5300 - val_task_hits@10@10: 0.6800 - lr: 0.0100
+Epoch 6/1500
+1/1 [==============================] - ETA: 0s - loss: 0.6916 - concept_loss: 0.6916 - task_loss: 0.6916 - concept_mrr: 0.9982 - concept_hits@1@1: 0.9964 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.9982 - task_hits@1@1: 0.9964 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000Checkpointing val_task_mrr: new best val (0.590)
+1/1 [==============================] - 0s 111ms/step - loss: 0.6916 - concept_loss: 0.6916 - task_loss: 0.6916 - concept_mrr: 0.9982 - concept_hits@1@1: 0.9964 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.9982 - task_hits@1@1: 0.9964 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000 - val_loss: 0.6927 - val_concept_loss: 0.6927 - val_task_loss: 0.6927 - val_concept_mrr: 0.5904 - val_concept_hits@1@1: 0.5200 - val_concept_hits@3@3: 0.6200 - val_concept_hits@10@10: 0.7100 - val_task_mrr: 0.5904 - val_task_hits@1@1: 0.5200 - val_task_hits@3@3: 0.6200 - val_task_hits@10@10: 0.7100 - lr: 0.0100
+Epoch 7/1500
+1/1 [==============================] - ETA: 0s - loss: 0.6907 - concept_loss: 0.6907 - task_loss: 0.6907 - concept_mrr: 0.9995 - concept_hits@1@1: 0.9991 - concept_hits@3@3: 1.0000 - concept_hits@10@10: 1.0000 - task_mrr: 0.9995 - task_hits@1@1: 0.9991 - task_hits@3@3: 1.0000 - task_hits@10@10: 1.0000

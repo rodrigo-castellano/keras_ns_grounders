@@ -19,6 +19,10 @@ from typing import Dict, List
 import time
 from model_utils import * 
 
+import wandb
+from wandb.keras import WandbCallback
+from wandb.keras import WandbMetricsLogger
+
 explain_enabled: bool = False
 
 def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
@@ -86,22 +90,20 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
             max_elements=20)
     return engine
  
-def main(base_path, output_filename, kge_output_filename, log_filename, args):
+def main(base_path, output_filename, log_filename, use_WB, args):
 
-    csv_logger = ns.utils.CustomCSVLogger(log_filename, append=True, separator=';') 
     print('\nARGS', args,'\n')
-
     seed = get_arg(args, 'seed_run_i', 0)
     random.seed(seed)
     np.random.seed(seed)
     tf.random.set_seed(seed)
-
     # Params
     ragged = get_arg(args, 'ragged', None, True)
-
     start_train = time.time()
 
-    # Data Loading
+
+
+    # DATA GENERATION
     data_handler = KGCDataHandler(
         dataset_name=args.dataset_name,
         base_path=base_path,
@@ -122,10 +124,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     domain2adaptive_constants: Dict[str, List[str]] = None
     num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
 
-    # Domains are used up to the serializer, the model assumes that all
-    # constants are in the same domain.
-
-    ### defining rules and grounding engine
+    # Domains are used up to the serializer, the model assumes that all constants are in the same domain.
+    # Defining rules and grounding engine
     rules = []
     engine = None
 
@@ -134,7 +134,8 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
         facts = list(data_handler.train_known_facts_set)
         engine = BuildGrounder(args, fol, rules, facts, domain2adaptive_constants)
-
+    # print('fol.constant2domain_name',fol.constant2domain_name)
+    # print('domain2adaptive_constants',domain2adaptive_constants)
     serializer = ns.serializer.LogicSerializerFast(
         predicates=fol.predicates, domains=fol.domains,
         constant2domain_name=fol.constant2domain_name,
@@ -157,14 +158,11 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
        batch_size=args.val_batch_size, ragged=ragged)
     end = time.time()
     args.time_ground_valid = np.round(end - start,2)
-    print("Time to create data generator valid: ",  np.round(end - start,2))
-    
-    # data_gen_test = ns.dataset.DataGenerator(
-    # dataset_test, fol, serializer, engine,
-    # batch_size=args.test_batch_size, ragged=ragged)
+    print("Time to create data generator valid: ",  np.round(end - start,2)) 
 
-    # The model can be built here or passed from the outside in case of
-    # usage of a pre-trained one.
+
+
+    # COMPILING MODEL
     model = CollectiveModel(
         fol, rules,
         kge=args.kge,
@@ -201,16 +199,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
                ns.utils.HitsMetric(3),
                ns.utils.HitsMetric(10)]
 
-    # optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
-
-    lr_scheduler = choose_lr_scheduler(args.lr_sched)
-    if args.lr_sched != 'plateau':
-        optimizer = choose_optimizer_with_scheduler(args.optimizer, lr_scheduler)
-    else:
-        optimizer = choose_optimizer(name_optimizer=args.optimizer,lr=args.learning_rate)
-
-    # optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
-
+    optimizer,lr_scheduler = optimizer_scheduler(args.optimizer,args.lr_sched,args.learning_rate)
     model.compile(optimizer=optimizer,
                     loss=loss,
                     loss_weights = {
@@ -230,8 +219,14 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         model.kge_model.trainable = kge_checkpoint_load[1]
         model.summary()
 
+
+
+    # CALLBACKS
     callbacks = []
-    callbacks.append(csv_logger)
+    if log_filename is not None:
+        csv_logger = ns.utils.CustomCSVLogger(log_filename, append=True, separator=';') 
+        callbacks.append(csv_logger)
+
     if args.lr_sched=='plateau':
       callbacks += [lr_scheduler]
     
@@ -239,26 +234,29 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
         early_stopping = keras.callbacks.EarlyStopping(
             monitor="val_loss",
             min_delta=0.0001,
-            patience=30,
+            patience=40,
             verbose=1)
         callbacks.append(early_stopping)
-    
 
     best_model_callback = MMapModelCheckpoint(model, 'val_task_mrr',frequency=args.valid_frequency,
         # if path is not None, checkpoint to file.
         filepath=get_arg(args, 'ckpt_filepath', None))        
     callbacks.append(best_model_callback)
 
-    # kge_filepath = get_arg(args, 'ckpt_filepath', None)
-    # if kge_filepath is not None:
-    #     kge_filepath = os.path.join(kge_filepath, 'kge_model')
-    # kge_best_model_callback = MMapModelCheckpoint(
-    #     model.kge_model, 'val_concept_mrr',
-    #     frequency=args.valid_frequency,
-    #     # if path is not None, checkpoint to file.
-    #     filepath=kge_filepath)
-    # callbacks.append(kge_best_model_callback)
+    # Initialize a W&B run
+    if use_WB:
+        run = wandb.init(project = "LLM-Logic", name=args.run_signature, config = dict(
+                shuffle_buffer = 1024,
+                batch_size = args.batch_size,
+                learning_rate = args.learning_rate,
+                epochs = args.epochs
+                )
+            ) 
+        callbacks.append(WandbMetricsLogger(log_freq=10))
 
+
+
+    # TRAIN
     history = model.fit(data_gen_train,
               epochs=args.epochs,
               callbacks=callbacks,
@@ -267,6 +265,11 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
               )
     
     end_train = time.time()
+
+    # Close the W&B run
+    if use_WB:
+        run.finish()
+    
     args.time_train = np.round(end_train - start_train,2)
     print('Training time:', np.round(end_train - start_train,2), 'seconds')
     best_model_callback.restore_weights()
@@ -281,6 +284,9 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     valid_accuracy =  model.evaluate(data_gen_valid) 
     # valid_accuracy = list(np.zeros(len(train_accuracy)))
 
+
+
+    # TEST
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
        
