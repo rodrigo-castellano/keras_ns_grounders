@@ -17,6 +17,8 @@ class ConstantEmbeddings(Layer):
         self.embedder = {}
         self.domains = domains
         for domain in domains:
+            # print('Domain', domain.name)
+            # print('Constants', len(domain.constants), 'Embedding size', constant_embedding_sizes_per_domain[domain.name])
             self.embedder[domain.name] = Embedding(
                 len(domain.constants),
                 constant_embedding_sizes_per_domain[domain.name],
@@ -28,6 +30,10 @@ class ConstantEmbeddings(Layer):
         for domain in self.domains:
             domain_features[domain.name] = self.embedder[domain.name](
                 domain_inputs[domain.name])
+            # print('Domain', domain.name, 'inputs', domain_inputs[domain.name].shape,domain_inputs[domain.name]  )
+            # print('Domain', domain.name, 'outputs', domain_features[domain.name].shape,domain_features[domain.name])
+        # To use an LM to get the embed. of the constants, we need to give the word (not the index), along with its text
+        # How should I do, before the serializer I work directly with the word to get the text? or once I have the indeces, I retrieve the word from each index?
         return domain_features
 
 class PredicateEmbeddings(Layer):

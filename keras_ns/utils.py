@@ -9,8 +9,117 @@ import numpy as np
 import sys
 from typing import Dict
 import datetime
-from tensorflow_ranking.python.utils import sort_by_scores, ragged_to_dense
+# from tensorflow_ranking.python.utils import sort_by_scores, ragged_to_dense
 from keras_ns.logic.commons import Atom, Domain, Rule, RuleLoader
+
+
+def ragged_to_dense(labels, predictions, weights):
+  """Converts given inputs from ragged tensors to dense tensors.
+
+  Args:
+    labels: A `tf.RaggedTensor` of the same shape as `predictions` representing
+      relevance.
+    predictions: A `tf.RaggedTensor` with shape [batch_size, (list_size)]. Each
+      value is the ranking score of the corresponding example.
+    weights: An optional `tf.RaggedTensor` of the same shape of predictions or a
+      `tf.Tensor` of shape [batch_size, 1]. The former case is per-example and
+      the latter case is per-list.
+
+  Returns:
+    A tuple (labels, predictions, weights, mask) of dense `tf.Tensor`s.
+  """
+  _PADDING_LABEL = -1.
+  _PADDING_PREDICTION = -1e6
+  _PADDING_WEIGHT = 0.
+  # TODO: Add checks to validate (ragged) shapes of input tensors.
+  mask = tf.cast(tf.ones_like(labels).to_tensor(0.), dtype=tf.bool)
+  labels = labels.to_tensor(_PADDING_LABEL)
+  if predictions is not None:
+    predictions = predictions.to_tensor(_PADDING_PREDICTION)
+  if isinstance(weights, tf.RaggedTensor):
+    weights = weights.to_tensor(_PADDING_WEIGHT)
+  return labels, predictions, weights, mask
+
+def _get_shuffle_indices(shape, mask=None, shuffle_ties=True, seed=None):
+  """Gets indices which would shuffle a tensor.
+
+  Args:
+    shape: The shape of the indices to generate.
+    mask: An optional mask that indicates which entries to place first. Its
+      shape should be equal to given shape.
+    shuffle_ties: Whether to randomly shuffle ties.
+    seed: The ops-level random seed.
+
+  Returns:
+    An int32 `Tensor` with given `shape`. Its entries are indices that would
+    (randomly) shuffle the values of a `Tensor` of given `shape` along the last
+    axis while placing masked items first.
+  """
+  # Generate random values when shuffling ties or all zeros when not.
+  if shuffle_ties:
+    shuffle_values = tf.random.uniform(shape, seed=seed)
+  else:
+    shuffle_values = tf.zeros(shape, dtype=tf.float32)
+
+  # Since shuffle_values is always in [0, 1), we can safely increase entries
+  # where mask=False with 2.0 to make sure those are placed last during the
+  # argsort op.
+  if mask is not None:
+    shuffle_values = tf.where(mask, shuffle_values, shuffle_values + 2.0)
+
+  # Generate indices by sorting the shuffle values.
+  return tf.argsort(shuffle_values, stable=True)
+
+def sort_by_scores(scores,
+                   features_list,
+                   topn=None,
+                   shuffle_ties=True,
+                   seed=None,
+                   mask=None):
+  """Sorts list of features according to per-example scores.
+
+  Args:
+    scores: A `Tensor` of shape [batch_size, list_size] representing the
+      per-example scores.
+    features_list: A list of `Tensor`s to be sorted. The shape of the `Tensor`
+      can be [batch_size, list_size] or [batch_size, list_size, feature_dims].
+      The latter is applicable for example features.
+    topn: An integer as the cutoff of examples in the sorted list.
+    shuffle_ties: A boolean. If True, randomly shuffle before the sorting.
+    seed: The ops-level random seed used when `shuffle_ties` is True.
+    mask: An optional `Tensor` of shape [batch_size, list_size] representing
+      which entries are valid for sorting. Invalid entries will be pushed to the
+      end.
+
+  Returns:
+    A list of `Tensor`s as the list of sorted features by `scores`.
+  """
+  with tf.compat.v1.name_scope(name='sort_by_scores'):
+    scores = tf.cast(scores, tf.float32)
+    scores.get_shape().assert_has_rank(2)
+    list_size = tf.shape(input=scores)[1]
+    if topn is None:
+      topn = list_size
+    topn = tf.minimum(topn, list_size)
+
+    # Set invalid entries (those whose mask value is False) to the minimal value
+    # of scores so they will be placed last during sort ops.
+    if mask is not None:
+      scores = tf.where(mask, scores, tf.reduce_min(scores))
+
+    # Shuffle scores to break ties and/or push invalid entries (according to
+    # mask) to the end.
+    shuffle_ind = None
+    if shuffle_ties or mask is not None:
+      shuffle_ind = _get_shuffle_indices(
+          tf.shape(input=scores), mask, shuffle_ties=shuffle_ties, seed=seed)
+      scores = tf.gather(scores, shuffle_ind, batch_dims=1, axis=1)
+
+    # Perform sort and return sorted feature_list entries.
+    _, indices = tf.math.top_k(scores, topn, sorted=True)
+    if shuffle_ind is not None:
+      indices = tf.gather(shuffle_ind, indices, batch_dims=1, axis=1)
+    return [tf.gather(f, indices, batch_dims=1, axis=1) for f in features_list]
 
 #######################################
 # Utils.
@@ -308,7 +417,7 @@ class CustomCSVLogger(CSVLogger):
 
 class FileLogger():
 
-    def __init__(self, folder,folder_experiments,folder_run):
+    def __init__(self, folder='.\log_folder',folder_experiments='.\log_folder\experiments',folder_run='.\log_folder\indiv_runs'):
         self.folder = folder
         self.folder_experiments = folder_experiments
         self.folder_run = folder_run
@@ -361,6 +470,7 @@ class FileLogger():
             with open(os.path.join(self.folder_experiments,file), 'r') as f:
                 lines = f.readlines()
                 for j,line in enumerate(lines):
+                    # Take the index of the column 'run_signature', to look for the signature
                     if j == 0:
                         # if line starts with 'sep', continue
                         if line.startswith('sep'):
@@ -369,19 +479,16 @@ class FileLogger():
                             headers = line.split(';')
                             pos_1 = headers.index('run_signature')
                         continue
-
                     if j == 1:
                         if headers is None:
                             headers = line.split(';')
                             pos_1 = headers.index('run_signature')
                         continue
-                    else:# if the line is not empty
+                    else: # if the line is not empty
                         if line == '\n' or line == '' or line.startswith(';;;;;') or line.startswith('<')  or line.startswith('='):
                             continue 
+                        # look for the signature
                         file_signature = line.split(';')[pos_1]
-                        # print('line',line)
-                        # print('file_signature',file_signature)
-                        # print('args[run_signature]',args['run_signature'])
                         if file_signature in args['run_signature']:
                             return True
         return False
@@ -392,12 +499,9 @@ class FileLogger():
         sub_signature = log_filename_tmp.split('-')[1:-3]
         # addd the seed
         sub_signature.append(str('seed_'+str(seed)))
-        # read all the files
-        all_files = os.listdir(self.folder_run)
-        # print('sub_signature',sub_signature)
-        # print()
-        for file in all_files:
-            # print('file',file)
+        # read all the files in the folder_run
+        all_files = os.listdir(self.folder_run) 
+        for file in all_files: 
             # if the file contains the sub_signature, then the training has been done
             if all(sub in file for sub in sub_signature):
                 return True
@@ -416,111 +520,142 @@ class FileLogger():
             for line in lines:
                 f.write(line+"\n")
 
-    def get_avg_results(self,run_signature,seeds):
-        # For every file with a different seed, read the results and take the average
+    def get_avg_results(self, run_signature, seeds):
+        """
+        Calculate the average results from multiple experiment runs with different seeds.
+
+        Args:
+            run_signature (str): Unique identifier present in the filenames of experiment result files.
+            seeds (list): List of seeds used in the experiments.
+
+        Returns:
+            tuple: A tuple containing average results dictionary and list of metric names.
+                - The average results dictionary contains the average and standard deviation of each metric.
+                - The list of metric names indicates the names of metrics used by the model.
+        """
+        # Get all files in the run folder
         all_files = os.listdir(self.folder_run)
-        # get the files that contain the run_signature
-        run_files = [file for file in all_files if run_signature in file]
-        # get the number of files
-        # print('run_signature',run_signature)
-        # print('all files',all_files)
-        n_files = len(run_files)
-        # print('n_files',n_files,'seeds',seeds)
-        # print('run_files',run_files)
+        
+        # Filter files based on run_signature
+        run_files = [file for file in all_files if run_signature in file] 
+        
+        # Check if the number of files matches the number of seeds
+        n_files = len(run_files) 
         if n_files < len(seeds):
-            print('The number of files',n_files,' found in the experiments is different from the number of seeds',len(seeds),'(',seeds,')!!!!!!!')
-            return None,None
-        # for every file, read all the lines and if the line starts with 'all_data', take the values and add them to the array
-        info = {}   
-        metrics_names = []
-        seeds_found = set()
+            print('The number of files', n_files, 'found in the experiments is different from the number of seeds', len(seeds), '(', seeds, ')!!!!!!!')
+            return None, None
+        
+        # Initialize dictionaries and lists to store results
+        info_results = {}  # Dictionary with the info of the metrics of the run
+        metrics_names = []  # Metrics used by the model
+        seeds_found = set()  # Set to keep track of found seeds
+        
+        # Iterate through each file
         for file in run_files:
-            with open(os.path.join(self.folder_run,file), 'r') as f:
+            with open(os.path.join(self.folder_run, file), 'r') as f:
                 lines = f.readlines()
                 for line in lines:
+                    # Find lines starting with 'All data'
                     if line.startswith('All data'):
                         d = line.split(';')[1:]
-                        # remove the \n from the last element
-                        d[-1] = d[-1][:-1]
-                        info_exp = {el.split(':')[0] : ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] in ['train_acc', 'valid_acc', 'test_acc','time_run']}
-                        # add also time_run
-                        info_exp['time'] = [float(el.split(':')[1]) for el in d if el.split(':')[0] in ['time_train','time_inference','time_ground_train','time_ground_valid','time_ground_test']]
-                        # print('info_exp',info_exp)
-                        # get the names of the metrics from the element 'metrics'
+                        d[-1] = d[-1][:-1]  # Remove newline character from the last element
+                        
+                        # Extract info about accuracy and time
+                        info_run = {el.split(':')[0]: ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] in ['train_acc', 'valid_acc', 'test_acc', 'time_run']}
+                        info_run['time'] = [float(el.split(':')[1]) for el in d if el.split(':')[0] in ['time_train', 'time_inference', 'time_ground_train', 'time_ground_valid', 'time_ground_test']]
+                        
+                        # Get the names of the metrics
                         metrics_names = [ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] == 'metrics'][0]
+                        
+                        # Get the seed used in the run
                         seed_found = [ast.literal_eval(el.split(':')[1]) for el in d if el.split(':')[0] == 'seed_run_i'][0]
-                        # print ('seed_found',seed_found,'metrics_names',metrics_names)
                         seeds_found.add(seed_found)
-                        # append the key,values to the dictionary
+                        
+                        # Append results to info_results if seed matches
                         if seed_found in seeds:
-                            for key in info_exp.keys():
-                                if key in info:
-                                    info[key].append(np.round(info_exp[key],3))
+                            for key in info_run.keys():
+                                if key in info_results:
+                                    info_results[key].append(np.round(info_run[key], 3))
                                 else:
-                                    info[key] = [np.round(info_exp[key],3)]
-        for key in info_exp.keys():
-            print('key',key,'info_exp[key]',info[key])
-        #print a message also
+                                    info_results[key] = [np.round(info_run[key], 3)]
+        
+        # Check if all seeds were found
         if len(seeds_found) != len(seeds):
-            print('The number of seeds',seeds_found,' found in the experiments is different from the number of seeds',seeds,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('The number of seeds', seeds_found, 'found in the experiments is different from the number of seeds', seeds, '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        
         assert len(seeds_found) == len(seeds), 'The number of seeds found in the experiments folder is different from the number of seeds you set in the code'
-        # for every key in the dictionary, take the average and the std
-        for key in info.keys():
-            avg = np.mean(info[key],axis=0)
-            std = np.std(info[key],axis=0)
-            info[key] = [list(avg),list(std)]
-        for key in info.keys():
-            print('names',metrics_names,'\nkey',key,'info[key]',info[key])
-        return info,metrics_names
+        
+        # Calculate average and standard deviation for each metric
+        for key in info_results.keys():
+            avg = np.mean(info_results[key], axis=0)
+            std = np.std(info_results[key], axis=0)
+            info_results[key] = [list(avg), list(std)] 
+        
+        return info_results, metrics_names
 
-    def write_avg_results(self,args_dict,info_metrics,metrics_name):
-        file_csv = os.path.join(self.folder_experiments,'experiments.csv')
-        if 'contrastive_loss' in metrics_name: # delete it from the list metrics_name
+    def write_avg_results(self, args_dict, info_results, metrics_name):
+        """
+        Write average results to a CSV file along with experiment parameters.
+
+        Args:
+            args_dict (dict): Dictionary containing experiment parameters.
+            info_results (dict): Dictionary containing average results and standard deviations.
+            metrics_name (list): List of metric names used in the experiment.
+
+        Returns:
+            None
+        """
+        file_csv = os.path.join(self.folder_experiments, 'experiments.csv')
+        
+        # Remove 'contrastive_loss' from metric names if present
+        if 'contrastive_loss' in metrics_name:
             metrics_name.remove('contrastive_loss')
-        # join the args_dict with the info_metrics
-        # take the metric elements until one element starts with 'val'
-        names_metrics = [str(metric) for metric in list(metrics_name) if not metric.startswith('val')]
-        metrics =  [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in names_metrics]
-        metrics += ['time_ground_train','time_ground_valid','time_train','time_ground_test','time_inference']
-        # metrics = [str(element)+'_'+str(metric) for element in ['train','val','test'] for metric in list(metrics_name)]
-        combined_names = ';'.join(list(args_dict.keys()) + [str(metric) for metric in metrics] )
-        values_args = [str(v) for k,v in args_dict.items()] 
-        values_metrics = []
-        for k,v in info_metrics.items():
-            print('k',k,'v',v)
-            for i in range(len(v[0])):
-                values_metrics.append(str([ np.round(v[0][i],3) , np.round(v[1][i],3) ]))
-        combined_results = ';'.join(values_args + values_metrics)
-        # print('args_dict',list(args_dict.keys()))
 
-        # print('metrics',metrics)
-        # print('values_metrics',values_metrics)
-        # Create a file for my results 
-        print("Writing results to", file_csv)   
-    
-        # Check if the file folder+'header.txt' exists, otherwise create it
-        if not os.path.exists(os.path.join(self.folder_experiments,'header.txt')):
-            with open(os.path.join(self.folder_experiments,'header.txt'), 'w') as f:
-                f.write('sep=;\n')
-                f.write(combined_names)
-        else: 
-            with open(os.path.join(self.folder_experiments,'header.txt'), 'r') as f:
-                lines = f.readlines()
-                if combined_names not in lines:
-                    with open(os.path.join(self.folder_experiments,'header.txt'), 'a') as f:
-                        f.write('\n')
-                        f.write(combined_names)
-        with open(file_csv, 'a') as f: 
+        # Construct column names for CSV file
+        names_metrics = [str(metric) for metric in list(metrics_name) if not metric.startswith('val')]
+        metrics = [str(element) + '_' + str(metric) for element in ['train', 'val', 'test'] for metric in names_metrics]
+        metrics += ['time_ground_train', 'time_ground_valid', 'time_train', 'time_ground_test', 'time_inference']
+        combined_names = ';'.join(list(args_dict.keys()) + [str(metric) for metric in metrics])
+
+        # Combine parameter values and average results
+        values_args = [str(v) for k, v in args_dict.items()]
+        values_metrics = []
+        for k, v in info_results.items():
+            for i in range(len(v[0])):
+                values_metrics.append(str([np.round(v[0][i], 3), np.round(v[1][i], 3)]))
+        combined_results = ';'.join(values_args + values_metrics)
+
+        print("Writing results to", file_csv)
+
+        # Write combined results to CSV file
+        with open(file_csv, 'a') as f:
             empty = os.stat(file_csv).st_size == 0
             if empty:
                 f.write('sep=;\n')
                 f.write(combined_names)
             f.write('\n')
             f.write(combined_results)
-        # write also the results in signature.txt
-        with open(os.path.join(self.folder_experiments,'signature.txt'), 'a') as f:
-            f.write(args_dict['run_signature'])
-            f.write('\n')
+
+        # # Write column names to header.txt if not already present
+        # header_file = os.path.join(self.folder_experiments, 'header.txt')
+        # if not os.path.exists(header_file):
+        #     with open(header_file, 'w') as f:
+        #         f.write('sep=;\n')
+        #         f.write(combined_names)
+        # else:
+        #     with open(header_file, 'r') as f:
+        #         lines = f.readlines()
+        #         if combined_names not in lines:
+        #             with open(header_file, 'a') as f:
+        #                 f.write('\n')
+        #                 f.write(combined_names)
+                        
+        # # Write run signature to signature.txt
+        # with open(os.path.join(self.folder_experiments, 'signature.txt'), 'a') as f:
+        #     f.write(args_dict['run_signature'])
+        #     f.write('\n')
+        
+        return None
 
 
 
