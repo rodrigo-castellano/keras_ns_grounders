@@ -1,0 +1,96 @@
+wandb_version: 1
+
+shuffle_buffer:
+  desc: null
+  value: 1024
+batch_size:
+  desc: null
+  value: -1
+learning_rate:
+  desc: null
+  value: 0.01
+epochs:
+  desc: null
+  value: 1500
+_wandb:
+  desc: null
+  value:
+    python_version: 3.10.14
+    cli_version: 0.16.6
+    framework: keras
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1713968300.0
+    t:
+      1:
+      - 2
+      - 3
+      - 55
+      2:
+      - 2
+      - 3
+      - 55
+      3:
+      - 7
+      - 13
+      - 16
+      - 23
+      - 38
+      4: 3.10.14
+      5: 0.16.6
+      8:
+      - 3
+      - 5
+      13: windows-amd64
+    m:
+    - 1: batch/batch_step
+      6:
+      - 3
+    - 1: batch/loss
+      5: 1
+      6:
+      - 1
+    - 1: batch/concept_loss
+      5: 1
+      6:
+      - 1
+    - 1: batch/task_loss
+      5: 1
+      6:
+      - 1
+    - 1: batch/concept_mrr
+      5: 1
+      6:
+      - 1
+    - 1: batch/concept_hits@1@1
+      5: 1
+      6:
+      - 1
+    - 1: batch/concept_hits@3@3
+      5: 1
+      6:
+      - 1
+    - 1: batch/concept_hits@10@10
+      5: 1
+      6:
+      - 1
+    - 1: batch/task_mrr
+      5: 1
+      6:
+      - 1
+    - 1: batch/task_hits@1@1
+      5: 1
+      6:
+      - 1
+    - 1: batch/task_hits@3@3
+      5: 1
+      6:
+      - 1
+    - 1: batch/task_hits@10@10
+      5: 1
+      6:
+      - 1
+    - 1: batch/learning_rate
+      5: 1
+      6:
+      - 1

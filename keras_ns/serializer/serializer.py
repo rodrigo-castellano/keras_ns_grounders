@@ -1,3 +1,5 @@
+import sys
+sys.path.append('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders')
 from abc import ABC, abstractmethod
 from collections import defaultdict, OrderedDict
 import traceback
@@ -82,7 +84,11 @@ class LogicSerializerFast(IndexerBase):
         for atom in all_atoms:
             all_atoms_per_predicate[atom[0]].append(atom)
 
-        # Create the index following the bucketed order
+        # Create the index following the bucketed order:
+        # A loop iterates over each predicate.
+        # For each atom in the predicate, an index is assigned.
+        # Each constant in the atom is assigned an index relative to its domain.
+        # A list of constant indices is generated for each atom.
         atom_to_index = {}
         count = 0
         for predicate in self.predicates:
@@ -456,8 +462,12 @@ if __name__ == '__main__':
 
     queries = [[a1, a2]]
 
-
+    # ..\keras_ns\serializer\serializer.py
     rule_groundings = {'r1':
                        RuleGroundings('r1', [((a1,), (a2,)), ((a2,), (a1,))])}
-    ls1 = LogicSerializerFast(predicates=[p], domains=[d])
+    print('domains', d)
+    print('predicates', p)
+    print('queries', queries)
+    print('rule_groundings', rule_groundings)
+    ls1 = LogicSerializerFast(predicates=[p], domains=[d], constant2domain_name={'a':'domain','b':'domain'},domain2adaptive_constants=None)
     print(ls1.serialize(queries, rule_groundings))

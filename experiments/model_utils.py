@@ -26,6 +26,15 @@ def lr_exp(epoch, lr):
     else:
         return lr * tf.math.exp(-0.1)
 
+def optimizer_scheduler(optimizer,lr_sched,learning_rate):
+    lr_scheduler = choose_lr_scheduler(lr_sched)
+    if lr_sched != 'plateau':
+        optimizer = choose_optimizer_with_scheduler(optimizer, lr_scheduler)
+    else:
+        optimizer = choose_optimizer(name_optimizer=optimizer,lr=learning_rate)   
+    return optimizer,lr_scheduler
+
+
 def choose_lr_scheduler(name_lr_scheduler=None):
     if name_lr_scheduler == 'exponential_decay':
         lr_scheduler = tf.keras.optimizers.schedules.ExponentialDecay(initial_learning_rate=.1,decay_steps=30,decay_rate=0.01)
@@ -40,7 +49,7 @@ def choose_lr_scheduler(name_lr_scheduler=None):
     elif name_lr_scheduler == 'polynomial_decay':
         lr_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(initial_learning_rate=1e-2,decay_steps=10000)
     elif name_lr_scheduler == 'plateau':
-        lr_scheduler = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1,patience=10, min_lr=1e-5,min_delta=0.0001) #factor 0.1
+        lr_scheduler = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5,patience=20, min_lr=1e-5,min_delta=0.0001) #factor 0.1
     elif name_lr_scheduler == 'custom':
         lr_scheduler = tf.keras.callbacks.LearningRateScheduler(lr) # lr_exp function
     elif name_lr_scheduler == 'cyclical':
@@ -61,9 +70,6 @@ def choose_lr_scheduler(name_lr_scheduler=None):
         plt.ylabel("Learning Rate")
         plt.show()
     return lr_scheduler
-
-
-
 
 
 

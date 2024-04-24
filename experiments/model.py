@@ -91,14 +91,19 @@ class KGEModel(Model):
     def call(self, inputs):
         # X_domains type is Dict[str, inputs]
         # A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
-        (X_domains, A_predicates) = inputs
+        # For x_domains, I get each domain value (country,region...) represented by a index
+        # For A_predicates, I get the predicate name and the constant indices for each grounding
+        (X_domains, A_predicates) = inputs 
         if self.adaptive_constant_embedder is not None:
+            # Create a mask to fix the values that are not in the domain.
             X_domains_fixed_mask = {
                 name:tf.where(x < len(self.fol.name2domain[name].constants),
                               True, False) for name,x in X_domains.items()}
+            # Set to 0 the values that are not in the domain.
             X_domains_fixed = {
                 name:tf.where(X_domains_fixed_mask[name], x, 0)
                 for name,x in X_domains.items()}
+            # Get the embeddings for the fixed values and the adaptive values.
             constant_embeddings_fixed = self.constant_embedder(X_domains_fixed)
             constant_embeddings_adaptive = self.adaptive_constant_embedder(
                 X_domains)
@@ -110,7 +115,7 @@ class KGEModel(Model):
                     constant_embeddings_adaptive[name])
                 for name in X_domains.keys()}
         else:
-            constant_embeddings = self.constant_embedder(X_domains)
+            constant_embeddings = self.constant_embedder(X_domains) 
 
         predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor)
         # Shape TE, T2E with T number of triplets.

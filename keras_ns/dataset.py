@@ -44,6 +44,7 @@ def _from_strings_to_tensors(fol, serializer,
     else:
         ground_formulas = {}
         rules = []
+    
     (domain_to_global, predicate_tuples, groundings, queries) = (
         serializer.serialize(queries=queries,
                              rule_groundings=ground_formulas))

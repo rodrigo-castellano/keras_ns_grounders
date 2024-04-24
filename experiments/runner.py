@@ -4,7 +4,9 @@ sys.path.append('/home/castellanoontiv/keras_ns_grounders')
 sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
 sys.path.append('/home2/castellanoontiv/keras_ns_grounders/')
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+import tensorflow as tf
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import copy
 from itertools import product
 from train import main
@@ -15,27 +17,28 @@ import time
 import datetime
 import numpy as np
 import ast
-import tensorflow as tf
 import argparse
 from model_utils import * 
 
+import wandb 
+wandb.login()
+
 if __name__ == '__main__':
 
-    # rerun for hits10: countries, pharmkg_small, fb15k237, wn18, kinship (do it with michlangelo changes and write in signature the test results)
+    print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
 
-    # print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
+    # Choose whether to save the results or not, and the folders where to save them
+    use_logger = True
+    use_WB = False
     log_folder :str = "tests/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
-    # rewrite the line above
-    save_results = True
-
     base_path :str = "data"
+
     epochs: int = 100
-    assert epochs > 0
-    DATASET_NAME = ['countries_s3','nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
+    DATASET_NAME = ['countries_s1','nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1','backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['complex','rotate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['r2n','no_reasoner'] # ['dcr','sbr','r2n','no_reasoner']  
+    MODEL_NAME = ['no_reasoner','r2n',] # ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
     E = [100,300] 
     DEPTH = [1,3]
@@ -46,10 +49,13 @@ if __name__ == '__main__':
     R = [0.0]
     RR = [0.0]
     LR = [0.01]
-    LR_SCHEDULER = ['plateau']
+    LR_SCHEDULER = ['plateau'] # None
     OPTIMIZER = ['None','adam']
     NUM_RULES = [1] 
     VALID_SIZE = [None]
+
+    
+    # This is in case I want to take inputs from the command line
 
     parser = argparse.ArgumentParser(description='Description of your script')  
     parser.add_argument("--d", default = None, help="dataset",nargs='+')
@@ -74,16 +80,20 @@ if __name__ == '__main__':
     del args.g
     print('Running experiments for the following parameters:','DATASET_NAME:',DATASET_NAME,'GROUNDER:',GROUNDER,'MODEL_NAME:',MODEL_NAME,'SEED:',SEED)
     
+    # Do the hparam search
     all_args = []
-
     for dataset_name,grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr,lr_sched,optimizer, nr, rr in product(
             DATASET_NAME,GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
             LR,LR_SCHEDULER,OPTIMIZER, NUM_RULES, RR ):  
 
         run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
+        if not os.path.exists(os.path.join(base_path, dataset_name)):
+            print('skipping, dataset not existing', run_vars)
+            continue
+        
+        # This conditions is for a special case of datasets, skip
         if 'reason' in dataset_name:
             if 'backward' not in grounder:
-                # print('skipping, no backward', run_vars)
                 continue
             else:
                 backward_level = grounder[-1]
@@ -91,19 +101,15 @@ if __name__ == '__main__':
                 if int(backward_level) > int(dataset_level):
                     # print('skipping, backward level higher than dataset level', run_vars)
                     continue
-                
-        if not os.path.exists(os.path.join(base_path, dataset_name)):
-            # print('skipping, dataset not existing', run_vars)
-            continue
-
+        
+        # Discern the datasets for which the grounders full, domainbody and relationentity are too heavy to run
         if grounder == 'full' and (dataset_name != 'countries_s1'):
             continue
-        if (grounder == 'domainbody' or grounder == 'relationentity') and (dataset_name == 'countries_s3' or dataset_name == 'wn18rr' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K' or dataset_name == 'kinshup_family'):
+        if (grounder == 'domainbody' or grounder == 'relationentity') and (dataset_name == 'countries_s3' or dataset_name == 'wn18rr' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K' or dataset_name == 'kinship_family'):
             continue
-        # if  grounder == 'relationentity' and 'countries' in dataset_name:
-        #     continue
+
+        # With model=no_reasoner the grounders are not used. Therefore, training is enough with backward_1 for example
         if model_name == 'no_reasoner' and (grounder == 'backward2' or grounder == 'backward3' or grounder == 'relationentity') and (dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name or 'wn18rr' in dataset_name):
-            # print('no need to calculate reasoner again', run_vars)
             continue
 
         args.dataset_name = dataset_name
@@ -112,7 +118,7 @@ if __name__ == '__main__':
         args.model_name = model_name 
         args.rule_miner = rule_miner 
         args.seed = seed
-        if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'):# and model_name != 'no_reasoner' :
+        if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'): # For heavy datasets, run only one seed
             args.seed = [0]
         args.kge_atom_embedding_size = e
         args.batch_size = -1 # 128 # Full batch only for explain.
@@ -123,30 +129,26 @@ if __name__ == '__main__':
         args.valid_file = 'valid.txt'
         args.test_file = 'test.txt'
         args.domain_file = 'domain2constants.txt'
-        args.rules_file = 'rules.txt'
+        args.rules_file = 'rules.txt' 
 
-        # if dataset_name == 'pharmkg_full' or 'FB15k' in dataset_name:
-        #     args.test_batch_size = 64
-
+        # Select the rules file
         if rule_miner == 'amie':
             args.rules_file = 'rules_amie.txt'
         elif rule_miner == 'ncrl':
             args.rules_file = 'rules_ncrl.txt'
         elif rule_miner == 'None':
             args.rules_file = 'rules.txt'
-        else: # raise an error if the rule miner is not recognized
+        else:  
             raise ValueError('Rule miner not recognized for ', dataset_name)
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
             # print('skipping, rules not existing', run_vars) 
             continue
 
         # Data params
-        args.corrupt_mode = 'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
+        args.corrupt_mode = 'HEAD_AND_TAIL' #'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 100  
         args.test_negatives = None  # all possible negatives
-        # if dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family' or 'FB15K' in dataset_name:
-        #     args.test_negatives = 1000
         args.ragged = True
         args.format = "functional"
         args.engine_num_negatives = 0
@@ -193,11 +195,11 @@ if __name__ == '__main__':
         # args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
         # args.relation_entity_grounder_max_elements = 20
         # args.semiring = "product"
+
         run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg, e)
         args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e',]
         args.run_signature = '-'.join(f'{v}' for v in run_vars)    
-        # args.ckpt_filepath = (os.path.join(ckpt_folder, args.run_signature)
-        #                 if ckpt_folder else None) 
+        args.ckpt_filepath = None # (os.path.join(ckpt_folder, args.run_signature) if ckpt_folder else None) 
         # append a hard copy of the args to the list of all_args
         all_args.append(copy.deepcopy(args)) 
 
@@ -207,67 +209,71 @@ if __name__ == '__main__':
     def main_wrapper(args,log_folder): 
 
         print("\nRun vars:", args.run_signature+'\n')
-        # LOGGER
-        # Results for every epoch will be saved in a folder 
-        log_folder_run = os.path.join(log_folder,'indiv_runs')
-        log_folder_experiments = os.path.join(log_folder,'experiments')
-        # Check if the logger exists, if so, skip the experiment, otherwise run it. Logger exists if all the arguments inside each file in the folder are the same as the current args
-        logger = ns.utils.FileLogger(log_folder,log_folder_experiments,log_folder_run)
-        if save_results:
+
+        # LOGGER (can skip if not used)
+
+        # Check if the logger exists, if so, skip the experiment, otherwise run it 
+        # Logger exists if, all the arguments inside each file in the folder runs, are the same as the current args
+        if use_logger:
+            logger = ns.utils.FileLogger(folder=log_folder,folder_experiments=os.path.join(log_folder,'experiments'),folder_run=os.path.join(log_folder,'indiv_runs'))
             if logger.exists_experiment(args.__dict__):
                 print("Skipping training, it has been already done for", args.run_signature, "\n")
                 #return
 
-        date = logger.get_date()
         for seed in args.seed:
             args.seed_run_i = seed
-            log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
-            if save_results:
+
+            if use_logger:
+                date = logger.get_date()
+                log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
                 if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
                     print("Seed number ", seed, " in ", args.seed,'already done')
                     continue
                 # else:
                 #     print("Seed number ", seed, " not done. Exit")
                 #     continue
+                with open(log_filename_tmp, 'w') as f:
+                    f.write('sep=;\n')
+            else:   
+                log_filename_tmp = None
 
             print("Seed number ", seed, " in ", args.seed)
-            with open(log_filename_tmp, 'w') as f:
-                f.write('sep=;\n')
-            try:
-                train_acc,valid_acc, test_acc,training_info = main(base_path,None,None,log_filename_tmp,args)
-            except Exception as e:
-                print('Error in experiment', args.run_signature, 'seed', seed, 'error:', e, '. Try again!')
-                train_acc,valid_acc, test_acc,training_info = main(base_path,None,None,log_filename_tmp,args)
-            # The reuslts of the training have been written to tmp. write them as an individual run
-            logged_data = copy.deepcopy(args)
-            logged_data.train_acc = train_acc
-            logged_data.valid_acc = valid_acc
-            logged_data.test_acc = test_acc
-            logged_data.metrics = list(training_info.keys())
-            logged_data.time_train = args.time_train
-            logged_data.time_inference = args.time_inference
-            logged_data.time_ground_train = args.time_ground_train
-            logged_data.time_ground_valid = args.time_ground_valid
-            logged_data.time_ground_test = args.time_ground_test
-            # write the info about the results in the tmp file 
-            logger.log(logged_data.__dict__, log_filename_tmp)
-            # Rename to not be temporal anymore
-            log_filename_run = os.path.join(log_folder,'indiv_runs', '_ind_log-{}-{}-{}-seed_{}.csv'.format(
-                                                        args.run_signature,date,np.round(test_acc[-4],3),seed))
-            if os.path.exists(log_filename_run):
-                os.remove(log_filename_run)
-            os.rename(log_filename_tmp, log_filename_run)
-  
+            train_acc,valid_acc, test_acc,training_info = main(base_path,None,log_filename_tmp,use_WB,args)
+
+
+            if use_logger:
+                # Rename the temporal file to the final file, and include the results in the logger
+                logged_data = copy.deepcopy(args)
+                logged_data.train_acc = train_acc
+                logged_data.valid_acc = valid_acc
+                logged_data.test_acc = test_acc
+                logged_data.metrics = list(training_info.keys())
+                logged_data.time_train = args.time_train
+                logged_data.time_inference = args.time_inference
+                logged_data.time_ground_train = args.time_ground_train
+                logged_data.time_ground_valid = args.time_ground_valid
+                logged_data.time_ground_test = args.time_ground_test
+                # write the info about the results in the tmp file 
+                logger.log(logged_data.__dict__, log_filename_tmp)
+                # Rename to not be temporal anymore
+                log_filename_run = os.path.join(log_folder,'indiv_runs', '_ind_log-{}-{}-{}-seed_{}.csv'.format(
+                                                            args.run_signature,date,np.round(test_acc[-4],3),seed))
+                if os.path.exists(log_filename_run):
+                    os.remove(log_filename_run)
+                os.rename(log_filename_tmp, log_filename_run)
+    
         # write the average results if we need to average over experiments
-        if save_results:
-            # if len(args.seed) > 1:
-            info_metrics,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
-            if info_metrics is not None:
-                logger.write_avg_results(args.__dict__,info_metrics,metrics_name)
+        # if len(args.seed) > 1:
+        print('get_avg_resultsssssssssssssssssssssssssssssssssssssssssssssss\n\n')
+        info_results,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
+        if info_results is not None:
+            print('Average resultsssssssssssssssssssssssssssssssssssssssssssssss')
+            logger.write_avg_results(args.__dict__,info_results,metrics_name)
 
                 
-    for l,args in enumerate(all_args):
-        print('Experiment',l,':',args.run_signature)
+
+    # for l,args in enumerate(all_args):
+        # print('Experiment',l,':',args.run_signature)
     for args in all_args:
         print('Experiment number ', all_args.index(args), ' out of ', len(all_args), ' experiments.')
         main_wrapper(args,log_folder)
