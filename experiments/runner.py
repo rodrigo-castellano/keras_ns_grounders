@@ -28,7 +28,7 @@ if __name__ == '__main__':
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
 
     # Choose whether to save the results or not, and the folders where to save them
-    use_logger = True
+    use_logger = False
     use_WB = False
     log_folder :str = "tests/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
