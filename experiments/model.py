@@ -260,6 +260,7 @@ class CollectiveModel(Model):
         #                   with constant indices for each grounding.
         (X_domains, A_predicates, A_rules, Q) = inputs
         atom_embeddings = self.kge_model((X_domains, A_predicates))
+        tf.print('atom_embeddings.shape', tf.shape(atom_embeddings),atom_embeddings)
 
         concept_output = tf.expand_dims(self.output_layer(atom_embeddings), -1)
 
