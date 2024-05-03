@@ -59,12 +59,16 @@ class KGEModel(Model):
                         predicate_embeddings: tf.Tensor,
                         A_predicates: Dict[str, tf.Tensor]):
         predicate_embeddings_per_triplets = []
+        # What I do here is taking the embedding of each predicate and repeating it for each grounded atom of that predicate
+        # For example, if I have a predicate with 3 grounded atoms, I will repeat the embedding of that predicate 3 times, 
+        # resulting in a tensor of shape [3,200] where 200 is the embedding size of the predicate.
+        # I do this for each predicate in the A_predicates dictionary, so I get [n_predicates, n_atoms/grounding per predicate, embed_size_predicate]
         for p,indices in A_predicates.items():
             idx = self.fol.name2predicate_idx[p]
             p_embeddings = tf.expand_dims(predicate_embeddings[idx], axis=0)  # 1E
-            predicate_embeddings_per_triplets.append(
-                tf.repeat(p_embeddings, tf.shape(indices)[0], axis=0)  #PE
-            )
+            # shape: [1,1918,200]=[1,number of grounded atoms for that predicate, embed size of the predicate]
+            predicate_embeddings_per_triplets.append(tf.repeat(p_embeddings, tf.shape(indices)[0], axis=0))  #PE
+        # shape=[n_predicates, n_atoms/grounding per predicate, embed_size_predicate]
         predicate_embeddings_per_triplets = tf.concat(predicate_embeddings_per_triplets,
                                                       axis=0)
 
@@ -73,6 +77,9 @@ class KGEModel(Model):
             constant_idx = tf.cast(constant_idx, tf.int32)
             predicate = self.fol.name2predicate[p]
             one_predicate_constant_embeddings = []
+            # Here, for each domain of the predicate (LocInSR(subregion,region)->for subregion), I get the embeddings of the constants that
+            # are grounded in that domain. If LocInSR has 58 groundings/atoms, I will get the representation of the subregion constants in 
+            # those atoms(58,200). I do the same for the region domain, so I get a tensor of shape [58,2,200] for LocIn where 2 is the arity of the predicate. 
             for i,domain in enumerate(predicate.domains):
                 constants = tf.gather(constant_embeddings[domain.name],
                                       constant_idx[..., i], axis=0)
@@ -81,11 +88,14 @@ class KGEModel(Model):
             one_predicate_constant_embeddings = tf.stack(one_predicate_constant_embeddings,
                                                          axis=-2)
             constant_embeddings_for_triplets.append(one_predicate_constant_embeddings)
+        # For all the queries, I have divided them by predicates. Once I have, for each predicate, the embeddings of the constants, i.e., 
+        # for LocInSR I have 58 atoms -> (58,2,200), for NeighOf .... I concatenate them to get a tensor of shape [58+..,2,200] = [3889,2,200]
         constant_embeddings_for_triplets = tf.concat(constant_embeddings_for_triplets,
                                                      axis=0)
         tf.debugging.assert_equal(tf.shape(predicate_embeddings_per_triplets)[0],
                                   tf.shape(constant_embeddings_for_triplets)[0])
         # Shape TE, T2E with T number of triplets.
+        # At the end I get for both predicates and embeddings a tensor of shape [n_atoms,ctes_in_atoms(arity),embed_size_predicate] and [n_atoms,2,embed_size_constant]
         return predicate_embeddings_per_triplets, constant_embeddings_for_triplets
 
     def call(self, inputs):
@@ -94,6 +104,7 @@ class KGEModel(Model):
         # For x_domains, I get each domain value (country,region...) represented by a index
         # For A_predicates, I get the predicate name and the constant indices for each grounding
         (X_domains, A_predicates) = inputs 
+
         if self.adaptive_constant_embedder is not None:
             # Create a mask to fix the values that are not in the domain.
             X_domains_fixed_mask = {
@@ -115,13 +126,30 @@ class KGEModel(Model):
                     constant_embeddings_adaptive[name])
                 for name in X_domains.keys()}
         else:
-            constant_embeddings = self.constant_embedder(X_domains) 
+            constant_embeddings = self.constant_embedder(X_domains)
+            # HERE I GET THE EMBEDDINGS OF THE CONSTANTS WITH ULTRA
+            # CONSTANT EMBEDDINGS = ULTRA(ENTITIES INDICES IN THE DOMAIN)
+            # model = Ultra(
+            #     rel_model_cfg=cfg.model.relation_model,
+            #     entity_model_cfg=cfg.model.entity_model,
+            # )
+            # model = model.to(device)
+            # test_triplets = torch.cat([test_data.target_edge_index, test_data.target_edge_type.unsqueeze(0)]).t()
+            # sampler = torch_data.DistributedSampler(test_triplets, world_size, rank)
+            # test_loader = torch_data.DataLoader(test_triplets, cfg.train.batch_size, sampler=sampler)
+            # t_batch, h_batch = tasks.all_negative(test_data, batch)
+            # t_pred = model(test_data, t_batch)
+            # h_pred = model(test_data, h_batch)
+            # I HAVE TO MODIFY THE MODEL TO OUTPUT THE EMBEDDINGS OF THE ENTITIES AND RELATIONS INSTEAD OF THE SCORES
+        
+            # constant_embeddings = entities embeddings from ultra
+            # predicate_embeddings = relations embeddings from ultra
 
         predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor)
         # Shape TE, T2E with T number of triplets.
         predicate_embeddings_per_triplets, constant_embeddings_for_triplets = \
             self.create_triplets(constant_embeddings, predicate_embeddings, A_predicates)
-
+        # Given the triplets with their embeddings obtained in create_triplets, I get the embeddings of the atoms with e.g. Transe
         atom_embeddings = self.kge_embedder((predicate_embeddings_per_triplets,
                                              constant_embeddings_for_triplets))
         # Shape TE
@@ -260,7 +288,7 @@ class CollectiveModel(Model):
         #                   with constant indices for each grounding.
         (X_domains, A_predicates, A_rules, Q) = inputs
         atom_embeddings = self.kge_model((X_domains, A_predicates))
-        tf.print('atom_embeddings.shape', tf.shape(atom_embeddings),atom_embeddings)
+        # tf.print('atom_embeddings.shape', tf.shape(atom_embeddings),atom_embeddings)
 
         concept_output = tf.expand_dims(self.output_layer(atom_embeddings), -1)
 
@@ -268,9 +296,11 @@ class CollectiveModel(Model):
         if self.reasoning is not None:
             task_output = concept_output  # initialization
             for i in range(self.enabled_reasoner_depth):
+                
                 if self._explain_mode and i == self.enabled_reasoner_depth - 1:
                     explanations = self.reasoning[i].explain(
                         [task_output, atom_embeddings, A_rules])
+                    
                 task_output, atom_embeddings = self.reasoning[i]([
                     task_output, atom_embeddings, A_rules])
         else:

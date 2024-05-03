@@ -55,6 +55,8 @@ class PredicateEmbeddings(Layer):
     # Inputs is tensor of predicate idx.
     # Output is tensor of embeddings of each predicate.
     def call(self, inputs: tf.Tensor, **kwargs) -> tf.Tensor:
+        # print('PredicateEmbeddings inputs', inputs.shape, inputs)
+        # print('PredicateEmbeddings outputs', self.embedder(inputs).shape, self.embedder(inputs))
         return self.embedder(inputs)  #BE
 
 class AdaptiveConstantEmbeddings(Layer):
