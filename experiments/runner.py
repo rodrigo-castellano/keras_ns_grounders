@@ -38,7 +38,7 @@ if __name__ == '__main__':
     DATASET_NAME = ['countries_s1','nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1','backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['complex','rotate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','r2n',] # ['dcr','sbr','r2n','no_reasoner']  
+    MODEL_NAME = ['r2n','no_reasoner','r2n',] # ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
     E = [100,300] 
     DEPTH = [1,3]
