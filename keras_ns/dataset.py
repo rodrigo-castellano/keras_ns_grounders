@@ -44,17 +44,31 @@ def _from_strings_to_tensors(fol, serializer,
     else:
         ground_formulas = {}
         rules = []
-    
+
+
+    # domain_to_global: global indices of all the ctes whithin each domain. 
+    # predicate_tuples: local indices of the ctes with respect to each predicate. For each predicate, all groundings of that predicate (ctes represented with local indeces)
+    # groundings      : local indices that  represent the position of atoms within the respective rule groundings. First index is the rule, e.g. ['r0'], the the first element 
+    #   [0] is a set of bodies and the second element [1] is a set of heads. The body has 2 elements, each representing one atom. The head has 1 element, representing one atom.
+    # queries     ??    : local indices that represent the position of atoms within each query. len(queries) is the number of queries, each query is a list of atoms. 
+    #   The first index (atom) represents the original query, the rest of the indeces (atoms) represent the corruptions of that query
+    # print('ground_formulas',ground_formulas)
+    # print('queries',queries)
     (domain_to_global, predicate_tuples, groundings, queries) = (
         serializer.serialize(queries=queries,
                              rule_groundings=ground_formulas))
+    # print('domain_to_global', domain_to_global)
+    # print('predicate_tuples',predicate_tuples)
+    # print('groundings',len(groundings['r0'][0]),len(groundings['r0'][1]),groundings['r0'][0][:20],groundings['r0'][1][:20] ) #first index is the rule,  [0] is the body and [1] is the head
+    # print('queries', len(queries), len(queries[0]), queries[0:5])
 
-    # Creating numpy dictionaries for input
+    
 
-    # CONSTANTS
+    # Convert constants(domain) indices from list to tf tensor
     input_domains_tf: Dict[DomainName, ConstantFeatures] = {}
     for d in fol.domains:
         if constants_features is not None and d.name in constants_features:
+            # If available, global features for constants are gathered based on their global indices within their domains.
             global_features = constants_features[d.name]
             global_indices = domain_to_global[d.name]
             input_features = tf.gather(global_features, global_indices, axis=0)
@@ -63,14 +77,14 @@ def _from_strings_to_tensors(fol, serializer,
             input_domains_tf[d.name] = tf.constant(domain_to_global[d.name],
                                                    dtype=tf.int32)
 
-    # Creating the input dictionaries (atoms as tuples of domains,
-    # atoms as dense ids, formulas as tuples of atoms)
+    # Convert ctes indices with respect to predicates from list to tf tensor. (num_predicates, number_of_groundings, arity_of_predicate)
     # Dict[predicate_name, List[Tuple[constants_ids]]]
     input_atoms_tuples_tf: Dict[PredicateName, ConstantTuples] = {
         name:tf.constant(tuples, dtype=tf.int32) if len(tuples) > 0 else
              tf.zeros(shape=(0, fol.name2predicate[name].arity), dtype=tf.int32)
         for name,tuples in predicate_tuples.items()}
 
+    # Same here, but for the groundings of the rules. (num_rules, 2, num_atoms (in body/head), arity_of_predicate)
     # Dict[formula_id, List[Tuple[atom_ids]]]
     input_formulas_tf: Dict[FormulaSignature, (AtomTuples, AtomTuples)] = {}
     for rule in rules:
@@ -86,6 +100,7 @@ def _from_strings_to_tensors(fol, serializer,
             input_formulas_tf[rule.name] = (
                 tf.zeros(shape=[0, ai], dtype=tf.int32),
                 tf.zeros(shape=[0, ao], dtype=tf.int32))
+            
     # TODO check how to understand if it is a good tensor or need to be ragged.
     if ragged:
         queries = tf.ragged.constant(queries, dtype=tf.int32)
@@ -174,7 +189,6 @@ class DataGenerator(tf.keras.utils.Sequence):
 
 
     def _get_batch(self, i, b):
-
         queries, labels = self.dataset[b*i:b*(i+1)]
         constants_features = self.dataset.constants_features
 
