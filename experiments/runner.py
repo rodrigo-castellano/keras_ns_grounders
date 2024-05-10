@@ -35,6 +35,7 @@ if __name__ == '__main__':
     base_path :str = "data"
 
     epochs: int = 100
+    ULTRA = True
     DATASET_NAME = ['countries_s1','nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1','backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['complex','rotate']  # ["distmult", "transe","complex", "rotate"]
@@ -112,6 +113,7 @@ if __name__ == '__main__':
         if model_name == 'no_reasoner' and (grounder == 'backward2' or grounder == 'backward3' or grounder == 'relationentity') and (dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name or 'wn18rr' in dataset_name):
             continue
 
+        args.use_ultra = ULTRA
         args.dataset_name = dataset_name
         args.grounder = grounder
         args.kge = kge
@@ -261,14 +263,15 @@ if __name__ == '__main__':
                 if os.path.exists(log_filename_run):
                     os.remove(log_filename_run)
                 os.rename(log_filename_tmp, log_filename_run)
-    
-        # write the average results if we need to average over experiments
-        # if len(args.seed) > 1:
-        print('get_avg_resultsssssssssssssssssssssssssssssssssssssssssssssss\n\n')
-        info_results,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
-        if info_results is not None:
-            print('Average resultsssssssssssssssssssssssssssssssssssssssssssssss')
-            logger.write_avg_results(args.__dict__,info_results,metrics_name)
+                
+        if use_logger:
+            # write the average results if we need to average over experiments
+            # if len(args.seed) > 1:
+            print('get_avg_resultsssssssssssssssssssssssssssssssssssssssssssssss\n\n')
+            info_results,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
+            if info_results is not None:
+                print('Average resultsssssssssssssssssssssssssssssssssssssssssssssss')
+                logger.write_avg_results(args.__dict__,info_results,metrics_name)
 
                 
 

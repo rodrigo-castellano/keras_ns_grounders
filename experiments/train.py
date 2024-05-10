@@ -89,6 +89,9 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
             build_cartesian_product=True,
             max_elements=20)
     return engine
+
+
+# Create a class called dataset_geompy that takes a train, valid and test dataset and 
  
 def main(base_path, output_filename, log_filename, use_WB, args):
 
@@ -160,11 +163,29 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     args.time_ground_valid = np.round(end - start,2)
     print("Time to create data generator valid: ",  np.round(end - start,2)) 
 
-
+    start = time.time()
+    data_gen_test = ns.dataset.DataGenerator(
+        dataset_test, fol, serializer, engine,
+        batch_size=args.test_batch_size, ragged=ragged)
+    end = time.time()
+    args.time_ground_test = np.round(end- start,2)
+    print("Time to create data generator test: ",  np.round(end - start,2))
+    
+    print('Testing dataset:', args.dataset_name, 'grounder:', args.grounder, 'model:', args.model_name, 'seed:', seed)
+    # print one iteration of the test data
+    item = data_gen_test.__getitem__(0)
+    # print('item00',len(item[0][0]), item[0][0])
+    # print('item01',len(item[0][1]), item[0][1])
+    # print('item02',len(item[0][2]), item[0][2])
+    # print('item03, queries',tf.shape(item[0][3]), item[0][3]) # Here each index is an atom
+    # print('item1_', item[1])
 
     # COMPILING MODEL
     model = CollectiveModel(
+        data_gen_train,
+        data_gen_test,
         fol, rules,
+        use_ultra=args.use_ultra,
         kge=args.kge,
         kge_regularization=args.kge_regularization,
         model_name=get_arg(args, 'model_name', 'dcr'),
@@ -289,15 +310,6 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     # TEST
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
-       
-    start = time.time()
-    data_gen_test = ns.dataset.DataGenerator(
-        dataset_test, fol, serializer, engine,
-        batch_size=args.test_batch_size, ragged=ragged)
-    end = time.time()
-    args.time_ground_test = np.round(end- start,2)
-    print("Time to create data generator test: ",  np.round(end - start,2))
-    print('Testing dataset:', args.dataset_name, 'grounder:', args.grounder, 'model:', args.model_name, 'seed:', seed)
     test_accuracy  =  model.evaluate(data_gen_test)
     end_inf = time.time()
     args.time_inference = np.round(end_inf - start_inf,2)
