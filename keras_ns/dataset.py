@@ -6,7 +6,7 @@ from keras.metrics import Metric
 from keras.losses import Loss
 import abc
 import numpy as np
-
+from ULTRA.ultra.tasks import build_relation_graph
 
 DomainName = str
 ConstantName = str
@@ -57,6 +57,7 @@ def _from_strings_to_tensors(fol, serializer,
     (domain_to_global, predicate_tuples, groundings, queries) = (
         serializer.serialize(queries=queries,
                              rule_groundings=ground_formulas))
+                             
     # print('domain_to_global', domain_to_global)
     # print('predicate_tuples',predicate_tuples)
     # print('groundings',len(groundings['r0'][0]),len(groundings['r0'][1]),groundings['r0'][0][:20],groundings['r0'][1][:20] ) #first index is the rule,  [0] is the body and [1] is the head
@@ -176,6 +177,9 @@ class DataGenerator(tf.keras.utils.Sequence):
             print('Building Full Batch Dataset', self.name)
             self._full_batch = self._get_batch(0, len(self.dataset))
 
+        # Get info for ULTRA
+        self.global_info_ultra()
+
 
     def __getitem__(self, item):
         if self._num_batches == 1:
@@ -201,63 +205,37 @@ class DataGenerator(tf.keras.utils.Sequence):
             ragged=self.ragged,
             constants_features=constants_features,
             deterministic=self.deterministic)
-        
-        # ------------------------------------------------------- I SHOULD DO THIS IN A FUNCTION APART, I ONLY NEED TO DO IT ONCE-------------------------------------        
-        # num_nodes is the sum of elements in each key of X_domains_data
-        num_nodes = 0
-        for key in X_domains_data.keys():
-            num_nodes += len(X_domains_data[key])
-        nodes_indeces = []
-        for key in X_domains_data.keys():
-            nodes_indeces.append(X_domains_data[key])
-        num_pred = len(A_predicates_data.keys()) 
 
-        pred_indeces = []
-        for p,indices in A_predicates_data.items():
-            pred_indeces.append(self.fol.name2predicate_idx[p])
+        return (X_domains_data, A_predicates_data, A_rules_data, Q), y
+    
+    
+    def global_info_ultra(self):
+        """
+        Get all the information of the dataset graph, as well as the relational graph.
+        Also, create the triplets for the queries.
+
+        Returns:
+            None
+        """
+        queries, labels = self.dataset[0:len(self.dataset)]
+        constants_features = self.dataset.constants_features
+        (X_domains_data, A_predicates_data, A_rules_data, Q), y = self._get_batch(0, len(self.dataset))
+
+        # num_nodes is the sum of elements in each key of X_domains_data
+        num_nodes = sum(len(X_domains_data[key]) for key in X_domains_data)
+        nodes_indeces = [X_domains_data[key] for key in X_domains_data]
+        num_pred = len(A_predicates_data)
+        pred_indeces = [self.fol.name2predicate_idx[p] for p in A_predicates_data]
 
         self.edge_index = nodes_indeces  
         self.edge_type = pred_indeces
         self.num_relations = num_pred
-        # print('num_relations in data generator',self.num_relations)
-        # self.num_relations = self.num_relations*2
         self.num_nodes = num_nodes 
 
+        # self.relation_graph = build_relation_graph
+        return None
 
-        # I need to get the triplets with the indeces as input to ULTRA. The problem is that Q only contain indices of the atoms. 
-        # I need to know how to get those indices from the indices of (h,r,t). In create_triples it is shown. It just takes every predicate and groundings
-        # from A_predicate, with the groundings in order, creates the triplets. So if LocIn:[[50,100],[80,90],...],NeighOf:[[20,300],[20,30],...]
-        # it will create the triplets [50,100,0],[80,90,0],...,[20,300,1],[20,30,1],... This will be given to Transe and in that order it will create
-        # the embeddings of the atoms [1],[2], [3], [4],...  up to the total number of atoms for all predicates. 
-        # Then to get Q from atom indeces to triplet indeces: ex: for Qi=[50,100,0], Yi=[1,0,0], it will be in the position [50,100,0] of the embeddings,
-        # Qi_triplets=[self.triplets(50),self.triplets(100),self.triplets(0)] and Yi_triplets=[1,0,0].
-        self.triplets = []
-        ind_pred = 0
-        for key, value in A_predicates_data.items():
-            for i in range(len(value)):
-                self.triplets.append(np.array([value[i][0],value[i][1],ind_pred]))
-            ind_pred += 1
 
-        self.triplets = np.array(self.triplets)
-        self.num_edges = len(self.triplets) # This is the number of queries
-        self.edge_index = self.triplets[:, :2] 
-        # num_edges is the first dim of edge_index
-        self.num_edges = len(self.edge_index)
-        self.edge_type = self.triplets[:,2]
-        # Calculate Q with triplet repesentation
-        self.Q_triplets = []
-        for i in range(tf.shape(Q)[0].numpy()):
-            pos_and_negatives = []
-            for j in range(len(Q[i])):
-                pos_and_negatives.append(self.triplets[Q[i][j]])
-            self.Q_triplets.append(pos_and_negatives)
-        # self.Q_triplets = np.array(self.Q_triplets)
-        # tf.print('Q_triplet', tf.shape(self.Q_triplets),tf.shape(self.Q_triplets[0]),self.Q_triplets)
-        # Q_triplet [[query,corruption1,corruption2,...], [query,corruption1,corruption2,...]] = [[(h,r,t),(h,r,t1),...],[(h,r,t),(h,r,t1),...],...]
-        # Q: Batch: [16=batch_size,1594,3]=[16 heads(tails), 1594 is, for each head(tail), the number of negative tails(heads), 3 is indeces full negative triple(h, t, r)]
-        # y [[1,0,0],[1,0,0]]
-
-        return (X_domains_data, A_predicates_data, A_rules_data, Q), y
 
 
 
