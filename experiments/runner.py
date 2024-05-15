@@ -123,9 +123,9 @@ if __name__ == '__main__':
         if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'): # For heavy datasets, run only one seed
             args.seed = [0]
         args.kge_atom_embedding_size = e
-        args.batch_size = -1 # 128 # Full batch only for explain.
-        args.val_batch_size = -1
-        args.test_batch_size = 256 #64
+        args.batch_size = 1 # 128 # Full batch only for explain.
+        args.val_batch_size = 1
+        args.test_batch_size = 1 #64
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
@@ -147,7 +147,7 @@ if __name__ == '__main__':
             continue
 
         # Data params
-        args.corrupt_mode = 'HEAD_AND_TAIL' #'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
+        args.corrupt_mode = 'TAIL' # for ultra only TAIL. 'HEAD_AND_TAIL' #'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 100  
         args.test_negatives = None  # all possible negatives

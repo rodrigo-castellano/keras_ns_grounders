@@ -261,12 +261,24 @@ class EntityNBFNet(BaseNBFNet):
         assert (h_index[:, [0]] == h_index).all()
         assert (r_index[:, [0]] == r_index).all()
 
-        # message passing and updated node representations 
+        # message passing and updated node representations of the head entities 
+        # print('After sampling','h_index',h_index.shape,'r_index',r_index.shape, 't_index',t_index.shape)
         output = self.bellmanford(data, h_index[:, 0], r_index[:, 0])  # (num_nodes, batch_size, feature_dim）
         feature = output["node_feature"]
+
+        # I can also try to return the features directly before the gather because I get there the embedd for all the entities
+        return feature
+
+        # Given t_index (which always has the corruptions because of negative_sample_to_tail) I go from [queries_idx,corruptions_idx] to [queries,corruptions,embedd] thanks to the gather
+        # done that takes the representations obtained in bellmanford of all the entities
         index = t_index.unsqueeze(-1).expand(-1, -1, feature.shape[-1]) 
+        # print('node feature',feature.shape)
+        # print('t_index',t_index.shape)
+        # print('t_index.unsqueeze(-1)',t_index.unsqueeze(-1).shape)
+        # print('index',index.shape)
         # extract representations of tail entities from the updated node states
         feature = feature.gather(1, index)  # (batch_size, num_negative + 1, feature_dim) 
+        # print('feature gathered',feature.shape)
         # probability logit for each tail node in the batch
         # (batch_size, num_negative + 1, dim) -> (batch_size, num_negative + 1)
         if self.embedd_out:
@@ -307,9 +319,10 @@ class Ultra(nn.Module):
 
         # For each query, get a representation of all the relations of dim 64
         # relation_representations:  torch.Size([16, 360, 64])=(queries,n_relationsx2,dim_embedd)
-        relation_representations = self.relation_model(data, query=query_rels)        
-        # print('\n Relation representations obtained', relation_representations.shape,'\n')
-        # CHECK WHY I GET AN EMBEDD OF SIZE 128 INSTEAD OF 64
+        relation_representations = self.relation_model(data, query=query_rels)   
+
+
+        # CARERFUUUUUUUUUUUUUUUUUUUUUUUUUUUUL, I NEED TO PASS DATA.RELATION_GRAPH TO relation_model
 
         # Given the batch [16,1594,3], do a prediction, for each of the 16 heads(tails) in the queries, of all possible tails(heads) candidates
         # score:  torch.Size([16, 1594])
@@ -361,7 +374,7 @@ class ultra_model():
         self.Ultra = Ultra(rel_model_cfg=RelNBFNet,entity_model_cfg=EntityNBFNet)
         self.Ultra = self.Ultra.to('cpu')
 
-        self.output_layer = KGEFactory(
+        self.kge_embedder, self.output_layer = KGEFactory(
             name=kge,
             atom_embedding_size=kge_atom_embedding_size,
             relation_embedding_size=kge_atom_embedding_size,
@@ -369,31 +382,86 @@ class ultra_model():
             dropout_rate=kge_dropout_rate)
         assert self.output_layer is not None
 
+    def get_triplets_indeces(self, X_domains, A_predicates,Q):
+        """
+        This function converts atom indices (`Q`) from the knowledge base to corresponding triplet indices for ULTRA. 
+        ULTRA requires triplets as input, where each triplet is a combination of head entity (h), relation (r), and tail entity (t). However, `Q` only contains indices referencing individual atoms in the knowledge base.
 
-    def call(self, inputs, data_gen):
-        # X_domains type is Dict[str, inputs]
-        # A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
-        # For x_domains, I get each domain value (country,region...) represented by a index
-        # For A_predicates, I get the predicate name and the constant indices for each grounding
+        The mapping between atom indices and triplet indices is established during the creation of triplets (`create_triples`). This function iterates through predicates and their groundings, constructing triplets in a specific order. Groundings for each predicate are combined with the predicate index (representing the relation) to form triplets.
+        For example, consider predicates "LocIn" and "NeighOf" with corresponding groundings:
+
+        - LocIn: [[50, 100], [80, 90], ...]
+        - NeighOf: [[20, 300], [20, 30], ...]
+
+        `create_triples` would generate triplets:
+
+        - [50, 100, 0], [80, 90, 0], ... (LocIn)
+        - [20, 300, 1], [20, 30, 1], ... (NeighOf)
+        Resulting in self.triples = [[50, 100, 0], [80, 90, 0], ..., [20, 300, 1], [20, 30, 1], ...]
+
+        These triplets are then used by TransE to learn atom embeddings. Each atom index in the knowledge base corresponds to a unique embedding vector.
+        In the vector Q, we see the atom embeddings [1], [2], ... Then to get Q from atom indeces to triplet indeces: ex: for Qi=[50,100,0], Yi=[1,0,0], it will be the position 50,100, and 0 of the embeddings.
+        Qi_triplets=[self.triplets(50),self.triplets(100),self.triplets(0)] and Yi_triplets=[1,0,0]
+
+        This function utilizes the mapping between atom indices and triplet order to convert `Q` (containing atom indices) to a list of corresponding triplet indices suitable for ULTRA.
+        """
+       
+        self.triplets = []
+        for key, value in A_predicates_data.items():
+            for i in range(len(value)):
+                self.triplets.append(np.array([value[i][0],value[i][1],self.fol.name2predicate_idx[key]]))
+                # self.triplets.append(np.array([value[i][0],value[i][1],ind_pred]))
+            ind_pred += 1
+
+        # self.triplets = np.array(self.triplets)
+        # self.num_edges = len(self.triplets) # This is the number of queries
+        # self.edge_index = self.triplets[:, :2] 
+        # # num_edges is the first dim of edge_index
+        # self.num_edges = len(self.edge_index)
+        # self.edge_type = self.triplets[:,2]
+        # # Calculate Q with triplet repesentation
+        # self.Q_triplets = []
+        # for i in range(tf.shape(Q)[0].numpy()):
+        #     pos_and_negatives = []
+        #     for j in range(len(Q[i])):
+        #         pos_and_negatives.append(self.triplets[Q[i][j]])
+        #     self.Q_triplets.append(pos_and_negatives)
+
+
+        # self.Q_triplets = np.array(self.Q_triplets)
+        # Q_triplet [[query,corruption1,corruption2,...], [query,corruption1,corruption2,...]] = [[(h,r,t),(h,r,t1),...],[(h,r,t),(h,r,t1),...],...]
+        # Q: Batch: [16=batch_size,1594,3]=[16 heads(tails), 1594 is, for each head(tail), the number of negative tails(heads), 3 is indeces full negative triple(h, t, r)]
+        # y [[1,0,0],[1,0,0]]
+
+        # print('num_nodes',num_nodes, 'num_pred',num_pred, 'num_relations',self.num_relations, 'edge_index',self.edge_index, 'edge_type',self.edge_type)
+        # print('self.triplets',self.triplets)
+        # print('Q_triplet',len(self.Q_triplets),len(self.Q_triplets[0]),self.Q_triplets)
+        return None
+
+    def call(self, inputs, data_gen, Q):
+
         (X_domains, A_predicates) = inputs      
-        entity_representations,relation_representations = self.Ultra(data_gen, data_gen.Q_triplets)
-        print('relation_representations',relation_representations.shape)
+        # With the current inputs, I need to get the possible triplets with the indeces
+        Q_triplets = self.get_triplets_indeces(X_domains, A_predicates, Q)
+        entity_representations, relation_representations = self.Ultra(data_gen, Q_triplets)
+
+        print('relation_representations', relation_representations.shape)
         for i in range(len(entity_representations)):
-            print('entity_representations',entity_representations[i].shape)
+            print('entity_representations', entity_representations[i].shape)
         print(paco)
+
         # NOW, ONCE I HAVE  entity_representations torch.Size([6, 199, 64]), relation_representations torch.Size([50, 267, 64]), I NEED TO TURN IT TO TRIPLET FORM (3889, 2, 200),(3889, 200) 
         # 3389 is the number of groundings (it comes from A_predicates, summing all groundings for every predicate). The problem is how to pass from relative to global indeces
         # In test should be fine if I have batch size of 1, but I should adapt it to any batch size, and also for training
 
         # EVENTUALLY I NEED TO GET THE EMBEDDINGS FOR ALL THE 
 
-
         # For every query in A_predicates, produce the corruptions. batch shape: (bs, 1+num_negs, 3)
         # t_batch, h_batch = tasks.all_negative(test_data, batch)
         # t_pred = model(test_data, t_batch)
         # h_pred = model(test_data, h_batch)
         # I HAVE TO MODIFY THE MODEL TO OUTPUT THE EMBEDDINGS OF THE ENTITIES AND RELATIONS INSTEAD OF THE SCORES
-    
+
         # constant_embeddings = entities embeddings from ultra
         # predicate_embeddings = relations embeddings from ultra 
 
@@ -464,8 +532,6 @@ class CollectiveModel(Model):
             # CONCEPT LAYER
             self.output_layer = self.kge_model.output_layer
         self.model_name = model_name
-
-
 
         # REASONING LAYER
         self.reasoning = None
@@ -549,17 +615,11 @@ class CollectiveModel(Model):
         (X_domains, A_predicates, A_rules, Q) = inputs
         if self.use_ultra: 
             if training == True:
-                atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.data_gen_train)
+                atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.data_gen_train,Q)
             else:
-                atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.data_gen_test)
+                atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.data_gen_test,Q)
         else: 
             atom_embeddings = self.kge_model((X_domains, A_predicates))
-        tf.print('Training: ', training)
-        for key in A_predicates.keys():
-            tf.print('shape of A_predicates[',key,']: ', tf.shape(A_predicates[key]))
-        tf.print('shape of atom_embeddings: ', tf.shape(atom_embeddings))
-        tf.print('self.output_layer(atom_embeddings)',  tf.shape(self.output_layer(atom_embeddings)))
-        tf.print('Q', tf.shape(Q))
 
 
         concept_output = tf.expand_dims(self.output_layer(atom_embeddings), -1)
@@ -577,13 +637,7 @@ class CollectiveModel(Model):
                     task_output, atom_embeddings, A_rules])
         else:
             task_output = tf.identity(concept_output)
-        # tf.print('atom_embeddings', tf.shape(atom_embeddings))
-        # tf.print('concept_output', tf.shape(concept_output), concept_output )
-        # tf.print('task_output', tf.shape(task_output), task_output)
-        # tf.print('tf.squeeze(task_output, -1)', tf.shape(tf.squeeze(task_output, -1)))
-        # tf.print('Q', tf.shape(Q), Q)
         task_output = tf.gather(params=tf.squeeze(task_output, -1), indices=Q)
-        # tf.print('task output', tf.shape(task_output))
         concept_output = tf.gather(params=tf.squeeze(concept_output, -1),
                                    indices=Q)
         if self.resnet and self.reasoning is not None:
