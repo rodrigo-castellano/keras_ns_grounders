@@ -23,6 +23,7 @@ import wandb
 from wandb.keras import WandbCallback
 from wandb.keras import WandbMetricsLogger
 
+from ultra_utils import build_relation_graph, Ultra,nested_dict
 explain_enabled: bool = False
 
 def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
@@ -137,8 +138,6 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
         facts = list(data_handler.train_known_facts_set)
         engine = BuildGrounder(args, fol, rules, facts, domain2adaptive_constants)
-    # print('fol.constant2domain_name',fol.constant2domain_name)
-    # print('domain2adaptive_constants',domain2adaptive_constants)
     serializer = ns.serializer.LogicSerializerFast(
         predicates=fol.predicates, domains=fol.domains,
         constant2domain_name=fol.constant2domain_name,
@@ -146,14 +145,14 @@ def main(base_path, output_filename, log_filename, use_WB, args):
 
 
     # Preparing data as generators for model fit
-    print('Generating train data')
+    print('Generating train data************************************')
     start = time.time()
     data_gen_train = ns.dataset.DataGenerator(
         dataset_train, fol, serializer, engine,
         batch_size=args.batch_size, ragged=ragged)
     end = time.time()
     args.time_ground_train = np.round(end - start,2)
-    print("Time to create data generator train: ", np.round(end - start,2))
+    print("Time to create data generator train: ", np.round(end - start,2),'\n************************************')
 
     start = time.time()
     data_gen_valid = ns.dataset.DataGenerator(
@@ -161,7 +160,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
        batch_size=args.val_batch_size, ragged=ragged)
     end = time.time()
     args.time_ground_valid = np.round(end - start,2)
-    print("Time to create data generator valid: ",  np.round(end - start,2)) 
+    print("Time to create data generator valid: ",  np.round(end - start,2),'\n************************************') 
 
     start = time.time()
     data_gen_test = ns.dataset.DataGenerator(
@@ -169,21 +168,46 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         batch_size=args.test_batch_size, ragged=ragged)
     end = time.time()
     args.time_ground_test = np.round(end- start,2)
-    print("Time to create data generator test: ",  np.round(end - start,2))
+    print("Time to create data generator test: ",  np.round(end - start,2),'\n************************************')
+
+    if args.use_ultra:
+        # ultra_embeddings = nested_dict(2, list)
+        # UltraModel = Ultra()
+        # UltraModel = UltraModel.to('cpu')
+
+        data_gen_train.device = args.device
+        data_gen_train.global_info_ultra()
+        data_gen_train = build_relation_graph(data_gen_train)
+
+        data_gen_valid.device = args.device
+        data_gen_valid.global_info_ultra()
+        data_gen_valid = build_relation_graph(data_gen_valid)
     
-    print('Testing dataset:', args.dataset_name, 'grounder:', args.grounder, 'model:', args.model_name, 'seed:', seed)
-    # print one iteration of the test data
-    item = data_gen_test.__getitem__(0)
-    # print('item00',len(item[0][0]), item[0][0])
-    # print('item01',len(item[0][1]), item[0][1])
-    # print('item02',len(item[0][2]), item[0][2])
-    # print('item03, queries',tf.shape(item[0][3]), item[0][3]) # Here each index is an atom
-    # print('item1_', item[1])
+        data_gen_test.device = args.device
+        data_gen_test.global_info_ultra()
+        data_gen_test = build_relation_graph(data_gen_test)
+
+        # train_constant_embeddings, train_predicate_embeddings = UltraModel(data_gen_train, data_gen_train.Q_global)
+        # ultra_embeddings['train']['constant'] = train_constant_embeddings
+        # ultra_embeddings['train']['predicate'] = train_predicate_embeddings
+        # print('\n\nUltra embeddings train', ultra_embeddings['train']['predicate'].shape)
+        # for k in ultra_embeddings['train'].keys():
+        #     print(k, ultra_embeddings['train'][k])
+        # valid_constant_embeddings, valid_predicate_embeddings = UltraModel(data_gen_valid, data_gen_valid.Q_global)
+        # ultra_embeddings['valid']['constant'] = valid_constant_embeddings
+        # ultra_embeddings['valid']['predicate'] = valid_predicate_embeddings
+        # test_constant_embeddings, test_predicate_embeddings = UltraModel(data_gen_test, data_gen_test.Q_global)
+        # ultra_embeddings['test']['constant'] = test_constant_embeddings
+        # ultra_embeddings['test']['predicate'] = test_predicate_embeddings
+    # else:
+    #     ultra_embeddings = None
 
     # COMPILING MODEL
     model = CollectiveModel(
         data_gen_train,
+        data_gen_valid,
         data_gen_test,
+        # ultra_embeddings,
         fol, rules,
         use_ultra=args.use_ultra,
         kge=args.kge,
@@ -209,6 +233,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         cdcr_use_positional_embeddings=get_arg(
             args, 'cdcr_use_positional_embeddings', True),
         cdcr_num_formulas=get_arg(args, 'cdcr_num_formulas', 3),
+        device=args.device,
     )
 
     #Loss
@@ -300,17 +325,15 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         model.save_weights(output_filename, overwrite=True)
 
     print("\nEvaluation train", flush=True)
-    train_accuracy = model.evaluate(data_gen_train) 
+    train_accuracy = model.evaluate(data_gen_train)#,train_data=True,testing=True) 
     print("\nEvaluation val", flush=True)
-    valid_accuracy =  model.evaluate(data_gen_valid) 
-    # valid_accuracy = list(np.zeros(len(train_accuracy)))
-
-
+    valid_accuracy =  model.evaluate(data_gen_valid)#,val_data=True,testing=True) 
 
     # TEST
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
-    test_accuracy  =  model.evaluate(data_gen_test)
+    model.testing = True
+    test_accuracy  =  model.evaluate(data_gen_test)#,test_data=True,testing=True)
     end_inf = time.time()
     args.time_inference = np.round(end_inf - start_inf,2)
     print('Inference time:', np.round(end_inf - start_inf,2), 'seconds')

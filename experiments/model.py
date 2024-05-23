@@ -13,9 +13,10 @@ import tensorflow_probability as tfp
 
 import torch
 from torch import nn
-from ULTRA.ultra.models import Ultra,RelNBFNet,BaseNBFNet,EntityNBFNet
 from ULTRA.ultra import layers
+from ultra_utils import Ultra
 
+from collections import defaultdict, OrderedDict
 
 
 class KGEModel(Model):
@@ -131,247 +132,69 @@ class KGEModel(Model):
                     constant_embeddings_fixed[name],
                     constant_embeddings_adaptive[name])
                 for name in X_domains.keys()}
-        else:
-            constant_embeddings = self.constant_embedder(X_domains)
-
-        predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor)
+        else: 
+            constant_embeddings = self.constant_embedder(X_domains) 
+            # for key, value in constant_embeddings.items():
+            #     print(key, value.shape)
+        
+        predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor) 
+        # print('predicate_embeddings', predicate_embeddings.shape)
+        # print('constant_embeddings')
+        # for key, value in constant_embeddings.items():
+        #     print(key, value.shape)
         # Given the embedds of the constants and the predicates, I create the triplets with the embeddings of the atoms and the predicates. 
         # A_predicates indicates the indeces of the constants for each grounding of the predicate, i.e., the queries
         predicate_embeddings_per_triplets, constant_embeddings_for_triplets = \
             self.create_triplets(constant_embeddings, predicate_embeddings, A_predicates)
-        # tf.print('\n\npredicate_embeddings_per_triplets',predicate_embeddings_per_triplets.shape)
-        # tf.print('constant_embeddings_for_triplets',constant_embeddings_for_triplets.shape)
+        # print('predicate_embeddings_per_triplets',predicate_embeddings_per_triplets.shape)
+        # print('constant_embeddings_for_triplets',constant_embeddings_for_triplets.shape)
         # Given the triplets with their embeddings obtained in create_triplets, I get the embeddings of the atoms with e.g. Transe
         atom_embeddings = self.kge_embedder((predicate_embeddings_per_triplets,
                                              constant_embeddings_for_triplets))
+        # print('atom_embeddings',atom_embeddings.shape)
         # Shape TE
         return atom_embeddings
-
-
-
-
-class EntityNBFNet(BaseNBFNet):
-
-    def __init__(self, input_dim, hidden_dims, num_relation=1,embedd_out=False, **kwargs):
-
-        # dummy num_relation = 1 as we won't use it in the NBFNet layer
-        super().__init__(input_dim, hidden_dims, num_relation, **kwargs)
-
-        self.layers = nn.ModuleList()
-        for i in range(len(self.dims) - 1):
-            self.layers.append(
-                layers.GeneralizedRelationalConv(
-                    self.dims[i], self.dims[i + 1], num_relation,
-                    self.dims[0], self.message_func, self.aggregate_func, self.layer_norm,
-                    self.activation, dependent=False, project_relations=True)
-            )
-        # print('self.num_mlp_layers',self.num_mlp_layers,'input_dim',input_dim,'hidden_dims',hidden_dims, 'self.concat_hidden',self.concat_hidden,'sum(hidden_dims)',sum(hidden_dims),'hidden_dims[-1]',hidden_dims[-1])
-        feature_dim = input_dim + (sum(hidden_dims) if self.concat_hidden else hidden_dims[-1])
-        self.mlp = nn.Sequential()
-        mlp = []
-        self.embedd_out = embedd_out
-        for i in range(self.num_mlp_layers - 1):
-            mlp.append(nn.Linear(feature_dim, feature_dim))
-            mlp.append(nn.ReLU())
-        if embedd_out:
-            mlp.append(nn.Linear(feature_dim, feature_dim//2))
-        else:
-            mlp.append(nn.Linear(feature_dim, 1))
-        self.mlp = nn.Sequential(*mlp)
-
     
-    def bellmanford(self, data, h_index, r_index, separate_grad=False):
-        batch_size = len(r_index)
-
-        # initialize queries (relation types of the given triples)
-        query = self.query[torch.arange(batch_size, device=r_index.device), r_index]
-        index = h_index.unsqueeze(-1).expand_as(query)
-
-        # initial (boundary) condition - initialize all node states as zeros
-        boundary = torch.zeros(batch_size, data.num_nodes, self.dims[0], device=h_index.device)
-        # by the scatter operation we put query (relation) embeddings as init features of source (index) nodes
-        boundary.scatter_add_(1, index.unsqueeze(1), query.unsqueeze(1))
-        
-        size = (data.num_nodes, data.num_nodes)
-        edge_weight = torch.ones(data.num_edges, device=h_index.device)
-
-        hiddens = []
-        edge_weights = []
-        layer_input = boundary
-        for layer in self.layers:
-            # print('------------------------------------')
-            # print('data.num_relations', data.num_relations)
-            # print('data.num_edges', data.num_edges)
-            # print('boundary', boundary.shape)
-            # print('layer_input', layer_input.shape)
-            # print('size', size)
-            # print('edge_weight', edge_weight.shape)
-            # print('data.edge_index', data.edge_index.shape)
-            # print('data.edge_type', data.edge_type.shape)
-            # print('query', query.shape)
-            # print('------------------------------------')
-            # for visualization
-            if separate_grad:
-                edge_weight = edge_weight.clone().requires_grad_()
-
-            # Bellman-Ford iteration, we send the original boundary condition in addition to the updated node states
-            hidden = layer(layer_input, query, boundary, data.edge_index, data.edge_type, size, edge_weight)
-            if self.short_cut and hidden.shape == layer_input.shape:
-                # residual connection here
-                hidden = hidden + layer_input
-            hiddens.append(hidden)
-            edge_weights.append(edge_weight)
-            layer_input = hidden
-
-        # original query (relation type) embeddings
-        node_query = query.unsqueeze(1).expand(-1, data.num_nodes, -1) # (batch_size, num_nodes, input_dim)
-        if self.concat_hidden:
-            # print('hiddens',hiddens.shape, 'node_query',node_query.shape)
-            output = torch.cat(hiddens + [node_query], dim=-1)
-            # print('output',output.shape)
-        else:
-            output = torch.cat([hiddens[-1], node_query], dim=-1)
-
-        return {
-            "node_feature": output,
-            "edge_weights": edge_weights,
-        }
-
-    def forward(self, data, relation_representations, batch):
-        h_index, t_index, r_index = batch.unbind(-1)
-        # initial query representations are those from the relation graph
-        self.query = relation_representations
-
-        # initialize relations in each NBFNet layer (with uinque projection internally)
-        for layer in self.layers:
-            layer.relation = relation_representations
-
-        if self.training:
-            # Edge dropout in the training mode
-            # here we want to remove immediate edges (head, relation, tail) from the edge_index and edge_types
-            # to make NBFNet iteration learn non-trivial paths
-            data = self.remove_easy_edges(data, h_index, t_index, r_index)
-            # UPDATE THE NUMBER OF EDGES
-            data.num_edges = data.edge_index.shape[1]
-
-
-        shape = h_index.shape
-        # turn all triples in a batch into a tail prediction mode
-        h_index, t_index, r_index = self.negative_sample_to_tail(h_index, t_index, r_index, num_direct_rel=data.num_relations // 2)
-        assert (h_index[:, [0]] == h_index).all()
-        assert (r_index[:, [0]] == r_index).all()
-
-        # message passing and updated node representations of the head entities 
-        # print('After sampling','h_index',h_index.shape,'r_index',r_index.shape, 't_index',t_index.shape)
-        output = self.bellmanford(data, h_index[:, 0], r_index[:, 0])  # (num_nodes, batch_size, feature_dim）
-        feature = output["node_feature"]
-
-        # I can also try to return the features directly before the gather because I get there the embedd for all the entities
-        return feature
-
-        # Given t_index (which always has the corruptions because of negative_sample_to_tail) I go from [queries_idx,corruptions_idx] to [queries,corruptions,embedd] thanks to the gather
-        # done that takes the representations obtained in bellmanford of all the entities
-        index = t_index.unsqueeze(-1).expand(-1, -1, feature.shape[-1]) 
-        # print('node feature',feature.shape)
-        # print('t_index',t_index.shape)
-        # print('t_index.unsqueeze(-1)',t_index.unsqueeze(-1).shape)
-        # print('index',index.shape)
-        # extract representations of tail entities from the updated node states
-        feature = feature.gather(1, index)  # (batch_size, num_negative + 1, feature_dim) 
-        # print('feature gathered',feature.shape)
-        # probability logit for each tail node in the batch
-        # (batch_size, num_negative + 1, dim) -> (batch_size, num_negative + 1)
-        if self.embedd_out:
-            score = self.mlp(feature)
-            return score
-        else:
-            score = self.mlp(feature).squeeze(-1)
-            return score.view(shape)
 
 
 
-class Ultra(nn.Module):
+class KGEModel_4Ultra(Model):
 
-    def __init__(self, rel_model_cfg, entity_model_cfg):
-        # kept that because super Ultra sounds cool
-        super(Ultra, self).__init__()
-        self.relation_model = RelNBFNet(input_dim=64, hidden_dims=[64, 64, 64, 64, 64, 64], message_func='distmult', aggregate_func='sum', short_cut=True, layer_norm=True)
-        self. entity_model = EntityNBFNet(input_dim=64, hidden_dims=[64, 64, 64, 64, 64, 64], message_func='distmult', aggregate_func='sum', short_cut=True, layer_norm=True,embedd_out=True)
-
-        
-    def forward(self, data, batch):
-        
-        # batch shape: (bs, 1+num_negs, 3)
-        # relations are the same all positive and negative triples, so we can extract only one from the first triple among 1+nug_negs
-
-        # Batch: [16=batch_size,1594,3]=[16 heads(tails), 1594 is, for each head(tail), the number of negative tails(heads), 3 is indeces full negative triple(h, t, r)]
-        # For all the heads(tails) in the batch, take the first element of the negatives(for all negatives, the relation is the same), and the relation index
-        # query_rels: torch.Size([16]) 
-        # query_rels = batch[:, 0, 2]
-        query_rels = []
-        for i in range(len(batch)):
-            query_rels.append(batch[i][0][2])
-        query_rels = torch.tensor(query_rels)
-        query_rels = query_rels.to(torch.int64)
-        # convert edge_index and edge_type to torch tensor, from (1159, 2) to (2, 1159) and (1159) to (1159)
-        data.edge_index = torch.tensor(data.edge_index, dtype=torch.long).t().contiguous()
-        data.edge_type = torch.tensor(data.edge_type, dtype=torch.long)
-
-        # For each query, get a representation of all the relations of dim 64
-        # relation_representations:  torch.Size([16, 360, 64])=(queries,n_relationsx2,dim_embedd)
-        relation_representations = self.relation_model(data, query=query_rels)   
-
-
-        # CARERFUUUUUUUUUUUUUUUUUUUUUUUUUUUUL, I NEED TO PASS DATA.RELATION_GRAPH TO relation_model
-
-        # Given the batch [16,1594,3], do a prediction, for each of the 16 heads(tails) in the queries, of all possible tails(heads) candidates
-        # score:  torch.Size([16, 1594])
-
-        # For the batch, I need to distinguish corruptions from heads and tails, because there are a different number of corruptions, e.g., for heads, I have 1594 corruptions, 
-        # for tails, I have 564 corruptions, [16,1594,3] and [16,564,3]. I need to split batch in as many batches as different number of second dimensions in batch I have, otherwise 
-        # I cannot pass it to entity_model
-        batches = {}
-        for i in range(len(batch)): 
-            if len(batch[i]) not in batches:
-                batches[len(batch[i])] = []
-            batches[len(batch[i])].append(batch[i])
-
-        # Convert each batch to a torch tensor
-        for key in batches.keys():
-            batches[key] = torch.tensor(np.array(batches[key])).long()
-        # For each batch, call the entity model. Take into account that I need to pass the relation representations for each query. If there are 50 queries, there are 50 relation representations
-        #  ,e.g. [50,267,64] for 267 relations and 64 embedding size. If to the entity model I pass 10 queries and in the next loop I pass 40 queries, I need to do the same with the relation representations will be the same
-        rel_start = 0
-        rel_end = 0
-        entity_representations = []
-        for key in batches.keys():
-            # print( '\nnumber of queries', batches[key].shape[0],', number of negatives', batches[key].shape[1],',', batches[key].shape)
-            rel_end +=  len(batches[key])
-            entity_representations.append(self.entity_model(data, relation_representations[rel_start:rel_end,:,:], batches[key],))
-            rel_start += len(batches[key])
-            # print('entity_representations',entity_representations.shape)
-        # Return a list with each element being a query with [num_negatives, embedd]
-        return entity_representations,relation_representations
-
-
-
-
-class ultra_model():
-
-    def __init__(self, 
-                 fol:FOL,
+    def __init__(self, fol:FOL,
                  kge: str,
                  kge_regularization: float,
                  constant_embedding_size: int,
                  predicate_embedding_size: int,
                  kge_atom_embedding_size: int,
-                 kge_dropout_rate: float):
-        
+                 kge_dropout_rate: float,
+                 num_adaptive_constants: int=0,
+                 device: str = 'cpu'):
+        super().__init__()
         self.fol = fol
         self.predicate_index_tensor = tf.constant(
             [i for i in range(len(self.fol.predicates))], dtype=tf.int32)
         
-        self.Ultra = Ultra(rel_model_cfg=RelNBFNet,entity_model_cfg=EntityNBFNet)
+        # self.predicate_embedder = PredicateEmbeddings(
+        #     fol.predicates,
+        #     predicate_embedding_size,
+        #     regularization=kge_regularization)
+        # self.constant_embedder = ConstantEmbeddings(
+        #     domains=fol.domains,
+        #     constant_embedding_sizes_per_domain={
+        #         domain.name: constant_embedding_size
+        #         for domain in fol.domains},
+        #     regularization=kge_regularization)
+        
+        # if num_adaptive_constants > 0:
+        #     self.adaptive_constant_embedder = AdaptiveConstantEmbeddings(
+        #         domains=fol.domains,
+        #         constant_embedder=self.constant_embedder,
+        #         constant_embedding_size=constant_embedding_size,
+        #         num_adaptive_constants=num_adaptive_constants)
+        # else:
+        self.adaptive_constant_embedder = None
+
+        self.Ultra = Ultra()
         self.Ultra = self.Ultra.to('cpu')
 
         self.kge_embedder, self.output_layer = KGEFactory(
@@ -380,109 +203,90 @@ class ultra_model():
             relation_embedding_size=kge_atom_embedding_size,
             regularization=kge_regularization,
             dropout_rate=kge_dropout_rate)
-        assert self.output_layer is not None
-
-    def get_triplets_indeces(self, X_domains, A_predicates,Q):
-        """
-        This function converts atom indices (`Q`) from the knowledge base to corresponding triplet indices for ULTRA. 
-        ULTRA requires triplets as input, where each triplet is a combination of head entity (h), relation (r), and tail entity (t). However, `Q` only contains indices referencing individual atoms in the knowledge base.
-
-        The mapping between atom indices and triplet indices is established during the creation of triplets (`create_triples`). This function iterates through predicates and their groundings, constructing triplets in a specific order. Groundings for each predicate are combined with the predicate index (representing the relation) to form triplets.
-        For example, consider predicates "LocIn" and "NeighOf" with corresponding groundings:
-
-        - LocIn: [[50, 100], [80, 90], ...]
-        - NeighOf: [[20, 300], [20, 30], ...]
-
-        `create_triples` would generate triplets:
-
-        - [50, 100, 0], [80, 90, 0], ... (LocIn)
-        - [20, 300, 1], [20, 30, 1], ... (NeighOf)
-        Resulting in self.triples = [[50, 100, 0], [80, 90, 0], ..., [20, 300, 1], [20, 30, 1], ...]
-
-        These triplets are then used by TransE to learn atom embeddings. Each atom index in the knowledge base corresponds to a unique embedding vector.
-        In the vector Q, we see the atom embeddings [1], [2], ... Then to get Q from atom indeces to triplet indeces: ex: for Qi=[50,100,0], Yi=[1,0,0], it will be the position 50,100, and 0 of the embeddings.
-        Qi_triplets=[self.triplets(50),self.triplets(100),self.triplets(0)] and Yi_triplets=[1,0,0]
-
-        This function utilizes the mapping between atom indices and triplet order to convert `Q` (containing atom indices) to a list of corresponding triplet indices suitable for ULTRA.
-        """
-       
-        self.triplets = []
-        for key, value in A_predicates_data.items():
-            for i in range(len(value)):
-                self.triplets.append(np.array([value[i][0],value[i][1],self.fol.name2predicate_idx[key]]))
-                # self.triplets.append(np.array([value[i][0],value[i][1],ind_pred]))
-            ind_pred += 1
-
-        # self.triplets = np.array(self.triplets)
-        # self.num_edges = len(self.triplets) # This is the number of queries
-        # self.edge_index = self.triplets[:, :2] 
-        # # num_edges is the first dim of edge_index
-        # self.num_edges = len(self.edge_index)
-        # self.edge_type = self.triplets[:,2]
-        # # Calculate Q with triplet repesentation
-        # self.Q_triplets = []
-        # for i in range(tf.shape(Q)[0].numpy()):
-        #     pos_and_negatives = []
-        #     for j in range(len(Q[i])):
-        #         pos_and_negatives.append(self.triplets[Q[i][j]])
-        #     self.Q_triplets.append(pos_and_negatives)
+        assert self.kge_embedder is not None
 
 
-        # self.Q_triplets = np.array(self.Q_triplets)
-        # Q_triplet [[query,corruption1,corruption2,...], [query,corruption1,corruption2,...]] = [[(h,r,t),(h,r,t1),...],[(h,r,t),(h,r,t1),...],...]
-        # Q: Batch: [16=batch_size,1594,3]=[16 heads(tails), 1594 is, for each head(tail), the number of negative tails(heads), 3 is indeces full negative triple(h, t, r)]
-        # y [[1,0,0],[1,0,0]]
+    def create_triplets(self,
+                        constant_embeddings: Dict[str, tf.Tensor],
+                        predicate_embeddings: tf.Tensor,
+                        A_predicates: Dict[str, tf.Tensor]):
+        predicate_embeddings_per_triplets = []
+        # What I do here is taking the embedding of each predicate and repeating it for each grounded atom of that predicate
+        # For example, if I have a predicate with 3 grounded atoms, I will repeat the embedding of that predicate 3 times, 
+        # resulting in a tensor of shape [3,200] where 200 is the embedding size of the predicate.
+        # I do this for each predicate in the A_predicates dictionary, so I get [n_predicates, n_atoms/grounding per predicate, embed_size_predicate]
+        for p,indices in A_predicates.items():
+            idx = self.fol.name2predicate_idx[p]
+            p_embeddings = tf.expand_dims(predicate_embeddings[idx], axis=0)  # 1E
+            # shape: [1,1918,200]=[1,number of grounded atoms for that predicate, embed size of the predicate]
+            predicate_embeddings_per_triplets.append(tf.repeat(p_embeddings, tf.shape(indices)[0], axis=0))  #PE
+        # shape=[n_predicates, n_atoms/grounding per predicate, embed_size_predicate]
+        predicate_embeddings_per_triplets = tf.concat(predicate_embeddings_per_triplets,
+                                                      axis=0)
 
-        # print('num_nodes',num_nodes, 'num_pred',num_pred, 'num_relations',self.num_relations, 'edge_index',self.edge_index, 'edge_type',self.edge_type)
-        # print('self.triplets',self.triplets)
-        # print('Q_triplet',len(self.Q_triplets),len(self.Q_triplets[0]),self.Q_triplets)
-        return None
+        constant_embeddings_for_triplets = []
+        for p,constant_idx in A_predicates.items():
+            constant_idx = tf.cast(constant_idx, tf.int32)
+            predicate = self.fol.name2predicate[p]
+            one_predicate_constant_embeddings = []
+            # Here, for each domain of the predicate (LocInSR(subregion,region)->for subregion), I get the embeddings of the constants that
+            # are grounded in that domain. If LocInSR has 58 groundings/atoms, I will get the representation of the subregion constants in 
+            # those atoms(58,200). I do the same for the region domain, so I get a tensor of shape [58,2,200] for LocIn where 2 is the arity of the predicate. 
+            for i,domain in enumerate(predicate.domains):
+                constants = tf.gather(constant_embeddings[domain.name],
+                                      constant_idx[..., i], axis=0)
+                one_predicate_constant_embeddings.append(constants)
+            # shape (predicate_batch_size, predicate_arity, constant_embedding_size)
+            one_predicate_constant_embeddings = tf.stack(one_predicate_constant_embeddings,
+                                                         axis=-2)
+            constant_embeddings_for_triplets.append(one_predicate_constant_embeddings)
+        # For all the queries, I have divided them by predicates. Once I have, for each predicate, the embeddings of the constants, i.e., 
+        # for LocInSR I have 58 atoms -> (58,2,200), for NeighOf .... I concatenate them to get a tensor of shape [58+..,2,200] = [3889,2,200]
+        constant_embeddings_for_triplets = tf.concat(constant_embeddings_for_triplets,
+                                                     axis=0)
+        tf.debugging.assert_equal(tf.shape(predicate_embeddings_per_triplets)[0],
+                                  tf.shape(constant_embeddings_for_triplets)[0])
+        # Shape TE, T2E with T number of triplets.
+        # At the end I get for both predicates and embeddings a tensor of shape [n_atoms,ctes_in_atoms(arity),embed_size_predicate] and [n_atoms,2,embed_size_constant]
+        return predicate_embeddings_per_triplets, constant_embeddings_for_triplets
 
-    def call(self, inputs, data_gen, Q):
+    def call(self, inputs,data_gen, Q, Q_global):
+        # X_domains type is Dict[str, inputs]
+        # A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
+        # For x_domains, I get each domain value (country,region...) represented by a index
+        # For A_predicates, I get the predicate name and the constant indices for each grounding
+        (X_domains, A_predicates) = inputs 
 
-        (X_domains, A_predicates) = inputs      
-        # With the current inputs, I need to get the possible triplets with the indeces
-        Q_triplets = self.get_triplets_indeces(X_domains, A_predicates, Q)
-        entity_representations, relation_representations = self.Ultra(data_gen, Q_triplets)
+        # HERE USE ULTRA TO OBTAIN THE EMBEDDINGS
+        constant_embeddings, predicate_embeddings = self.Ultra(data_gen, Q_global)
 
-        print('relation_representations', relation_representations.shape)
-        for i in range(len(entity_representations)):
-            print('entity_representations', entity_representations[i].shape)
-        print(paco)
+        # print('predicate_embeddings', predicate_embeddings.shape)
+        # for key in constant_embeddings.keys():
+        #     print(key, constant_embeddings[key].shape)
 
-        # NOW, ONCE I HAVE  entity_representations torch.Size([6, 199, 64]), relation_representations torch.Size([50, 267, 64]), I NEED TO TURN IT TO TRIPLET FORM (3889, 2, 200),(3889, 200) 
-        # 3389 is the number of groundings (it comes from A_predicates, summing all groundings for every predicate). The problem is how to pass from relative to global indeces
-        # In test should be fine if I have batch size of 1, but I should adapt it to any batch size, and also for training
-
-        # EVENTUALLY I NEED TO GET THE EMBEDDINGS FOR ALL THE 
-
-        # For every query in A_predicates, produce the corruptions. batch shape: (bs, 1+num_negs, 3)
-        # t_batch, h_batch = tasks.all_negative(test_data, batch)
-        # t_pred = model(test_data, t_batch)
-        # h_pred = model(test_data, h_batch)
-        # I HAVE TO MODIFY THE MODEL TO OUTPUT THE EMBEDDINGS OF THE ENTITIES AND RELATIONS INSTEAD OF THE SCORES
-
-        # constant_embeddings = entities embeddings from ultra
-        # predicate_embeddings = relations embeddings from ultra 
-
-        # predicate_embeddings_per_triplets, constant_embeddings_for_triplets = \
-        #     self.create_triplets(constant_embeddings, predicate_embeddings, A_predicates)
-        # atom_embeddings = self.kge_embedder((predicate_embeddings_per_triplets,
-        #                                      constant_embeddings_for_triplets))
-        # return atom_embeddings
-
- 
+        # Given the embedds of the constants and the predicates, I create the triplets with the embeddings of the atoms and the predicates. 
+        # A_predicates indicates the indeces of the constants for each grounding of the predicate, i.e., the queries
+        predicate_embeddings_per_triplets, constant_embeddings_for_triplets = \
+            self.create_triplets(constant_embeddings, predicate_embeddings, A_predicates)
+        # Given the triplets with their embeddings obtained in create_triplets, I get the embeddings of the atoms with e.g. Transe
+        atom_embeddings = self.kge_embedder((predicate_embeddings_per_triplets,
+                                             constant_embeddings_for_triplets))
+        # print('atom_embeddings',atom_embeddings.shape)
+        # Shape TE
+        return atom_embeddings
 
 
 class CollectiveModel(Model):
 
     def __init__(self,
                  data_gen_train,
+                 data_gen_valid,
                  data_gen_test,
+                #  ultra_embeddings,
                  fol: FOL,
                  rules: List[Rule],
                  *,  # all named after this point
-                 use_ultra: bool, 
+                 use_ultra: bool,
                  kge: str,
                  kge_regularization: float,
                  constant_embedding_size: int,
@@ -505,22 +309,35 @@ class CollectiveModel(Model):
                  filter_activity_regularization: float,
                  num_adaptive_constants: int,
                  cdcr_use_positional_embeddings: bool,
-                 cdcr_num_formulas: int):
+                 cdcr_num_formulas: int,
+                 device: str = 'cpu'):
         super().__init__()
+
+        self.testing = False
         self.data_gen_train = data_gen_train
+        self.data_gen_valid = data_gen_valid
         self.data_gen_test = data_gen_test
+        # self.ultra_embeddings = ultra_embeddings
+
         # Reasoning depth of the model structure.
         self.reasoner_depth = reasoner_depth
-        # Reasoning depth currently used, this can differ from
-        # self.reasoner_depth during multi-stage learning (like if
-        # pretraining the KGEs).
+        # Reasoning depth currently used, this can differ from  self.reasoner_depth during multi-stage learning (like if pretraining the KGEs).
         self.enabled_reasoner_depth = reasoner_depth
         self.resnet = resnet
         self.logic = GodelTNorm()
         self.use_ultra = use_ultra
         if self.use_ultra: 
-            self.ultra_model = ultra_model(fol,kge,kge_regularization,constant_embedding_size,predicate_embedding_size,kge_atom_embedding_size,kge_dropout_rate)
+            self.ultra_model = KGEModel_4Ultra(fol,kge,kge_regularization,constant_embedding_size,predicate_embedding_size,
+                kge_atom_embedding_size,kge_dropout_rate,device='cpu')
+            # self.ultra_model = KGEModel_wUltra(fol, kge,
+            #                         kge_regularization,
+            #                         constant_embedding_size,
+            #                         predicate_embedding_size,
+            #                         kge_atom_embedding_size,
+            #                         kge_dropout_rate,
+            #                         num_adaptive_constants)
             self.output_layer = self.ultra_model.output_layer
+    
         else:   
             self.kge_model = KGEModel(fol, kge,
                                     kge_regularization,
@@ -529,8 +346,7 @@ class CollectiveModel(Model):
                                     kge_atom_embedding_size,
                                     kge_dropout_rate,
                                     num_adaptive_constants)
-            # CONCEPT LAYER
-            self.output_layer = self.kge_model.output_layer
+            self.output_layer = self.kge_model.output_layer # CONCEPT LAYER
         self.model_name = model_name
 
         # REASONING LAYER
@@ -601,27 +417,49 @@ class CollectiveModel(Model):
     def explain_mode(self, mode=True):
         self._explain_mode = mode
 
-    def call(self, inputs, training=False, *args, **kwargs):
+    def test_mode(self, dataset_type):
+        return self.dataset_type
+
+    def call(self, inputs, testing=False, training=False, dataset_type=None, *args, **kwargs):
         if self._explain_mode:
             # No explanations are posible when reasoning is disabled.
             assert self.reasoning is not None
             # Check that we are using an explainable model.
             assert self.model_name == 'dcr' or self.model_name == 'cdcr'
 
+
         # X_domains type is Dict[str, tensor[constant_indices_in_domain]]
         # A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
         #              e.g. mapping predicate_name -> tensor [num_groundings, arity]
         #                   with constant indices for each grounding.
-        (X_domains, A_predicates, A_rules, Q) = inputs
-        if self.use_ultra: 
+        (X_domains, A_predicates, A_rules, Q, Q_global) = inputs
+
+        # def numpy_func(x):
+        #     # This will run in eager mode
+        #     if not isinstance(x, np.ndarray):
+        #         x = x.numpy()
+        #     return x
+        
+        # Q_global = tf.numpy_function(numpy_func, [Q_global], tf.float32)
+        
+        # print('****************************Training mode:',training, 'Testing mode:',testing, 'Dataset type:',dataset_type)
+        # print('training:',self.train,'val:',self.val,'test:',self.test)
+        if self.use_ultra: # NEED TO ACCOMODATE THE VALIDATION DATASET!!!!!
             if training == True:
-                atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.data_gen_train,Q)
+                # print('****************************Using ULTRA embeddings from training set')
+                atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.data_gen_train,Q,Q_global)
+                # atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.ultra_embeddings['train']['constant'],self.ultra_embeddings['train']['predicate'])
             else:
-                atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.data_gen_test,Q)
+                if testing == False:
+                    # print('****************************Using ULTRA embeddings from validation set')
+                    atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.data_gen_valid,Q,Q_global)
+                    # atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.ultra_embeddings['valid']['constant'],self.ultra_embeddings['valid']['predicate'])
+                else:
+                    # print('****************************Using ULTRA embeddings from test set')
+                    atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.data_gen_test,Q,Q_global) 
+                    # atom_embeddings = self.ultra_model.call((X_domains, A_predicates),self.ultra_embeddings['test']['constant'],self.ultra_embeddings['test']['predicate'])
         else: 
             atom_embeddings = self.kge_model((X_domains, A_predicates))
-
-
         concept_output = tf.expand_dims(self.output_layer(atom_embeddings), -1)
 
         explanations = None
@@ -647,3 +485,63 @@ class CollectiveModel(Model):
             return concept_output, task_output, explanations
         else:
             return {'concept':concept_output, 'task':task_output}
+        
+
+    # def evaluate(self, *args, **kwargs):
+    #     self.train_data = kwargs.pop('train_data', False)
+    #     self.val_data = kwargs.pop('val_data', False)
+    #     self.test_data = kwargs.pop('test_data', False)
+    #     self.testing = kwargs.pop('testing', False)
+    #     # print('TESTING MODE+++++++++++++++++++++++++++',self.testing, self.train_data, self.val_data, self.test_data)
+    #     return super().evaluate(*args, **kwargs)
+
+
+    # def evaluate(self, x, y=None, batch_size=None, verbose=1, sample_weight=None, steps=None, callbacks=None, max_queue_size=10, workers=1, use_multiprocessing=False, return_dict=False, **kwargs):
+    #     self.train = kwargs.pop('train', False)
+    #     self.val = kwargs.pop('val', False)
+    #     self.test = kwargs.pop('test', False)
+    #     dataset_type = 'testing' if self.test else 'validation' if self.val else 'training' if self.train else 'unknown'
+    #     print('TESTING MODE+++++++++++++++++++++++++++', self.train, self.val, self.test)
+    #     self.dataset_type = dataset_type
+        
+    #     # Convert inputs to dataset if necessary
+    #     dataset = tf.data.Dataset.from_tensor_slices((x, y))
+    #     if batch_size is not None:
+    #         dataset = dataset.batch(batch_size)
+
+    #     # Iterate through the dataset and explicitly call the `call` method
+    #     for step, (batch_x, batch_y) in enumerate(dataset):
+    #         y_pred = self.call(batch_x, training=False, dataset_type=self.dataset_type)
+    #         loss = self.compiled_loss(batch_y, y_pred, regularization_losses=self.losses)
+    #         self.compiled_metrics.update_state(batch_y, y_pred)
+    #         if verbose:
+    #             print(f'Step {step}: Loss = {loss.numpy()}')
+
+    #     # Gather and return metrics results
+    #     results = {m.name: m.result().numpy() for m in self.metrics}
+    #     return results if return_dict else list(results.values())
+    
+
+    # def train_step(self, data):
+    #     x, y = data
+    #     with tf.GradientTape() as tape:
+    #         y_pred = self(x, training=True)
+    #         # print('!!!!!!!!!!!!!!!!!!!! train step')
+    #         loss = self.compiled_loss(y, y_pred, regularization_losses=self.losses)
+    #     gradients = tape.gradient(loss, self.trainable_variables)
+    #     self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+    #     self.compiled_metrics.update_state(y, y_pred)
+    #     return {m.name: m.result() for m in self.metrics}
+    
+    # def test_step(self, data):
+    #     x, y = data
+    #     y_pred = self(x, training=False)
+    #     # print('!!!!!!!!!!!!!!!!!!!! test step')
+    #     loss = self.compiled_loss(y, y_pred, regularization_losses=self.losses)
+    #     self.compiled_metrics.update_state(y, y_pred)
+    #     return {m.name: m.result() for m in self.metrics}
+    
+    # def predict_step(self, data):
+    #     # print('!!!!!!!!!!!!!!!!!!!! predict step')
+    #     x = data
+    #     return self(x, training=False, dataset_type='predicting')

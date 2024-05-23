@@ -1,5 +1,6 @@
 import sys
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders')
+sys.path.append('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\experiments')
 sys.path.append('/home/castellanoontiv/keras_ns_grounders')
 sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
 sys.path.append('/home2/castellanoontiv/keras_ns_grounders/')
@@ -26,14 +27,13 @@ wandb.login()
 if __name__ == '__main__':
 
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
-
+    tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
     use_logger = False
     use_WB = False
-    log_folder :str = "tests/"
+    log_folder :str = "experiments/tests/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
-    base_path :str = "data"
-
+    base_path :str = "experiments/data"
     epochs: int = 100
     ULTRA = True
     DATASET_NAME = ['countries_s1','nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     E = [100,300] 
     DEPTH = [1,3]
     SEED = [[0,1,2]]
-    NEG_PER_SIDE = [1]
+    NEG_PER_SIDE = [2]#[1]
     WEIGHT_LOSS = [.5]  
     DROPOUT = [0.0,0.1,0,2]
     R = [0.0]
@@ -113,6 +113,7 @@ if __name__ == '__main__':
         if model_name == 'no_reasoner' and (grounder == 'backward2' or grounder == 'backward3' or grounder == 'relationentity') and (dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name or 'wn18rr' in dataset_name):
             continue
 
+        args.device = 'cpu' # if not tf.config.experimental.list_physical_devices('GPU') else 'gpu'
         args.use_ultra = ULTRA
         args.dataset_name = dataset_name
         args.grounder = grounder
@@ -123,9 +124,9 @@ if __name__ == '__main__':
         if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'): # For heavy datasets, run only one seed
             args.seed = [0]
         args.kge_atom_embedding_size = e
-        args.batch_size = 1 # 128 # Full batch only for explain.
-        args.val_batch_size = 1
-        args.test_batch_size = 1 #64
+        args.batch_size = 256 # 128 # Full batch only for explain.
+        args.val_batch_size = 256
+        args.test_batch_size = 256 #64
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
@@ -147,7 +148,7 @@ if __name__ == '__main__':
             continue
 
         # Data params
-        args.corrupt_mode = 'TAIL' # for ultra only TAIL. 'HEAD_AND_TAIL' #'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
+        args.corrupt_mode = 'HEAD_AND_TAIL' # for ultra only TAIL. 'HEAD_AND_TAIL' #'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 100  
         args.test_negatives = None  # all possible negatives

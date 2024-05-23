@@ -446,7 +446,7 @@ def backward_chaining_grounding_one_rule_with_domains(
     # print('AVG_NUM_GROUNDINGS', sum(groundings_numbers)/len(groundings_numbers))
 
     end = time.time()
-    print('NUM GROUNDINGS', len(new_ground_atoms),'. TIME', end - start)
+    # print('NUM GROUNDINGS', len(new_ground_atoms),'. TIME', end - start)
     # print('NEW GROUND ATOMS', new_ground_atoms) if cont< lim else None
     if res is None:
         return new_ground_atoms
