@@ -6,7 +6,7 @@ from keras.metrics import Metric
 from keras.losses import Loss
 import abc
 import numpy as np
-from ULTRA.ultra.tasks import build_relation_graph
+import torch
 
 DomainName = str
 ConstantName = str
@@ -46,24 +46,23 @@ def _from_strings_to_tensors(fol, serializer,
         rules = []
 
 
-    # domain_to_global: global indices of all the ctes whithin each domain. 
+    # domain_to_global: global indices of all the ctes whithin each domain. Not in order, they are added as the appear in the groundings. Just to see how many different constants
     # predicate_tuples: local indices of the ctes with respect to each predicate. For each predicate, all groundings of that predicate (ctes represented with local indeces)
     # groundings      : local indices that  represent the position of atoms within the respective rule groundings. First index is the rule, e.g. ['r0'], the the first element 
     #   [0] is a set of bodies and the second element [1] is a set of heads. The body has 2 elements, each representing one atom. The head has 1 element, representing one atom.
     # queries     ??    : local indices that represent the position of atoms within each query. len(queries) is the number of queries, each query is a list of atoms. 
     #   The first index (atom) represents the original query, the rest of the indeces (atoms) represent the corruptions of that query
+    # queries_global  ?? : global indices of the queries. The first index is the original query, the rest are the corruptions of that query. It i as queries, but with (h_id, t_id, r_id)
     # print('ground_formulas',ground_formulas)
     # print('queries',queries)
-    (domain_to_global, predicate_tuples, groundings, queries) = (
-        serializer.serialize(queries=queries,
+    (domain_to_global, predicate_tuples, groundings, queries, queries_global) = (
+        serializer.serialize_global_A_predicates(queries=queries,
                              rule_groundings=ground_formulas))
-                             
+    # print('\n\n\nType of queries_global', type(queries_global), queries_global)
     # print('domain_to_global', domain_to_global)
     # print('predicate_tuples',predicate_tuples)
     # print('groundings',len(groundings['r0'][0]),len(groundings['r0'][1]),groundings['r0'][0][:20],groundings['r0'][1][:20] ) #first index is the rule,  [0] is the body and [1] is the head
     # print('queries', len(queries), len(queries[0]), queries[0:5])
-
-    
 
     # Convert constants(domain) indices from list to tf tensor
     input_domains_tf: Dict[DomainName, ConstantFeatures] = {}
@@ -105,13 +104,15 @@ def _from_strings_to_tensors(fol, serializer,
     # TODO check how to understand if it is a good tensor or need to be ragged.
     if ragged:
         queries = tf.ragged.constant(queries, dtype=tf.int32)
+        queries_global = tf.ragged.constant(queries_global, dtype=tf.int32)
         labels =  tf.ragged.constant(labels, dtype=tf.float32)
     else:
         queries = tf.constant(queries, dtype=tf.int32)
+        queries_global = tf.constant(queries_global, dtype=tf.int32)
         labels = tf.constant(labels, dtype=tf.float32)
 
     return (input_domains_tf, input_atoms_tuples_tf,
-            input_formulas_tf, queries), labels
+            input_formulas_tf, queries, queries_global), labels
 
 
 class Dataset():
@@ -177,8 +178,8 @@ class DataGenerator(tf.keras.utils.Sequence):
             print('Building Full Batch Dataset', self.name)
             self._full_batch = self._get_batch(0, len(self.dataset))
 
-        # Get info for ULTRA
-        self.global_info_ultra()
+        # # Get info for ULTRA
+        # self.global_info_ultra()
 
 
     def __getitem__(self, item):
@@ -196,7 +197,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         queries, labels = self.dataset[b*i:b*(i+1)]
         constants_features = self.dataset.constants_features
 
-        ((X_domains_data, A_predicates_data, A_rules_data, Q), y) = _from_strings_to_tensors(
+        ((X_domains_data, A_predicates_data, A_rules_data, Q, Q_global), y) = _from_strings_to_tensors(
             fol=self.fol,
             serializer=self.serializer,
             queries=queries,
@@ -205,8 +206,7 @@ class DataGenerator(tf.keras.utils.Sequence):
             ragged=self.ragged,
             constants_features=constants_features,
             deterministic=self.deterministic)
-
-        return (X_domains_data, A_predicates_data, A_rules_data, Q), y
+        return (X_domains_data, A_predicates_data, A_rules_data, Q, Q_global), y
     
     
     def global_info_ultra(self):
@@ -217,25 +217,35 @@ class DataGenerator(tf.keras.utils.Sequence):
         Returns:
             None
         """
-        queries, labels = self.dataset[0:len(self.dataset)]
+        queries, labels = self.dataset[:]
         constants_features = self.dataset.constants_features
-        (X_domains_data, A_predicates_data, A_rules_data, Q), y = self._get_batch(0, len(self.dataset))
+        # I select engine=None because I dont want to ground the rules, only the queries    
+        ((X_domains_data, A_predicates_data, A_rules_data, Q, Q_global), y) = _from_strings_to_tensors(
+            fol=self.fol,
+            serializer=self.serializer,
+            queries=queries,
+            labels=labels,
+            engine=None,
+            ragged=self.ragged,
+            constants_features=constants_features,
+            deterministic=self.deterministic)
+        
+        self.Q_global = Q_global    
+        # Here Im interested in Q_global, to get the general info that I pass to ultra. From Q_global I can get the triplets of the queries only by taking the first element in every query
+        # (the rest are the negative representations)
+        self.queries_global = np.array([q[0] for q in Q_global])  
+        self.edge_index = self.queries_global[:, :2].T # For all the queries, this takes in the first dim the head, and in the second the tail
+        self.edge_type = self.queries_global[:, 2] # For all the queries, it takes the relation
+        self.num_relations = len(A_predicates_data)*2
+        self.num_nodes = sum(len(X_domains_data[key]) for key in X_domains_data)
+        self.num_edges = self.edge_index.shape[1] # it is the number of queries
+        self.device = 'cpu' 
 
-        # num_nodes is the sum of elements in each key of X_domains_data
-        num_nodes = sum(len(X_domains_data[key]) for key in X_domains_data)
-        nodes_indeces = [X_domains_data[key] for key in X_domains_data]
-        num_pred = len(A_predicates_data)
-        pred_indeces = [self.fol.name2predicate_idx[p] for p in A_predicates_data]
+        # convert edge_index and edge_type to torch tensor
+        self.edge_index = torch.tensor(self.edge_index, dtype=torch.long)
+        self.edge_type = torch.tensor(self.edge_type, dtype=torch.long)
 
-        self.edge_index = nodes_indeces  
-        self.edge_type = pred_indeces
-        self.num_relations = num_pred
-        self.num_nodes = num_nodes 
-
-        # self.relation_graph = build_relation_graph
         return None
-
-
 
 
 
