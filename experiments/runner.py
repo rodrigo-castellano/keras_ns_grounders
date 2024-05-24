@@ -27,23 +27,23 @@ wandb.login()
 if __name__ == '__main__':
 
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
-    tf.config.run_functions_eagerly(True)
+    # tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
     use_logger = False
-    use_WB = False
+    use_WB = True
     log_folder :str = "experiments/tests/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
     base_path :str = "experiments/data"
-    epochs: int = 100
+    epochs: int = 5
     ULTRA = True
-    DATASET_NAME = ['countries_s1','nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
-    GROUNDER = ['backward_1','backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
-    KGE = ['complex','rotate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['r2n','no_reasoner','r2n',] # ['dcr','sbr','r2n','no_reasoner']  
+    DATASET_NAME = ['countries_s1']#,'nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
+    GROUNDER = ['backward_1']#,'backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
+    KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
+    MODEL_NAME = ['r2n']#,'no_reasoner','r2n',] # ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
-    E = [100,300] 
-    DEPTH = [1,3]
-    SEED = [[0,1,2]]
+    E = [100]#,300] 
+    DEPTH = [1]#,3]
+    SEED = [0],[[0,1,2]]
     NEG_PER_SIDE = [2]#[1]
     WEIGHT_LOSS = [.5]  
     DROPOUT = [0.0,0.1,0,2]
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     RR = [0.0]
     LR = [0.01]
     LR_SCHEDULER = ['plateau'] # None
-    OPTIMIZER = ['None','adam']
+    OPTIMIZER = ['Adam'] #['None','adam']
     NUM_RULES = [1] 
     VALID_SIZE = [None]
 
@@ -172,7 +172,7 @@ if __name__ == '__main__':
         args.lr_sched = lr_sched
         args.optimizer = 'adam'
         args.early_stopping = True
-        args.epochs = epochs if not args.early_stopping else 1500
+        args.epochs = epochs # if not args.early_stopping else 1500
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
         args.loss = "binary_crossentropy"
         args.weight_loss = w_loss
