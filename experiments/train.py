@@ -91,8 +91,6 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
             max_elements=20)
     return engine
 
-
-# Create a class called dataset_geompy that takes a train, valid and test dataset and 
  
 def main(base_path, output_filename, log_filename, use_WB, args):
 
@@ -101,13 +99,11 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     random.seed(seed)
     np.random.seed(seed)
     tf.random.set_seed(seed)
-    # Params
+
     ragged = get_arg(args, 'ragged', None, True)
     start_train = time.time()
 
-
-
-    # DATA GENERATION
+    # DATASET PREPARATION
     data_handler = KGCDataHandler(
         dataset_name=args.dataset_name,
         base_path=base_path,
@@ -129,7 +125,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
 
     # Domains are used up to the serializer, the model assumes that all constants are in the same domain.
-    # Defining rules and grounding engine
+    # DEFINING RULES AND GROUNDING ENGINE
     rules = []
     engine = None
 
@@ -144,7 +140,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         domain2adaptive_constants=domain2adaptive_constants)
 
 
-    # Preparing data as generators for model fit
+    # DATA GENERATORS
     print('Generating train data************************************')
     start = time.time()
     data_gen_train = ns.dataset.DataGenerator(
@@ -202,6 +198,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     # else:
     #     ultra_embeddings = None
 
+
     # COMPILING MODEL
     model = CollectiveModel(
         data_gen_train,
@@ -236,7 +233,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         device=args.device,
     )
 
-    #Loss
+    #LOSS
     loss_name = get_arg(args, 'loss', 'binary_crossentropy')
     loss = KgeLossFactory(loss_name)
 
@@ -295,9 +292,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
                 shuffle_buffer = 1024,
                 batch_size = args.batch_size,
                 learning_rate = args.learning_rate,
-                epochs = args.epochs
-                )
-            ) 
+                epochs = args.epochs)) 
         callbacks.append(WandbMetricsLogger(log_freq=10))
 
 
@@ -324,15 +319,18 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         print('Saving model weights to', output_filename)
         model.save_weights(output_filename, overwrite=True)
 
+
+    # EVALUATION
     print("\nEvaluation train", flush=True)
+    model.test_mode('train',mode=True)
     train_accuracy = model.evaluate(data_gen_train)#,train_data=True,testing=True) 
     print("\nEvaluation val", flush=True)
+    model.test_mode('valid',mode=True)
     valid_accuracy =  model.evaluate(data_gen_valid)#,val_data=True,testing=True) 
 
-    # TEST
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
-    model.testing = True
+    model.test_mode('test',mode=True)
     test_accuracy  =  model.evaluate(data_gen_test)#,test_data=True,testing=True)
     end_inf = time.time()
     args.time_inference = np.round(end_inf - start_inf,2)
