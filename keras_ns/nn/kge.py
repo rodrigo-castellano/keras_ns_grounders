@@ -433,6 +433,87 @@ class Tucker(KGELayer, Layer):
         return __internal__
 
 
+class LLMConcatE(KGELayer, Layer):
+    def __init__(self, atom_embedding_size: int,
+                 regularization: float=0.0,
+                 dropout_rate: float=0.0,
+                 dense_dims: List[int]= [1000, 500],
+                 dense_activations: List[str]=['relu', 'relu'],
+                 dropout_layers: List[float]=[0.0, 0.0],
+                 norm_layers: List[bool]=[False, False],
+                 **kwargs):
+        """
+        Initialize the LLM like KGE model.
+
+        Args:
+            atom_embedding_size (int): The size of the atom embedding.
+            relation_embedding_size (int, optional): The size of the relation embedding. If not provided, it will be set to the same size as the atom embedding.
+            regularization (float, optional): The regularization parameter. Defaults to 0.0.
+            dropout_rate (float, optional): The dropout rate. Defaults to 0.0.
+            dense_dims (List[int], optional): The dimensions of the dense layers in the network. Defaults to [1000, 500].
+            dense_activations (List[str], optional): The activation functions for the dense layers. Defaults to ['relu', 'relu'].
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            None
+        """
+        super().__init__()
+        
+        self.regularization = regularization
+        self.dropout_layer = tf.keras.layers.Dropout(rate=dropout_rate)
+        self.atom_embedding_size = atom_embedding_size
+        
+        w_initializer = tf.initializers.HeNormal() # Weight initializer for the dense layers, why HeNormal? Because it works better than Xavier with ReLU shape (not simmetry around 0) 
+        self.dense_network = keras.Sequential()
+        
+        # Define the MLP network
+        for i, (n_units, activation, dropout, norm) in enumerate(zip(dense_dims, dense_activations, dropout_layers, norm_layers)):
+            self.dense_network.add(keras.layers.Dense(n_units, activation=activation, kernel_initializer=w_initializer))
+            if dropout > 0.0:
+                self.dense_network.add(tf.keras.layers.Dropout(rate=dropout))
+            if norm:
+                self.dense_network.add(tf.keras.layers.BatchNormalization())
+        
+        self.output_layer = tf.keras.layers.Dense(1, activation='sigmoid') # Output layer for the LLME model
+    
+    def input_size(self) -> tf.Tensor:
+        return self.atom_embedding_size
+    
+    def output_size(self) -> int:
+        return 1
+    
+    def call(self, inputs, **kwargs) -> tf.Tensor:
+            """
+            Applies the KGE model to the input embeddings.
+
+            Args:
+                inputs: A tuple of two tensors representing the parent and child embeddings.
+            
+            Returns:
+                A tensor representing the concatenated embeddings of the head, predicates, and tail.
+            """
+            p_embeddings, c_embeddings = inputs
+            p_embeddings = self.dropout_layer(p_embeddings)
+            c_embeddings = self.dropout_layer(c_embeddings)
+            
+            head = c_embeddings[..., 0, :] # Shape: (B, head, E)                      
+            tail = c_embeddings[..., 1, :] # Shape: (B, tail, E)
+            
+            # Concatenate the head, predicates, and tail embeddings
+            embeddings = tf.concat([p_embeddings, head, tail], axis=-1) # Shape: (B, head + tail + E)
+            
+            return embeddings
+
+    @classmethod
+    def output_layer(cls):
+        def __internal__(inputs) -> tf.Tensor:
+
+            outputs = cls.dense_network(inputs)
+            return outputs
+
+        return __internal__
+
+
 ####################################
 def KGEFactory(name: str,
                atom_embedding_size: int,
@@ -443,6 +524,9 @@ def KGEFactory(name: str,
   relation_embedding_size = (relation_embedding_size
                              if relation_embedding_size is not None
                              else atom_embedding_size)
+  if name.casefold() == 'llmconcate':
+      return LLMConcatE(atom_embedding_size, regularization, dropout_rate), LLMConcatE.output_layer()
+  
   if name.casefold() == 'complex':
     return ComplEx(atom_embedding_size, regularization, dropout_rate), ComplEx.output_layer()
 
@@ -462,7 +546,7 @@ def KGEFactory(name: str,
 
   elif name.casefold() == 'mode':
     return ModE(atom_embedding_size, regularization, dropout_rate), ModE.output_layer()
-
+  
   else:
     print('Unknown KGE', name, flush=True)
     return None

@@ -20,8 +20,8 @@ import time
 from model_utils import * 
 
 import wandb
-from wandb.keras import WandbCallback
-from wandb.keras import WandbMetricsLogger
+from wandb.integration.keras import WandbCallback
+from wandb.integration.keras import WandbMetricsLogger
 
 explain_enabled: bool = False
 
