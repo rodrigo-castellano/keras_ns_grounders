@@ -1,8 +1,5 @@
 import sys
-sys.path.append('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders')
-sys.path.append('/home/castellanoontiv/keras_ns_grounders')
-sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
-sys.path.append('/home2/castellanoontiv/keras_ns_grounders/')
+sys.path.append('/home/christian/Dottorato/keras_ns_grounders')
 import os
 import tensorflow as tf
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -32,12 +29,12 @@ if __name__ == '__main__':
     use_WB = False
     log_folder :str = "tests/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
-    base_path :str = "data"
+    base_path :str = "/home/christian/Dottorato/keras_ns_grounders/experiments/data"
 
     epochs: int = 100
-    DATASET_NAME = ['countries_s1','nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
+    DATASET_NAME = ['countries_s1']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1','backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
-    KGE = ['complex','rotate']  # ["distmult", "transe","complex", "rotate"]
+    KGE = ['llmconcate']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['no_reasoner','r2n',] # ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
     E = [100,300] 
