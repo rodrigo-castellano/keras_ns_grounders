@@ -1,9 +1,11 @@
 import sys
-sys.path.append('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders')
-sys.path.append('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\experiments')
-sys.path.append('/home/castellanoontiv/keras_ns_grounders')
-sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
-sys.path.append('/home2/castellanoontiv/keras_ns_grounders/')
+import os
+
+# Get the directory of the current script
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+sys.path.append(os.path.join(current_dir, '..'))
+sys.path.append(os.path.join(current_dir, '..', 'keras_ns'))
 import os
 import tensorflow as tf
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
