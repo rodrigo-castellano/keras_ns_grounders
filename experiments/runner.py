@@ -30,12 +30,13 @@ if __name__ == '__main__':
     # tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
     use_logger = False
-    use_WB = True
+    use_WB = False
     log_folder :str = "experiments/tests/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
     base_path :str = "experiments/data"
     epochs: int = 5
     ULTRA = True
+    ULTRA_KGE = False
     DATASET_NAME = ['countries_s1']#,'nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1']#,'backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
@@ -115,6 +116,7 @@ if __name__ == '__main__':
 
         args.device = 'cpu' # if not tf.config.experimental.list_physical_devices('GPU') else 'gpu'
         args.use_ultra = ULTRA
+        args.use_ultra_kge = ULTRA_KGE
         args.dataset_name = dataset_name
         args.grounder = grounder
         args.kge = kge
@@ -124,9 +126,9 @@ if __name__ == '__main__':
         if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'): # For heavy datasets, run only one seed
             args.seed = [0]
         args.kge_atom_embedding_size = e
-        args.batch_size = 256 # 128 # Full batch only for explain.
-        args.val_batch_size = 256
-        args.test_batch_size = 256 #64
+        args.batch_size = 1 # 128 # Full batch only for explain.
+        args.val_batch_size = 1
+        args.test_batch_size = 1 #64
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'

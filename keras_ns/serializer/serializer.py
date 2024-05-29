@@ -232,7 +232,6 @@ class LogicSerializerFast(IndexerBase):
                                 if c in self.constant2domain_name else
                                 self.adaptive_constant2domain[c])
                     index_query.append(self.constant_to_global_index[domain][c])
-                    # index_query.append(int(self.constant_to_global_index[domain][c]))
                 # Now get the index of the predicate
                 predicate_idx = self.predicate_to_global_index[atom[0]]
                 index_query.append(predicate_idx)
@@ -243,11 +242,19 @@ class LogicSerializerFast(IndexerBase):
         # print('triplet_index_queries',triplet_index_queries)
 
 
+        # Create indices for A_predicates triples, in which, for each atom, the index of the h,t,r is stored.
+        triplet_index_A_predicates = []
+        for predicate in predicate_to_constant_tuples.keys():
+            # Now get the index of the predicate
+            predicate_idx = self.predicate_to_global_index[predicate]
+            for atom in predicate_to_constant_tuples[predicate]:
+                triplet_index_A_predicates.append(atom + [predicate_idx])  
+        
 
         return (domain_to_global,
                 predicate_to_constant_tuples,
                 index_groundings,
-                index_queries,triplet_index_queries)
+                index_queries,(triplet_index_queries,triplet_index_A_predicates))
 
 
 #################################################
