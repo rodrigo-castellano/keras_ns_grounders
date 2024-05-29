@@ -145,7 +145,8 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     start = time.time()
     data_gen_train = ns.dataset.DataGenerator(
         dataset_train, fol, serializer, engine,
-        batch_size=args.batch_size, ragged=ragged)
+        batch_size=args.batch_size, ragged=ragged,
+        use_ultra=args.use_ultra, use_ultra_kge=args.use_ultra_kge)
     end = time.time()
     args.time_ground_train = np.round(end - start,2)
     print("Time to create data generator train: ", np.round(end - start,2),'\n************************************')
@@ -153,7 +154,8 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     start = time.time()
     data_gen_valid = ns.dataset.DataGenerator(
        dataset_valid, fol, serializer, engine,
-       batch_size=args.val_batch_size, ragged=ragged)
+       batch_size=args.val_batch_size, ragged=ragged,
+        use_ultra=args.use_ultra, use_ultra_kge=args.use_ultra_kge)
     end = time.time()
     args.time_ground_valid = np.round(end - start,2)
     print("Time to create data generator valid: ",  np.round(end - start,2),'\n************************************') 
@@ -161,42 +163,21 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     start = time.time()
     data_gen_test = ns.dataset.DataGenerator(
         dataset_test, fol, serializer, engine,
-        batch_size=args.test_batch_size, ragged=ragged)
+        batch_size=args.test_batch_size, ragged=ragged,
+        use_ultra=args.use_ultra, use_ultra_kge=args.use_ultra_kge)
     end = time.time()
     args.time_ground_test = np.round(end- start,2)
     print("Time to create data generator test: ",  np.round(end - start,2),'\n************************************')
 
-    if args.use_ultra:
-        # ultra_embeddings = nested_dict(2, list)
-        # UltraModel = Ultra()
-        # UltraModel = UltraModel.to('cpu')
-
+    if args.use_ultra or args.use_ultra_kge:
         data_gen_train.device = args.device
-        data_gen_train.global_info_ultra()
         data_gen_train = build_relation_graph(data_gen_train)
 
         data_gen_valid.device = args.device
-        data_gen_valid.global_info_ultra()
         data_gen_valid = build_relation_graph(data_gen_valid)
     
         data_gen_test.device = args.device
-        data_gen_test.global_info_ultra()
         data_gen_test = build_relation_graph(data_gen_test)
-
-        # train_constant_embeddings, train_predicate_embeddings = UltraModel(data_gen_train, data_gen_train.Q_global)
-        # ultra_embeddings['train']['constant'] = train_constant_embeddings
-        # ultra_embeddings['train']['predicate'] = train_predicate_embeddings
-        # print('\n\nUltra embeddings train', ultra_embeddings['train']['predicate'].shape)
-        # for k in ultra_embeddings['train'].keys():
-        #     print(k, ultra_embeddings['train'][k])
-        # valid_constant_embeddings, valid_predicate_embeddings = UltraModel(data_gen_valid, data_gen_valid.Q_global)
-        # ultra_embeddings['valid']['constant'] = valid_constant_embeddings
-        # ultra_embeddings['valid']['predicate'] = valid_predicate_embeddings
-        # test_constant_embeddings, test_predicate_embeddings = UltraModel(data_gen_test, data_gen_test.Q_global)
-        # ultra_embeddings['test']['constant'] = test_constant_embeddings
-        # ultra_embeddings['test']['predicate'] = test_predicate_embeddings
-    # else:
-    #     ultra_embeddings = None
 
 
     # COMPILING MODEL
@@ -204,9 +185,9 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         data_gen_train,
         data_gen_valid,
         data_gen_test,
-        # ultra_embeddings,
         fol, rules,
         use_ultra=args.use_ultra,
+        use_ultra_kge=args.use_ultra_kge,
         kge=args.kge,
         kge_regularization=args.kge_regularization,
         model_name=get_arg(args, 'model_name', 'dcr'),
@@ -261,8 +242,6 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         model.kge_model.load_weights(kge_checkpoint_load[0])
         model.kge_model.trainable = kge_checkpoint_load[1]
         model.summary()
-
-
 
     # CALLBACKS
     callbacks = []

@@ -2,11 +2,16 @@ from typing import Dict, Iterable, List, Tuple, Union
 import keras_ns as ns
 from keras_ns.logic.commons import Atom, FOL, RuleGroundings
 import tensorflow as tf
-from keras.metrics import Metric
-from keras.losses import Loss
-import abc
 import numpy as np
 import torch
+
+from keras import Sequential
+from keras.layers import Dense
+import sys
+sys.path.append('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\experiments')
+from ultra_utils import Ultra
+from ultra_utils import build_relation_graph
+from collections import defaultdict
 
 DomainName = str
 ConstantName = str
@@ -55,7 +60,7 @@ def _from_strings_to_tensors(fol, serializer,
     # queries_global  ?? : global indices of the queries. The first index is the original query, the rest are the corruptions of that query. It i as queries, but with (h_id, t_id, r_id)
     # print('ground_formulas',ground_formulas)
     # print('queries',queries)
-    (domain_to_global, predicate_tuples, groundings, queries, queries_global) = (
+    (domain_to_global, predicate_tuples, groundings, queries, (queries_global,A_predicates_triplets)) = (
         serializer.serialize_global_A_predicates(queries=queries,
                              rule_groundings=ground_formulas))
     # print('\n\n\nType of queries_global', type(queries_global), queries_global)
@@ -104,15 +109,15 @@ def _from_strings_to_tensors(fol, serializer,
     # TODO check how to understand if it is a good tensor or need to be ragged.
     if ragged:
         queries = tf.ragged.constant(queries, dtype=tf.int32)
-        queries_global = tf.ragged.constant(queries_global, dtype=tf.int32)
+        # queries_global = tf.ragged.constant(queries_global, dtype=tf.int32)
         labels =  tf.ragged.constant(labels, dtype=tf.float32)
     else:
         queries = tf.constant(queries, dtype=tf.int32)
-        queries_global = tf.constant(queries_global, dtype=tf.int32)
+        # queries_global = tf.constant(queries_global, dtype=tf.int32)
         labels = tf.constant(labels, dtype=tf.float32)
 
     return (input_domains_tf, input_atoms_tuples_tf,
-            input_formulas_tf, queries, queries_global), labels
+            input_formulas_tf, queries, (queries_global,A_predicates_triplets)), labels
 
 
 class Dataset():
@@ -144,6 +149,17 @@ class Dataset():
         return self.queries[b*i:b*(i+1)], self.labels[b*i:b*(i+1)], 
 
 
+class Dataset_Ultra():
+    
+        def __init__(self, edge_index, edge_type, num_relations, num_nodes, num_edges, device):
+            self.edge_index = edge_index
+            self.edge_type = edge_type
+            self.num_relations = num_relations
+            self.num_nodes = num_nodes
+            self.num_edges = num_edges
+            self.device = device
+
+
 class DataGenerator(tf.keras.utils.Sequence):
 
     def __init__(self,
@@ -154,7 +170,9 @@ class DataGenerator(tf.keras.utils.Sequence):
                  deterministic=True,
                  batch_size=None,
                  ragged: bool=False,
-                 name= "None"):
+                 name= "None",
+                 use_ultra = False,
+                 use_ultra_kge = False):
 
         self.dataset = dataset
         self.deterministic = deterministic
@@ -166,6 +184,16 @@ class DataGenerator(tf.keras.utils.Sequence):
                             if batch_size is not None and batch_size > 0
                             else -1)
         self.name = name
+        self.use_ultra = use_ultra
+        self.use_ultra_kge = use_ultra_kge
+        if self.use_ultra or self.use_ultra_kge:
+            self.global_info_ultra()
+            self.Ultra = Ultra()
+            state = torch.load('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\ULTRA\\ckpts\\ultra_4g.pth', map_location="cpu")
+            # Filter out the keys that correspond to the final layer
+            filtered_state = {k: v for k, v in state.items() if 'mlp.2' not in k}        
+            self.Ultra.load_state_dict(filtered_state, strict=False)
+            self.Ultra = self.Ultra.to('cpu')
 
         self._num_batches = 1
         if self._batch_size > 0:
@@ -178,8 +206,7 @@ class DataGenerator(tf.keras.utils.Sequence):
             print('Building Full Batch Dataset', self.name)
             self._full_batch = self._get_batch(0, len(self.dataset))
 
-        # # Get info for ULTRA
-        # self.global_info_ultra()
+
 
 
     def __getitem__(self, item):
@@ -197,7 +224,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         queries, labels = self.dataset[b*i:b*(i+1)]
         constants_features = self.dataset.constants_features
 
-        ((X_domains_data, A_predicates_data, A_rules_data, Q, Q_global), y) = _from_strings_to_tensors(
+        ((X_domains_data, A_predicates_data, A_rules_data, Q, (Q_global,A_predicates_triplets)), y) = _from_strings_to_tensors(
             fol=self.fol,
             serializer=self.serializer,
             queries=queries,
@@ -206,7 +233,21 @@ class DataGenerator(tf.keras.utils.Sequence):
             ragged=self.ragged,
             constants_features=constants_features,
             deterministic=self.deterministic)
-        return (X_domains_data, A_predicates_data, A_rules_data, Q, Q_global), y
+        
+        
+        # print('A_predicates_triplets', len(A_predicates_triplets))
+        embeddings = None
+        if self.use_ultra_kge:  
+            constant_embeddings, predicate_embeddings = self.Ultra(self.aux_dataset, Q_global,use_kge=True) # embedds of the ctes,preds
+            # Convert embeddings to tf
+            for key in constant_embeddings:
+                constant_embeddings[key] = tf.constant(constant_embeddings[key])
+            embeddings = (constant_embeddings, tf.constant(predicate_embeddings, dtype=tf.float32))
+        elif self.use_ultra: 
+            embeddings,_ = self.Ultra(self.aux_dataset, A_predicates_triplets, use_kge=False) # embedds of the atoms
+            embeddings = tf.constant(embeddings, dtype=tf.float32)
+
+        return (X_domains_data, A_predicates_data, A_rules_data, Q, embeddings), y
     
     
     def global_info_ultra(self):
@@ -220,7 +261,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         queries, labels = self.dataset[:]
         constants_features = self.dataset.constants_features
         # I select engine=None because I dont want to ground the rules, only the queries    
-        ((X_domains_data, A_predicates_data, A_rules_data, Q, Q_global), y) = _from_strings_to_tensors(
+        ((X_domains_data, A_predicates_data, A_rules_data, Q, (Q_global,_)), y) = _from_strings_to_tensors(
             fol=self.fol,
             serializer=self.serializer,
             queries=queries,
@@ -241,9 +282,15 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.num_edges = self.edge_index.shape[1] # it is the number of queries
         self.device = 'cpu' 
 
-        # convert edge_index and edge_type to torch tensor
+        # convert edge_index and edge_type to torch tensor to feed it to ULTRA
         self.edge_index = torch.tensor(self.edge_index, dtype=torch.long)
         self.edge_type = torch.tensor(self.edge_type, dtype=torch.long)
+
+        self.aux_dataset = Dataset_Ultra(edge_index=self.edge_index, edge_type=self.edge_type, num_relations=self.num_relations, 
+                                    num_nodes=self.num_nodes, num_edges=self.num_edges, device=self.device)
+        self.aux_dataset.device = 'cpu'
+        self.aux_dataset = build_relation_graph(self.aux_dataset)
+        self.aux_dataset.fol = self.fol
 
         return None
 

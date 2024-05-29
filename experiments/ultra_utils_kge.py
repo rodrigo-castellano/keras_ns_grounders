@@ -196,7 +196,7 @@ class EntityNBFNet(BaseNBFNet):
             "edge_weights": edge_weights,
         }
 
-    def forward(self, data, relation_representations, batch, use_kge=False):
+    def forward(self, data, relation_representations, batch):
         h_index, t_index, r_index = batch.unbind(-1)
         # initial query representations are those from the relation graph
         self.query = relation_representations
@@ -226,16 +226,11 @@ class EntityNBFNet(BaseNBFNet):
         # message passing and updated node representations of the head entities 
         output = self.bellmanford(data, h_index[:, 0], r_index[:, 0])  # (num_nodes, batch_size, feature_dim）
         feature = output["node_feature"]
-
-        if not use_kge:
-            # Get the tail indices [19,num_negative+1], then unesqueeze it to [19,num_negative+1,1], then expand (repeat) it to [19,num_negative+1,64] 
-            index = t_index.unsqueeze(-1).expand(-1, -1, feature.shape[-1])
-            # here, for every query (pos and neg), I get the tail embeddings
-            feature = feature.gather(1, index)  # (batch_size, num_negative + 1, feature_dim)
-            # From these embeddings of the pos and negatives queries, Im just interested in the postive query (self representation)
-            feature = feature[:, :1, :]
-
+        # print('index ',t_index.unsqueeze(-1).expand(-1, -1, feature.shape[-1]).shape, t_index.unsqueeze(-1).expand(-1, -1, feature.shape[-1]) )
+        # print('feature shape:', feature.shape)
+        # (batch_size, num_negative + 1, dim)  
         embedd = self.mlp(feature)
+        # print('embedd shape:', embedd.shape)
         return embedd
 
 
@@ -338,7 +333,7 @@ class Ultra(nn.Module):
             subbatches[n_corruptions].append([batch[i]])
         return subbatches
 
-    def forward(self, data, batch,use_kge=False):
+    def forward(self, data, batch):
         
         # batch shape: (bs, 1+num_negs, 3)
         # relations are the same all positive and negative triples, so we can extract only one from the first triple among 1+nug_negs
@@ -369,58 +364,36 @@ class Ultra(nn.Module):
         all_relation_representations = []
         all_entity_representations = []
         for key,batch in batches.items():
-            # print('Batch:',batch.shape)
-            # if the number of dimensions is 2,add a dimension in the middle (it would mean that there are no negatives, only positives)
-            if len(batch.shape) == 2:
-                batch = batch.unsqueeze(1)
             query_rels = batch[:, 0, 2]
 
             # For each query, get a representation of all the relations of dim 64
             # relation_representations:  torch.Size([16, 360, 64])=(queries,n_relationsx2,dim_embedd)
-            relation_representations = self.relation_model(data.relation_graph, query=query_rels) 
+            relation_representations = self.relation_model(data.relation_graph, query=query_rels)   
             # Given the batch [16,1594,3], do a prediction, for each of the 16 heads(tails) in the queries, of all possible tails(heads) candidates
             # score:  torch.Size([16, 1594])
+
 
             # Instead of an array of [n_queries, n_corruptions, 3], I get [n_queries*2, n_corruptions/2, 3] in training, where for each q, half of the corrup. are negatives (head corr) and the other half are tail corruptions
             # I put them as a two different queries, so that I can pass them to the entity model
             batch,relation_representations = self.split_head_tail_negatives(batch,relation_representations)
             # It may be that the queries have indices of entities greater than the number of entities in the graph, so I need to filter them. SHUOLD NOT HAPPEN!!!
-            entity_representations = self.entity_model(data, relation_representations, batch,use_kge=use_kge) # [16,1594,64] = [batch_size, num_negatives, embedd_size]
+            # batch = torch.tensor(batch, dtype=torch.int64)
+            entity_representations = self.entity_model(data, relation_representations, batch) # [16,1594,64] = [batch_size, num_negatives, embedd_size]
             # PLEASE make sure that in entity_representations:[1,354=n_nodes,64], the first node correspond to the first index and so on
             all_relation_representations.append(relation_representations)
             all_entity_representations.append(entity_representations)
 
-        
-        if use_kge:
-            # print('relation_representations before:',relation_representations.shape)
-            # print('entity_representations before:',entity_representations.shape)
-            # By now, as a temporary solution, I will take the average of hte relative embeddings of each entity
-            relation_representations = relation_representations[:,data.num_relations//2:,:] # Dont take the inverse relations
-            relation_representations = torch.mean(relation_representations, dim=0)
-            relation_representations = pytorch_to_tf(relation_representations)
 
-            entity_representations = torch.mean(entity_representations, dim=0)
-            # print('entity_representations after:',entity_representations.shape)
-            # Here, if the entities have different domains, I put them in a dict with different domains
-            entity_representations = self.convert_to_domain(entity_representations,data.fol)
-            # print('relation_representations after:',relation_representations.shape)
-        else:
-            # For the relations, I shuold take the one associated to the query
-            # squeeze the dim in the middle, given we have only the postive query
-            # assert that there is only a positive query
-            assert entity_representations.shape[1] == 1
-            entity_representations = entity_representations.squeeze(1)
-            # convert the atom embedds to tf (I dont need convert_to_domain because I directly get the atom embedds, not the cte embedds)
-            # entity_representations = pytorch_to_tf(entity_representations)
-            entity_representations = entity_representations.detach().cpu().numpy()
-            # I DONT CARE ABOUT THE RELATIONS, THIS IS THE ATOMS REPRESENATIONS
-            # print('relation_representations.shape:',relation_representations.shape)
-            # print('entity_representations.shape',entity_representations.shape)
-        
+        # By now, as a temporary solution, I will take the average of hte relative embeddings of each entity
+        entity_representations = torch.mean(entity_representations, dim=0)
+        relation_representations = relation_representations[:,data.num_relations//2:,:] # Dont take the inverse relations
+        relation_representations = torch.mean(relation_representations, dim=0)
+        # Here, if the entities have different domains, I put them in a dict with different domains
+        entity_representations = self.convert_to_domain(entity_representations,data.fol)
 
         # convert them to tf tensors
         # relation_representations = tf.convert_to_tensor(relation_representations.detach().numpy())
-
+        relation_representations = pytorch_to_tf(relation_representations)
         # for key in entity_representations.keys():
         #     entity_representations[key] = tf.convert_to_tensor(entity_representations[key])
 
