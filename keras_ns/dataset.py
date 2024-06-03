@@ -11,7 +11,7 @@ import sys
 sys.path.append('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\experiments')
 from ultra_utils import Ultra
 from ultra_utils import build_relation_graph
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 DomainName = str
 ConstantName = str
@@ -50,24 +50,32 @@ def _from_strings_to_tensors(fol, serializer,
         ground_formulas = {}
         rules = []
 
+    '''
+    - Domain_to_global: set of global indices of all the ctes whithin each domain. Only the ones present in the batch. 
+        Not necessarily in order, they are added as the appear in the ordered groundings.
 
-    # domain_to_global: global indices of all the ctes whithin each domain. Not in order, they are added as the appear in the groundings. Just to see how many different constants
-    # predicate_tuples: local indices of the ctes with respect to each predicate. For each predicate, all groundings of that predicate (ctes represented with local indeces)
-    # groundings      : local indices that  represent the position of atoms within the respective rule groundings. First index is the rule, e.g. ['r0'], the the first element 
-    #   [0] is a set of bodies and the second element [1] is a set of heads. The body has 2 elements, each representing one atom. The head has 1 element, representing one atom.
-    # queries     ??    : local indices that represent the position of atoms within each query. len(queries) is the number of queries, each query is a list of atoms. 
-    #   The first index (atom) represents the original query, the rest of the indeces (atoms) represent the corruptions of that query
-    # queries_global  ?? : global indices of the queries. The first index is the original query, the rest are the corruptions of that query. It i as queries, but with (h_id, t_id, r_id)
-    # print('ground_formulas',ground_formulas)
-    # print('queries',queries)
-    (domain_to_global, predicate_tuples, groundings, queries, (queries_global,A_predicates_triplets)) = (
-        serializer.serialize_global_A_predicates(queries=queries,
-                             rule_groundings=ground_formulas))
-    # print('\n\n\nType of queries_global', type(queries_global), queries_global)
-    # print('domain_to_global', domain_to_global)
-    # print('predicate_tuples',predicate_tuples)
-    # print('groundings',len(groundings['r0'][0]),len(groundings['r0'][1]),groundings['r0'][0][:20],groundings['r0'][1][:20] ) #first index is the rule,  [0] is the body and [1] is the head
-    # print('queries', len(queries), len(queries[0]), queries[0:5])
+    - Predicate_tuples: local indices of the ctes in the atoms with respect to each predicate. For each predicate, all groundings of that predicate are present
+        For every predicate, indices start from 0, as they appear in the ordered groundings (not neccessarily in strict order).
+        The local indices are created every batch in 'domain_to_local_constant_index', starting by 0.
+
+    - Groundings      : local indices that  represent the position of atoms within the respective rule groundings. First index is the rule, e.g. ['r0'], the the first element 
+      [0] is a set of bodies and the second element [1] is a set of heads. The body has 2 elements, each representing one atom. The head has 1 element, representing one atom.
+      the local indices are the ones assigned to the ordered atoms of the batch.
+
+    - Queries         : local indices that represent the position of atoms within each query. len(queries) is the number of queries, each query is a list of atoms. 
+      The first index (atom) represents the original query, the rest of the indeces (atoms) represent the corruptions of that query. 
+      The local indices are the ones assigned to the ordered atoms of the batch.
+
+    - Queries_global  : global indices of the queries. The first index is the original query, the rest are the corruptions of that query. It i as queries, but with (h_id, t_id, r_id)
+    '''
+    queries_global = A_predicates_triplets = None
+    (domain_to_global, predicate_tuples, groundings, queries) = (serializer.serialize(queries=queries,
+                                rule_groundings=ground_formulas))   
+    
+    # (domain_to_global, predicate_tuples, groundings, queries, (queries_global,A_predicates_triplets)) = (
+    #     serializer.serialize_global_A_predicates(queries=queries,
+    #                          rule_groundings=ground_formulas))
+
 
     # Convert constants(domain) indices from list to tf tensor
     input_domains_tf: Dict[DomainName, ConstantFeatures] = {}
@@ -109,11 +117,9 @@ def _from_strings_to_tensors(fol, serializer,
     # TODO check how to understand if it is a good tensor or need to be ragged.
     if ragged:
         queries = tf.ragged.constant(queries, dtype=tf.int32)
-        # queries_global = tf.ragged.constant(queries_global, dtype=tf.int32)
         labels =  tf.ragged.constant(labels, dtype=tf.float32)
     else:
         queries = tf.constant(queries, dtype=tf.int32)
-        # queries_global = tf.constant(queries_global, dtype=tf.int32)
         labels = tf.constant(labels, dtype=tf.float32)
 
     return (input_domains_tf, input_atoms_tuples_tf,
@@ -172,7 +178,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                  ragged: bool=False,
                  name= "None",
                  use_ultra = False,
-                 use_ultra_kge = False):
+                 use_ultra_with_kge = False):
 
         self.dataset = dataset
         self.deterministic = deterministic
@@ -185,8 +191,8 @@ class DataGenerator(tf.keras.utils.Sequence):
                             else -1)
         self.name = name
         self.use_ultra = use_ultra
-        self.use_ultra_kge = use_ultra_kge
-        if self.use_ultra or self.use_ultra_kge:
+        self.use_ultra_with_kge = use_ultra_with_kge
+        if self.use_ultra or self.use_ultra_with_kge:
             self.global_info_ultra()
             self.Ultra = Ultra()
             state = torch.load('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\ULTRA\\ckpts\\ultra_4g.pth', map_location="cpu")
@@ -201,7 +207,6 @@ class DataGenerator(tf.keras.utils.Sequence):
                 self._num_batches = len(self.dataset) // self._batch_size
             else:
                 self._num_batches = len(self.dataset) // self._batch_size + 1
-
         if self._num_batches == 1:
             print('Building Full Batch Dataset', self.name)
             self._full_batch = self._get_batch(0, len(self.dataset))
@@ -232,19 +237,17 @@ class DataGenerator(tf.keras.utils.Sequence):
             engine=self.engine,
             ragged=self.ragged,
             constants_features=constants_features,
-            deterministic=self.deterministic)
+            deterministic=self.deterministic) 
         
-        
-        # print('A_predicates_triplets', len(A_predicates_triplets))
         embeddings = None
-        if self.use_ultra_kge:  
-            constant_embeddings, predicate_embeddings = self.Ultra(self.aux_dataset, Q_global,use_kge=True) # embedds of the ctes,preds
+        if self.use_ultra_with_kge:  
+            constant_embeddings, predicate_embeddings = self.Ultra(self.aux_dataset, Q_global,atom_repr=False) # embedds of the ctes,preds
             # Convert embeddings to tf
             for key in constant_embeddings:
                 constant_embeddings[key] = tf.constant(constant_embeddings[key])
             embeddings = (constant_embeddings, tf.constant(predicate_embeddings, dtype=tf.float32))
         elif self.use_ultra: 
-            embeddings,_ = self.Ultra(self.aux_dataset, A_predicates_triplets, use_kge=False) # embedds of the atoms
+            embeddings = self.Ultra(self.aux_dataset, A_predicates_triplets, atom_repr=True) # embedds of the atoms
             embeddings = tf.constant(embeddings, dtype=tf.float32)
 
         return (X_domains_data, A_predicates_data, A_rules_data, Q, embeddings), y
@@ -261,7 +264,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         queries, labels = self.dataset[:]
         constants_features = self.dataset.constants_features
         # I select engine=None because I dont want to ground the rules, only the queries    
-        ((X_domains_data, A_predicates_data, A_rules_data, Q, (Q_global,_)), y) = _from_strings_to_tensors(
+        ((X_domains_data, A_predicates_data, _, _, (Q_global,_)), _) = _from_strings_to_tensors(
             fol=self.fol,
             serializer=self.serializer,
             queries=queries,
@@ -281,7 +284,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.num_nodes = sum(len(X_domains_data[key]) for key in X_domains_data)
         self.num_edges = self.edge_index.shape[1] # it is the number of queries
         self.device = 'cpu' 
-
+    
         # convert edge_index and edge_type to torch tensor to feed it to ULTRA
         self.edge_index = torch.tensor(self.edge_index, dtype=torch.long)
         self.edge_type = torch.tensor(self.edge_type, dtype=torch.long)

@@ -17,21 +17,49 @@ class ConstantEmbeddings(Layer):
         self.embedder = {}
         self.domains = domains
         for domain in domains:
-            # print('Domain', domain.name)
-            # print('Constants', len(domain.constants), 'Embedding size', constant_embedding_sizes_per_domain[domain.name])
+            # tf.print('Domain', domain.name)
+            # tf.print('Constants', len(domain.constants),domain.constants)
             self.embedder[domain.name] = Embedding(
                 len(domain.constants),
                 constant_embedding_sizes_per_domain[domain.name],
                 embeddings_regularizer=L2(regularization))
-
     # domain_inputs is Dict domain->tensor of idx
     def call(self, domain_inputs: Dict[str, tf.Tensor], **kwargs):
         domain_features = {}
         for domain in self.domains:
             domain_features[domain.name] = self.embedder[domain.name](
                 domain_inputs[domain.name])
-            # print('Domain', domain.name, 'inputs', domain_inputs[domain.name].shape,domain_inputs[domain.name]  )
-            # print('Domain', domain.name, 'outputs', domain_features[domain.name].shape,domain_features[domain.name])
+            # tf.print('Domain', domain.name, 'inputs', domain_inputs[domain.name].shape,domain_inputs[domain.name],summarize=-1)
+            # tf.print('Domain', domain.name, 'outputs', domain_features[domain.name].shape,domain_features[domain.name],summarize=-1)
+        return domain_features
+
+class ConstantEmbeddingsSparse(Layer):
+    """same as the class above, but it uses a sparse tensor as output. For example if I have idx  = [1,2,4,6],
+    instead of the output being [emb(1),emb(2),emb(4),emb(6)], it will be [0,emb(1),emb(2),0,emb(4),0,emb(6)] as a sparse tensor"""
+    def __init__(self, domains: List[Domain],
+                 constant_embedding_sizes_per_domain: Dict[str, int],
+                 regularization: float=0.0):
+        super().__init__()
+        self.embedder = {}
+        self.domains = domains
+        for domain in domains: 
+            self.embedder[domain.name] = Embedding(
+                len(domain.constants),
+                constant_embedding_sizes_per_domain[domain.name],
+                embeddings_regularizer=L2(regularization))
+    # domain_inputs is Dict domain->tensor of idx
+    def call(self, domain_inputs: Dict[str, tf.Tensor], **kwargs):
+        domain_features = {}
+        for domain in self.domains:
+            # tf.print('domain_inputs[domain.name]', domain_inputs[domain.name].shape, domain_inputs[domain.name], summarize=-1)
+            # tf.print('type(domain_inputs[domain.name])', type(domain_inputs[domain.name]))
+            # tf.print('type(self.embedder[domain.name])', type(self.embedder[domain.name]))
+            domain_features[domain.name] = self.embedder[domain.name](
+                domain_inputs[domain.name])
+            embedds = self.embedder[domain.name](domain_inputs[domain.name])
+            # convert to sparse tensor tf.SparseTensor(indices=domain_inputs[domain.name], values=embedds, dense_shape)
+            # tf.print('Domain', domain.name, 'inputs', domain_inputs[domain.name].shape,domain_inputs[domain.name],summarize=-1)
+            # tf.print('Domain', domain.name, 'outputs', domain_features[domain.name].shape,domain_features[domain.name],summarize=-1)
         return domain_features
 
 class PredicateEmbeddings(Layer):
