@@ -29,20 +29,21 @@ wandb.login()
 if __name__ == '__main__':
 
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
-    # tf.config.run_functions_eagerly(True)
+    tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
     use_logger = False
     use_WB = False
     log_folder :str = "experiments/tests/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
     base_path :str = "experiments/data"
-    epochs: int = 5
-    ULTRA = True
-    ULTRA_KGE = False
+    epochs: int = 1
+    EARLY_STOPPING = True
+    ULTRA = False
+    ULTRA_WITH_KGE = False
     DATASET_NAME = ['countries_s1']#,'nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1']#,'backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['r2n']#,'no_reasoner','r2n',] # ['dcr','sbr','r2n','no_reasoner']  
+    MODEL_NAME = ['no_reasoner']#,'r2n']#,'no_reasoner','r2n',] # ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
     E = [100]#,300] 
     DEPTH = [1]#,3]
@@ -118,7 +119,7 @@ if __name__ == '__main__':
 
         args.device = 'cpu' # if not tf.config.experimental.list_physical_devices('GPU') else 'gpu'
         args.use_ultra = ULTRA
-        args.use_ultra_kge = ULTRA_KGE
+        args.use_ultra_with_kge = ULTRA_WITH_KGE
         args.dataset_name = dataset_name
         args.grounder = grounder
         args.kge = kge
@@ -128,9 +129,9 @@ if __name__ == '__main__':
         if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'): # For heavy datasets, run only one seed
             args.seed = [0]
         args.kge_atom_embedding_size = e
-        args.batch_size = 1 # 128 # Full batch only for explain.
-        args.val_batch_size = 1
-        args.test_batch_size = 1 #64
+        args.batch_size = 128 # 128 # Full batch only for explain.
+        args.val_batch_size = 128
+        args.test_batch_size = 128 #64
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
@@ -175,14 +176,14 @@ if __name__ == '__main__':
         args.learning_rate = lr
         args.lr_sched = lr_sched
         args.optimizer = 'adam'
-        args.early_stopping = True
-        args.epochs = epochs # if not args.early_stopping else 1500
+        args.early_stopping = EARLY_STOPPING
+        args.epochs = epochs if not args.early_stopping else 1500
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
         args.loss = "binary_crossentropy"
         args.weight_loss = w_loss
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
-        args.valid_frequency = 1
+        args.valid_frequency = 3
         args.resnet = True
         args.reasoner_depth = dp if nr > 0 else 0
         args.reasoner_regularization_factor = rr

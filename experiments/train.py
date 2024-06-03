@@ -146,7 +146,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     data_gen_train = ns.dataset.DataGenerator(
         dataset_train, fol, serializer, engine,
         batch_size=args.batch_size, ragged=ragged,
-        use_ultra=args.use_ultra, use_ultra_kge=args.use_ultra_kge)
+        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge)
     end = time.time()
     args.time_ground_train = np.round(end - start,2)
     print("Time to create data generator train: ", np.round(end - start,2),'\n************************************')
@@ -155,7 +155,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     data_gen_valid = ns.dataset.DataGenerator(
        dataset_valid, fol, serializer, engine,
        batch_size=args.val_batch_size, ragged=ragged,
-        use_ultra=args.use_ultra, use_ultra_kge=args.use_ultra_kge)
+        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge)
     end = time.time()
     args.time_ground_valid = np.round(end - start,2)
     print("Time to create data generator valid: ",  np.round(end - start,2),'\n************************************') 
@@ -164,12 +164,12 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     data_gen_test = ns.dataset.DataGenerator(
         dataset_test, fol, serializer, engine,
         batch_size=args.test_batch_size, ragged=ragged,
-        use_ultra=args.use_ultra, use_ultra_kge=args.use_ultra_kge)
+        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge)
     end = time.time()
     args.time_ground_test = np.round(end- start,2)
     print("Time to create data generator test: ",  np.round(end - start,2),'\n************************************')
 
-    if args.use_ultra or args.use_ultra_kge:
+    if args.use_ultra or args.use_ultra_with_kge:
         data_gen_train.device = args.device
         data_gen_train = build_relation_graph(data_gen_train)
 
@@ -182,12 +182,9 @@ def main(base_path, output_filename, log_filename, use_WB, args):
 
     # COMPILING MODEL
     model = CollectiveModel(
-        data_gen_train,
-        data_gen_valid,
-        data_gen_test,
         fol, rules,
         use_ultra=args.use_ultra,
-        use_ultra_kge=args.use_ultra_kge,
+        use_ultra_with_kge=args.use_ultra_with_kge,
         kge=args.kge,
         kge_regularization=args.kge_regularization,
         model_name=get_arg(args, 'model_name', 'dcr'),

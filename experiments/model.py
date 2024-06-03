@@ -36,20 +36,21 @@ class KGEModel(Model):
                 fol.predicates,
                 predicate_embedding_size,
                 regularization=kge_regularization)
+            
             self.constant_embedder = ConstantEmbeddings(
                 domains=fol.domains,
                 constant_embedding_sizes_per_domain={
                     domain.name: constant_embedding_size
                     for domain in fol.domains},
                 regularization=kge_regularization)
+            
+            # self.constant_embedder = ConstantEmbeddingsSparse(
+            #     domains=fol.domains,
+            #     constant_embedding_sizes_per_domain={
+            #         domain.name: constant_embedding_size
+            #         for domain in fol.domains},
+            #     regularization=kge_regularization)
         else: 
-            # self.Ultra = Ultra()
-            # state = torch.load('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\ULTRA\\ckpts\\ultra_4g.pth', map_location="cpu")
-            # # Filter out the keys that correspond to the final layer
-            # filtered_state = {k: v for k, v in state.items() if 'mlp.2' not in k}        
-            # self.Ultra.load_state_dict(filtered_state, strict=False)
-            # self.Ultra = self.Ultra.to('cpu')
-
             # To adapt the size of the embeddings given by ultra
             self.predicate_projection = Sequential([
                 Dense(128, activation='relu'),
@@ -86,39 +87,47 @@ class KGEModel(Model):
                         A_predicates: Dict[str, tf.Tensor]):
         predicate_embeddings_per_triplets = []
         '''For A_predicates, take the emebdding representation of the predicates and the constants and create the triplets for the KGE model.
-        For instance, if I have a predicate with 3 grounded atoms, I will repeat the embedding of that predicate 3 times, and put it with the embeddings of the constants for each grounded atom'''
-
-        
-        # What I do here is taking the embedding of each predicate and repeating it for each grounded atom of that predicate
-        # For example, if I have a predicate with 3 grounded atoms, I will repeat the embedding of that predicate 3 times, 
-        # resulting in a tensor of shape [3,200] where 200 is the embedding size of the predicate.
-        # I do this for each predicate in the A_predicates dictionary, so I get [n_predicates, n_atoms/grounding per predicate, embed_size_predicate]
+        For instance, if I have a predicate with 3 grounded atoms, I will repeat the embedding of that predicate 3 times, and put it with the 
+        embeddings of the constants for each grounded atom
+        - output: 
+            predicate_embeddings_per_triplets: [n_predicates, n_atoms/grounding per predicate, embed_size_predicate]
+            constant_embeddings_for_triplets: [n_atoms,2=n_domains,embed_size_constant]'''
+            
         
 
         for p,indices in A_predicates.items():
             idx = self.fol.name2predicate_idx[p]
-            p_embeddings = tf.expand_dims(predicate_embeddings[idx], axis=0)  # 1E
-            # shape: [1,1918,200]=[1,number of grounded atoms for that predicate, embed size of the predicate]
-            predicate_embeddings_per_triplets.append(tf.repeat(p_embeddings, tf.shape(indices)[0], axis=0))  #PE
-        # shape=[n_predicates, n_atoms/grounding per predicate, embed_size_predicate]
-        predicate_embeddings_per_triplets = tf.concat(predicate_embeddings_per_triplets,
-                                                      axis=0)
+            # Repeat the predicate embedding for each atom in the predicate
+            p_embeddings = tf.expand_dims(predicate_embeddings[idx], axis=0)  # [1,1,200]=[1,1, embed_size_predicate]
+            predicate_embeddings_per_triplets.append(tf.repeat(p_embeddings, tf.shape(indices)[0], axis=0))  # [1,1918,200]=[1,n_groundings for that predicate, embed_size_predicate]
+        predicate_embeddings_per_triplets = tf.concat(predicate_embeddings_per_triplets,axis=0) # shape=[n_predicates, n_groundings for that predicate, embed_size_predicate]
 
         constant_embeddings_for_triplets = []
         for p,constant_idx in A_predicates.items():
-            constant_idx = tf.cast(constant_idx, tf.int32)
+            # tf.print('\npredicate',p)
+            # print('predicate',p,'constant_idx',constant_idx.shape,'constant_idx',constant_idx)
+            constant_idx = tf.cast(constant_idx, tf.int32) # all the groundings idx for that predicate
             predicate = self.fol.name2predicate[p]
             one_predicate_constant_embeddings = []
             # Here, for each domain of the predicate (LocInSR(subregion,region)->for subregion), I get the embeddings of the constants that
             # are grounded in that domain. If LocInSR has 58 groundings/atoms, I will get the representation of the subregion constants in 
-            # those atoms(58,200). I do the same for the region domain, so I get a tensor of shape [58,2,200] for LocIn where 2 is the arity of the predicate. 
+            # those atoms(58,200). I do the same for the domain region, so I get a tensor of shape [58,2,200] for LocIn where 2 is the arity of the predicate. 
             for i,domain in enumerate(predicate.domains):
+                # print('domain',domain.name)
+                # print('constant_embeddings of domain',constant_embeddings[domain.name].shape)
+                # print('constant_idx',constant_idx.shape,constant_idx)
+                # print('constant_idx[...,i]',constant_idx[...,i].shape,constant_idx[...,i])
+                # Take the embeddings of the constants in the domain i of the predicate
+                # tf.print('constant_idx',constant_idx[...,i].shape,constant_idx[...,i],summarize=-1) if domain.name == 'countries' else None
+                # tf.print('cte_emb',constant_embeddings[domain.name].shape,constant_embeddings[domain.name][:,5],summarize=-1) if domain.name == 'countries' else None
+                # If I have A_pred=[country,region]=[[1,2],[3,4],...], I get for country: [1,3] which are local! they're the pos of the ctes in X_domain
+                # In X_domain, in pos i I have the global idx of that cte (which has been created to create the embedds)
                 constants = tf.gather(constant_embeddings[domain.name],
-                                      constant_idx[..., i], axis=0)
+                                      constant_idx[..., i], axis=0) # constant_idx[..., i] takes the idx of the constants for that domain (in predicate p)
+                # tf.print('constants',constants.shape,constants[:,5],summarize=-1) if domain.name == 'countries' else None
                 one_predicate_constant_embeddings.append(constants)
             # shape (predicate_batch_size, predicate_arity, constant_embedding_size)
-            one_predicate_constant_embeddings = tf.stack(one_predicate_constant_embeddings,
-                                                         axis=-2)
+            one_predicate_constant_embeddings = tf.stack(one_predicate_constant_embeddings,axis=-2)
             constant_embeddings_for_triplets.append(one_predicate_constant_embeddings)
         # For all the queries, I have divided them by predicates. Once I have, for each predicate, the embeddings of the constants, i.e., 
         # for LocInSR I have 58 atoms -> (58,2,200), for NeighOf .... I concatenate them to get a tensor of shape [58+..,2,200] = [3889,2,200]
@@ -131,7 +140,7 @@ class KGEModel(Model):
         return predicate_embeddings_per_triplets, constant_embeddings_for_triplets
 
     def call(self, inputs,
-            data_gen=None,embeddings=None # For ULTRA
+            embeddings=None # For ULTRA
             ):
         '''
         X_domains type is Dict[str, inputs]
@@ -163,12 +172,13 @@ class KGEModel(Model):
                 for name in X_domains.keys()}
         else: 
             if not self.use_ultra:
-                constant_embeddings = self.constant_embedder(X_domains)
+                constant_embeddings = self.constant_embedder(X_domains) # For the constant embedds, I always need global idx to get consistent embedds every batch
         
         if not self.use_ultra:
-            predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor)
+            print('USING KGE')
+            predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor) # Embedds for every pred in fol (global idx)
         else: 
-            # constant_embeddings, predicate_embeddings = self.Ultra(data_gen, Q_global)
+            print('USING ULTRA WITH KGE')
             (constant_embeddings, predicate_embeddings) = embeddings
             # Project embeddings to the new size
             predicate_embeddings = self.predicate_projection(predicate_embeddings)
@@ -186,13 +196,9 @@ class KGEModel(Model):
     
 
 
-class ULTRAModel(Model):
+class ULTRA_bridge(Model):
 
-    def __init__(self,
-                 kge: str,
-                 kge_regularization: float, 
-                 kge_atom_embedding_size: int,
-                 kge_dropout_rate: float):
+    def __init__(self):
         super().__init__()
         
         # To adapt the size of the embeddings given by ultra
@@ -201,15 +207,6 @@ class ULTRAModel(Model):
             Dense(114, activation='relu'),
             Dense(100, activation='relu'),
             Dense(100, activation='relu'),])
-    
-        # OUTPUT LAYER
-        # self.kge_embedder, self.output_layer = KGEFactory(
-        #     name=kge,
-        #     atom_embedding_size=kge_atom_embedding_size,
-        #     relation_embedding_size=kge_atom_embedding_size,
-        #     regularization=kge_regularization,
-        #     dropout_rate=kge_dropout_rate)
-        # assert self.kge_embedder is not None
 
         # Define the output layer as a method
         self.output_layer = self._output_layer
@@ -218,8 +215,6 @@ class ULTRAModel(Model):
         outputs = tf.reduce_sum(inputs, axis=-1)
         outputs = tf.nn.sigmoid(outputs)
         return outputs
-
-
 
     def call(self,embeddings):
         # Project embeddings to the new size
@@ -230,15 +225,11 @@ class ULTRAModel(Model):
 class CollectiveModel(Model):
 
     def __init__(self,
-                 data_gen_train,
-                 data_gen_valid,
-                 data_gen_test,
-                #  ultra_embeddings,
                  fol: FOL,
                  rules: List[Rule],
                  *,  # all named after this point
                  use_ultra: bool,
-                 use_ultra_kge: bool,
+                 use_ultra_with_kge: bool,
                  kge: str,
                  kge_regularization: float,
                  constant_embedding_size: int,
@@ -265,17 +256,13 @@ class CollectiveModel(Model):
         super().__init__()
 
         self.testing = False
-        self.data_gen_train = data_gen_train
-        self.data_gen_valid = data_gen_valid
-        self.data_gen_test = data_gen_test
-        # self.ultra_embeddings = ultra_embeddings
         self.reasoner_depth = reasoner_depth
         # Reasoning depth currently used, this can differ from  self.reasoner_depth during multi-stage learning (like if pretraining the KGEs).
         self.enabled_reasoner_depth = reasoner_depth
         self.resnet = resnet
         self.logic = GodelTNorm()
         self.use_ultra = use_ultra
-        self.use_ultra_kge = use_ultra_kge
+        self.use_ultra_with_kge = use_ultra_with_kge
         if not self.use_ultra:
             self.kge_model = KGEModel(fol, kge,
                                     kge_regularization,
@@ -285,14 +272,11 @@ class CollectiveModel(Model):
                                     kge_dropout_rate,
                                     num_adaptive_constants,
                                     device='cpu',
-                                    use_ultra=self.use_ultra)
+                                    use_ultra=self.use_ultra_with_kge)
             self.output_layer = self.kge_model.output_layer # CONCEPT LAYER
         else:
-            self.ULTRAModel = ULTRAModel(kge,
-                                    kge_regularization,
-                                    kge_atom_embedding_size,
-                                    kge_dropout_rate)
-            self.output_layer = self.ULTRAModel.output_layer
+            self.ULTRA_bridge = ULTRA_bridge()
+            self.output_layer = self.ULTRA_bridge.output_layer
         self.model_name = model_name
 
         # REASONING LAYER
@@ -359,7 +343,6 @@ class CollectiveModel(Model):
                   assert False, 'Unknown model name %s' % model_name
 
         self._explain_mode = False
-        self.testing = False
 
     def explain_mode(self, mode=True):
         self._explain_mode = mode
@@ -369,6 +352,12 @@ class CollectiveModel(Model):
         self.dataset_type = dataset_type
 
     def call(self, inputs, training=False, *args, **kwargs):
+        '''
+        X_domains type is Dict[str, tensor[constant_indices_in_domain]]
+        A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
+                     e.g. mapping predicate_name -> tensor [num_groundings, arity]
+                     with constant indices for each grounding.
+        '''
 
         if self._explain_mode:
             # No explanations are posible when reasoning is disabled.
@@ -376,32 +365,14 @@ class CollectiveModel(Model):
             # Check that we are using an explainable model.
             assert self.model_name == 'dcr' or self.model_name == 'cdcr'
 
-
-        '''
-        X_domains type is Dict[str, tensor[constant_indices_in_domain]]
-        A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
-                     e.g. mapping predicate_name -> tensor [num_groundings, arity]
-                     with constant indices for each grounding.
-        '''
         (X_domains, A_predicates, A_rules, Q, embeddings) = inputs
         
         if self.use_ultra:
-            atom_embeddings = self.ULTRAModel(embeddings)
-
-        elif self.use_ultra_kge:
-            if training == True:
-                atom_embeddings = self.kge_model((X_domains, A_predicates),data_gen=self.data_gen_train,embeddings=embeddings)
-            else:
-                if self.testing == False:
-                    atom_embeddings = self.kge_model((X_domains, A_predicates),data_gen=self.data_gen_valid,embeddings=embeddings)
-                else:
-                    dataset =  self.data_gen_train if self.dataset_type == 'train' else self.data_gen_valid if self.dataset_type == 'valid' else self.data_gen_test
-                    atom_embeddings = self.kge_model((X_domains, A_predicates),data_gen=dataset,embeddings=embeddings) 
-        else: 
-            atom_embeddings = self.kge_model((X_domains, A_predicates))
-
-        tf.print('atom_embeddings',atom_embeddings.shape)
-        tf.print('self.output_layer',self.output_layer(atom_embeddings).shape)
+            print('USING ULTRA')
+            atom_embeddings = self.ULTRA_bridge(embeddings)
+        else:
+            atom_embeddings = self.kge_model((X_domains, A_predicates),embeddings=embeddings)
+ 
         concept_output = tf.expand_dims(self.output_layer(atom_embeddings), -1)
         explanations = None
         if self.reasoning is not None:
