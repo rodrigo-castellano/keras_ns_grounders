@@ -1,28 +1,25 @@
 import os
 import tensorflow as tf
-import keras_ns as ns
+import ns_lib as ns
 from itertools import product
 import numpy as np
 from os.path import join
 import random
 import pickle
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from dataset import KGCDataHandler, build_domains
 from model import CollectiveModel
 from keras.callbacks import CSVLogger
-from keras_ns.logic.commons import Atom, Domain, FOL, Rule, RuleLoader
-from keras_ns.utils import MMapModelCheckpoint, KgeLossFactory, read_file_as_lines
-from keras_ns.utils import get_arg
-from keras_ns.grounding.backward_chaining_grounder_nocleanup import BackwardChainingGrounder_nocleanup
-from typing import Dict, List
+from ns_lib.logic.commons import Atom, Domain, FOL, Rule, RuleLoader
+from ns_lib.grounding.grounder_factory import BuildGrounder
+from ns_lib.utils import MMapModelCheckpoint, KgeLossFactory, get_arg
+from ns_lib.grounding.backward_chaining_grounder_nocleanup import BackwardChainingGrounder_nocleanup
 import time
 from model_utils import * 
-
 import wandb
 from wandb.keras import WandbCallback
 from wandb.keras import WandbMetricsLogger
-
 from ultra_utils import build_relation_graph, Ultra,nested_dict
 explain_enabled: bool = False
 
@@ -30,16 +27,15 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
 
     if args.grounder == 'full':
         engine = ns.grounding.PlaceholderGeneratorFullGrounder(
-            domains={d.name:d for d in fol.domains},
-            rules=rules,
-            domain2adaptive_constants=domain2adaptive_constants,
-            exclude_symmetric=True,
-            exclude_query=False)
+                        domains={d.name:d for d in fol.domains},
+                        rules=rules,
+                        domain2adaptive_constants=domain2adaptive_constants,
+                        exclude_symmetric=True,
+                        exclude_query=False)
     elif args.grounder == 'domain':
-        engine = ns.grounding.DomainFullGrounder(domains={d.name:d for d in fol.domains},
-                                                rules=rules,
-                                                exclude_symmetric=True,
-                                                exclude_query=False)
+        engine = ns.grounding.DomainFullGrounder(
+                        rules, domains={d.name:d for d in fol.domains},
+                        domain2adaptive_constants=domain2adaptive_constants)
     elif args.grounder == 'known':
         engine = ns.grounding.KnownBodyGrounder(rules, facts=facts)
     
@@ -60,22 +56,33 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
             max_unknown_fact_count_last_step = max_unknown_fact_count = 0
 
         print('Grounder: ',args.grounder,'Number of steps:', num_steps, 'Prune:', prune_backward, 'max_unknown_fact_count:', max_unknown_fact_count)
-        engine = ns.grounding.BackwardChainingGrounder(rules, facts=facts,
-                                                    domains={d.name:d for d in fol.domains},
-                                                    num_steps=num_steps, prune_incomplete_proofs=prune_backward,
-                                                    max_unknown_fact_count=max_unknown_fact_count, max_unknown_fact_count_last_step=max_unknown_fact_count_last_step)
+        engine = ns.grounding.ApproximateBackwardChainingGrounder(
+                        rules, facts=facts, domains={d.name:d for d in fol.domains},
+                        domain2adaptive_constants=domain2adaptive_constants,
+                        pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
+                        num_steps=num_steps,
+                        max_unknown_fact_count=max_unknown_fact_count,
+                        max_groundings_per_rule=get_arg(
+                            args, 'backward_chaining_max_groundings_per_rule', -1),
+                        prune_incomplete_proofs=prune_backward)
 
         if 'original' in args.grounder:
-            print('Original grounder')
-            engine =  ns.grounding.OriginalBackwardChainingGrounder(
-                                                    rules, facts=facts, domains={d.name:d for d in fol.domains},
-                                                    num_steps=num_steps, prune_incomplete_proofs=prune_backward,
-                                                    max_unknown_fact_count=max_unknown_fact_count, max_unknown_fact_count_last_step=max_unknown_fact_count_last_step) 
+            engine = ns.grounding.BackwardChainingGrounder(
+                        rules, facts=facts,
+                        domains={d.name:d for d in fol.domains},
+                        domain2adaptive_constants=domain2adaptive_constants,
+                        pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
+                        num_steps=get_arg(args, 'backward_chaining_depth', 1)) 
 
-        if '_nocleanup' in args.grounder:
-            engine = BackwardChainingGrounder_nocleanup(rules, facts=facts,
-                                                    domains={d.name:d for d in fol.domains},
-                                                    num_steps=num_steps, prune_incomplete_proofs=prune_backward)
+        if  'relationentity' in args.grounder:
+            engine = ns.grounding.RelationEntityGraphGrounder(
+            rules, facts=facts,
+            # TODO: Domain support is not added yet.
+            #domains={d.name:d for d in fol.domains},
+            #domain2adaptive_constants=domain2adaptive_constants,
+            build_cartesian_product=True,
+            max_elements=get_arg(
+                args, 'relation_entity_grounder_max_elements', -1))
         
 
             
@@ -122,9 +129,10 @@ def main(base_path, output_filename, log_filename, use_WB, args):
 
     fol = data_handler.fol
     domain2adaptive_constants: Dict[str, List[str]] = None
+    dot_product = get_arg(args, 'engine_dot_product', False)
+
     num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
 
-    # Domains are used up to the serializer, the model assumes that all constants are in the same domain.
     # DEFINING RULES AND GROUNDING ENGINE
     rules = []
     engine = None
@@ -201,13 +209,16 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         aggregation_type=args.aggregation_type,
         signed=args.signed,
         resnet=get_arg(args, 'resnet', False),
+        embedding_resnet=get_arg(args, 'embedding_resnet', False),
         temperature=args.temperature,
         filter_num_heads=args.filter_num_heads,
         filter_activity_regularization=args.filter_activity_regularization,
         num_adaptive_constants=num_adaptive_constants,
+        dot_product=dot_product,
         cdcr_use_positional_embeddings=get_arg(
             args, 'cdcr_use_positional_embeddings', True),
         cdcr_num_formulas=get_arg(args, 'cdcr_num_formulas', 3),
+        r2n_prediction_type=get_arg(args, 'r2n_prediction_type', 'full'),
         device=args.device,
     )
 
@@ -219,6 +230,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
                ns.utils.HitsMetric(1),
                ns.utils.HitsMetric(3),
                ns.utils.HitsMetric(10)]
+                # ns.utils.AUCPRMetric()]
 
     optimizer,lr_scheduler = optimizer_scheduler(args.optimizer,args.lr_sched,args.learning_rate)
     model.compile(optimizer=optimizer,
@@ -230,14 +242,13 @@ def main(base_path, output_filename, log_filename, use_WB, args):
                     metrics=metrics,
                     run_eagerly=False)
 
-    if get_arg(args, 'kge_checkpoint_load', None) is not None:
-        kge_checkpoint_load = get_arg(args, 'kge_checkpoint_load', None)
-        print('Loading weights from ', kge_checkpoint_load[0], 'Trainable', kge_checkpoint_load[1], flush=True)
+    assert get_arg(args, 'checkpoint_load', None) is None or (
+        get_arg(args, 'kge_checkpoint_load', None) is None)
+    if get_arg(args, 'checkpoint_load', None) is not None:
+        checkpoint_load = get_arg(args, 'checkpoint_load', None)
+        print('Loading weights from ', checkpoint_load, flush=True)
         _ = model(next(iter(data_gen_train))[0])  # force building the model.
-        print('Preload model', flush=True)
-        model.kge_model.summary()
-        model.kge_model.load_weights(kge_checkpoint_load[0])
-        model.kge_model.trainable = kge_checkpoint_load[1]
+        model.load_weights(checkpoint_load)
         model.summary()
 
     # CALLBACKS
@@ -257,10 +268,22 @@ def main(base_path, output_filename, log_filename, use_WB, args):
             verbose=1)
         callbacks.append(early_stopping)
 
-    best_model_callback = MMapModelCheckpoint(model, 'val_task_mrr',frequency=args.valid_frequency,
+    best_model_callback = MMapModelCheckpoint(
+        model, 'val_task_mrr',
+        frequency=args.valid_frequency,
         # if path is not None, checkpoint to file.
-        filepath=get_arg(args, 'ckpt_filepath', None))        
+        filepath=get_arg(args, 'ckpt_filepath', None))
     callbacks.append(best_model_callback)
+    kge_filepath = get_arg(args, 'ckpt_filepath', None)
+    if kge_filepath is not None:
+        kge_filepath =  '%s_kge_model' % kge_filepath
+    kge_best_model_callback = MMapModelCheckpoint(
+        model.kge_model, 'val_concept_mrr',
+        frequency=args.valid_frequency,
+        # if path is not None, checkpoint to file.
+        filepath=kge_filepath)
+    callbacks.append(kge_best_model_callback)
+
 
     # Initialize a W&B run
     if use_WB:
@@ -272,28 +295,28 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         callbacks.append(WandbMetricsLogger(log_freq=10))
 
 
+    if args.epochs > 0:
 
-    # TRAIN
-    history = model.fit(data_gen_train,
-              epochs=args.epochs,
-              callbacks=callbacks,
-              validation_data=data_gen_valid,
-              validation_freq=args.valid_frequency
-              )
-    
-    end_train = time.time()
+        # TRAIN
+        history = model.fit(data_gen_train,
+                epochs=args.epochs,
+                callbacks=callbacks,
+                validation_data=data_gen_valid,
+                validation_freq=args.valid_frequency)
+        
+        end_train = time.time()
 
-    # Close the W&B run
-    if use_WB:
-        run.finish()
-    
-    args.time_train = np.round(end_train - start_train,2)
-    print('Training time:', np.round(end_train - start_train,2), 'seconds')
-    best_model_callback.restore_weights()
+        # Close the W&B run
+        if use_WB:
+            run.finish()
+        
+        args.time_train = np.round(end_train - start_train,2)
+        print('Training time:', np.round(end_train - start_train,2), 'seconds')
+        best_model_callback.restore_weights()
 
-    if output_filename is not None:
-        print('Saving model weights to', output_filename)
-        model.save_weights(output_filename, overwrite=True)
+        if output_filename is not None:
+            print('Saving model weights to', output_filename)
+            model.save_weights(output_filename, overwrite=True)
 
 
     # EVALUATION

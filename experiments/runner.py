@@ -5,7 +5,7 @@ import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 sys.path.append(os.path.join(current_dir, '..'))
-sys.path.append(os.path.join(current_dir, '..', 'keras_ns'))
+sys.path.append(os.path.join(current_dir, '..', 'ns_lib'))
 import os
 import tensorflow as tf
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -14,10 +14,8 @@ import copy
 from itertools import product
 from train import main
 import shutil as sh
-import keras_ns as ns
-from keras_ns.utils import NSParser
-import time
-import datetime
+import ns_lib as ns
+from ns_lib.utils import NSParser
 import numpy as np
 import ast
 import argparse
