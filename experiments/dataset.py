@@ -2,16 +2,16 @@ import copy
 import os.path
 import random
 
-from keras_ns.dataset import Dataset
-from keras_ns.logic import FOL, Domain, Predicate
+from ns_lib.dataset import Dataset
+from ns_lib.logic import Domain, FOL, Predicate, Rule
 from typing import Dict, List, Union, Set, Tuple
 from os.path import join
 from collections import OrderedDict
-from keras_ns.utils import read_file_as_lines
-from keras_ns.logic.commons import Atom
+from ns_lib.utils import read_file_as_lines
+from ns_lib.logic.commons import Atom
 from itertools import product
 from collections import defaultdict,namedtuple
-from keras_ns.metrics import MRRMetric
+from ns_lib.metrics import MRRMetric
 import numpy as np
 from functools import lru_cache
 import tensorflow as tf
@@ -72,8 +72,6 @@ def read_ntp_ontology_only(file, base_path):
     return constants, predicates
 
 def read_atoms(paths: List[str], format: str):
-    #constants_file = join(base_path, "entities.dict")
-    #relations_file = join(base_path, "relations.dict")
     atoms = []
     for file in paths:
         if not os.path.exists(file):
@@ -96,6 +94,7 @@ def read_domains(path: str) -> Tuple[Dict[str, str], Dict[str, List[str]]]:
         t = line.split(' ')
         domain_name = t[0]
         domain2constants[domain_name] = []
+        # Sort the constants to keep them sorted.
         for c in sorted(list(set(t[1:]))):
             assert c not in constant2domain, 'Repeated constant %s' % c
             constant2domain[c] = domain_name
@@ -143,9 +142,9 @@ class KGCTrainingDataset(Dataset):
 
     def __init__(self, queries, labels, num_negatives, known_facts,
                  constant2domain, domain2constants,
-                 constants_features=None, format="functional",
+                 constant_features=None, format="functional",
                  corrupt_mode: str='HEAD_AND_TAIL'):
-        super().__init__(queries, labels, constants_features, format=format)
+        super().__init__(queries, labels, constant_features, format=format)
         self.num_negatives = num_negatives
         self.known_facts = set(f if isinstance(f,Tuple) else f.toTuple()
                                if isinstance(f,Atom) else
@@ -185,14 +184,19 @@ class KGCTrainingDataset(Dataset):
 
 class KGCEvalDataset(Dataset):
 
-    """It creates two different test sample per each query: one with only head corruptions
-    and one with only test corruptions"""
+    """It creates two different test sample per each query:
+       one with only head corruptions and
+       one with only test corruptions. """
 
-    def __init__(self, queries, labels, num_negatives, known_facts,
+    def __init__(self, queries,
+                 labels,
+                 num_negatives,
+                 known_facts,
                  constant2domain, domain2constants,
-                 constants_features=None, format="functional",
+                 constant_features=None,
+                 format="functional",
                  corrupt_mode: str='HEAD_AND_TAIL'):
-        super().__init__(queries, labels, constants_features, format=format)
+        super().__init__(queries, labels, constant_features, format=format)
         self.num_negatives = num_negatives
         self.known_facts = set(f if isinstance(f,Tuple) else f.toTuple()
                                if isinstance(f, Atom) else
@@ -223,9 +227,7 @@ class KGCEvalDataset(Dataset):
         # Eval corruptions are split head and tail corruptions
         Q = []
         L = []
-        cont = 0
         for q,l,c in zip(queries, labels, corruptions_per_query):
-            cont += 1
             Q.append(q + c.head)
             Q.append(q + c.tail)
             L.append(l + [0] * len(c.head))
@@ -235,17 +237,18 @@ class KGCEvalDataset(Dataset):
 
 class KGCDataHandler():
 
-    def __init__(self, dataset_name,
-                 base_path,
-                 ragged=False,
-                 num_negatives=None,
-                 format="functional",
-                 valid_size=None,
-                 domain_file=None,
-                 train_file="train.txt",
-                 valid_file="valid.txt",
-                 test_file="test.txt",
-                 fact_file="facts.txt"):
+    def __init__(self, dataset_name:str,
+                 base_path:str,
+                 ragged:bool=False,
+                 num_negatives:int=None,
+                 format:str="functional",
+                 valid_size:int=None,
+                 domain_file:str=None,
+                 train_file:str="train.txt",
+                 valid_file:str="valid.txt",
+                 test_file:str="test.txt",
+                 fact_file:str="facts.txt",
+                 feature_file:str=None, feature_loader=None):
 
         self.num_negatives = num_negatives
         self.format = format
@@ -297,7 +300,8 @@ class KGCDataHandler():
                                     self.known_facts)
 
         # Create one global domain, this is still used by the serializer.
-        self.default_domain_name = 'default'
+        self.default_domain_name = Rule.default_domain()
+
         # Global domain.
         self.domains: List[Domain] = []
 
@@ -309,7 +313,7 @@ class KGCDataHandler():
                 assert c in constants_set, (
                     '%s constant missing in the ontology constraits' % c)
             self.domains += [
-                Domain(name, constants)
+                Domain(name, constants, has_features=False)
                 for name,constants in self.domain2constants.items()]
         else:
             self.constant2domain = {}
@@ -333,7 +337,8 @@ class KGCDataHandler():
             constant2domain=self.constant2domain)
         # Computes the domains for each positional input of a predicate,
         # checking that the possible domains are univocally determined.
-        for p,domain_list in predicate2domains.items():
+        for p in sorted(predicate2domains.keys()):
+            domain_list = predicate2domains[p]
             assert len(domain_list) > 0
             num_possible_domains = len(domain_list)
             assert num_possible_domains == 1, '%s %s'%(p, domain_list)
@@ -342,6 +347,9 @@ class KGCDataHandler():
 
         self.fol = FOL(self.domains, self.predicates, self.train_facts_set,
                        constant2domain_name=self.constant2domain)
+        self.constant_features = None
+        if feature_file is not None and feature_loader is not None:
+            self.constant_features = feature_loader(feature_file)
 
     @staticmethod
     def create_corruptions(queries: List[Tuple],
@@ -463,7 +471,8 @@ class KGCDataHandler():
                                       known_facts=self.ground_facts_set,
                                       constant2domain=self.constant2domain,
                                       domain2constants=self.domain2constants,
-                                      corrupt_mode=corrupt_mode)
+                                      corrupt_mode=corrupt_mode,
+                                      constant_features=self.constant_features)
         else:
             if split == "valid":
                 queries, labels = [[q] for q in self.valid_facts], [[1] for _ in self.valid_facts]
@@ -474,7 +483,8 @@ class KGCDataHandler():
                                   known_facts=self.ground_facts_set,
                                   constant2domain=self.constant2domain,
                                   domain2constants=self.domain2constants,
-                                  corrupt_mode=corrupt_mode)
+                                  corrupt_mode=corrupt_mode,
+                                  constant_features=self.constant_features)
 
 
 if __name__ == "__main__":
