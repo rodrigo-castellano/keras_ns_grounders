@@ -1,19 +1,7 @@
-from keras import Model
-from keras.layers import Dense, Layer
-import keras_ns as ns
-import tensorflow as tf
-from keras_ns.nn.constant_embedding import *
-from keras_ns.nn.reasoning import *
-from keras_ns.nn.kge import KGEFactory, KGELayer
-from keras_ns.logic import FOL, Rule
-from typing import Dict, List
-from keras_ns.logic.semantics import GodelTNorm
-from typing import Dict, List, Union
-import tensorflow_probability as tfp
-
-class LMEModel(Layer):
+class LMEModelConstantPredicate(Layer):
     
     def __init__(self, fol:FOL,
+                 serializer: LogicSerializerFast,
                  kge: str,
                  kge_regularization: float,
                  constant_embedding_size: int,
@@ -23,34 +11,35 @@ class LMEModel(Layer):
                  num_adaptive_constants: int=0):
         super().__init__()
         self.fol = fol
-        
+        self.serializer = serializer
         self.predicate_index_tensor = tf.constant(
             [i for i in range(len(self.fol.predicates))], dtype=tf.int32)
         self.grounded_atom_embeddings = {}
-        self.embedder = LMEmbeddings("sentence-transformers/all-MiniLM-L6-v2")
+        # self.embedder = LMEmbeddings("sentence-transformers/all-MiniLM-L6-v2")
         
-        #Embed relation
-        self.embedded_relations = {}
-        for predicate in fol.predicates:
-            self.embedded_relations[predicate.name] = self.get_embedding(predicate.name)
+        self.embedded_relations = pickle.load(open('embedded_relations.pkl','rb'))
+        # #Embed relation
+        # self.embedded_relations = {}
+        # for predicate in fol.predicates:
+        #     self.embedded_relations[predicate.name] = self.get_embedding(predicate.name)
         
-        #Embed constants
-        self.embedded_constants = {}
-        for domain in fol.domains:
-            self.embedded_constants[domain.name] = {}
-            for constant in domain.constants:
-                self.embedded_constants[domain.name][constant] = self.get_embedding(constant)
-        
+        self.embedded_constants = pickle.load(open('embedded_constants.pkl','rb'))
+        # #Embed constants
+        # self.embedded_constants = {}
+        # for domain in fol.domains:
+        #     self.embedded_constants[domain.name] = {}
+        #     for constant in domain.constants:
+        #         self.embedded_constants[domain.name][constant] = self.get_embedding(constant)
         self.dense_merge = Sequential([
-            Dense(384, activation='relu'),
-            Dense(384, activation='relu'),
-            Dense(384, activation='relu'),
             Dense(384, activation='relu'),
             Dense(384, activation='relu'),
             Dense(384, activation='relu'),
             Dense(300, activation='tanh'),
         ])
         self.output_layer = self._output_layer
+        # save the embeddings
+        # pickle.dump(self.embedded_relations, open('embedded_relations.pkl','wb'))
+        # pickle.dump(self.embedded_constants, open('embedded_constants.pkl','wb'))
         
     def get_embedding(self, text):
         return self.embedder(f"{text}")
@@ -101,6 +90,7 @@ class LMEModel(Layer):
         #     pickle.dump(self.grounded_atom_embeddings,open('grounded_atom_embeddings.pkl','wb'))
             
         # Check if the precomputed embeddings not differ from the new ones
+        dumped_embeddings = pickle.load(open('grounded_atom_embeddings.pkl','rb'))
         # if dumped_embeddings != self.grounded_atom_embeddings:
         #     # Find the difference
         #     for key, value in self.grounded_atom_embeddings.items():
@@ -196,6 +186,7 @@ class KGEModel(Model):
         # Shape TE, T2E with T number of triplets.
         return predicate_embeddings_per_triplets, constant_embeddings_for_triplets
 
+    
     def call(self, inputs):
         # X_domains type is Dict[str, inputs]
         # A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
@@ -234,163 +225,3 @@ class KGEModel(Model):
                                              constant_embeddings_for_triplets))
         # Shape TE
         return atom_embeddings
-
-
-class CollectiveModel(Model):
-
-    def __init__(self,
-                 fol: FOL,
-                 rules: List[Rule],
-                 *,  # all named after this point
-                 kge: str,
-                 kge_regularization: float,
-                 constant_embedding_size: int,
-                 predicate_embedding_size: int,
-                 kge_atom_embedding_size: int,
-                 kge_dropout_rate: float,
-                 # same model for all reasoning depths
-                 reasoner_atom_embedding_size: int,
-                 reasoner_formula_hidden_embedding_size: int,
-                 reasoner_regularization: float,
-                 reasoner_single_model: bool,
-                 reasoner_dropout_rate: float,
-                 reasoner_depth: int,
-                 aggregation_type: str,
-                 signed: bool,
-                 temperature: float,
-                 model_name: str,
-                 resnet: bool,
-                 filter_num_heads: int,
-                 filter_activity_regularization: float,
-                 num_adaptive_constants: int,
-                 cdcr_use_positional_embeddings: bool,
-                 cdcr_num_formulas: int):
-        super().__init__()
-        # Reasoning depth of the model structure.
-        self.reasoner_depth = reasoner_depth
-        # Reasoning depth currently used, this can differ from
-        # self.reasoner_depth during multi-stage learning (like if
-        # pretraining the KGEs).
-        self.enabled_reasoner_depth = reasoner_depth
-        self.resnet = resnet
-        self.logic = GodelTNorm()
-
-        self.kge_model = KGEModel(fol, kge,
-                                  kge_regularization,
-                                  constant_embedding_size,
-                                  predicate_embedding_size,
-                                  kge_atom_embedding_size,
-                                  kge_dropout_rate,
-                                  num_adaptive_constants)
-        self.model_name = model_name
-
-        # CONCEPT LAYER
-        self.output_layer = self.kge_model.output_layer
-
-        # REASONING LAYER
-        self.reasoning = None
-        if reasoner_depth > 0 and len(rules) > 0:
-            self.reasoning = []
-            for i in range(reasoner_depth):
-              if i > 0 and reasoner_single_model:
-                  self.reasoning.append(self.reasoning[0])
-                  continue
-
-              if model_name == 'dcr':
-                  self.reasoning.append(DCRReasoningLayer(
-                      templates=rules,
-                      formula_hidden_size=reasoner_formula_hidden_embedding_size,
-                      aggregation_type=aggregation_type,
-                      temperature=temperature,
-                      signed=signed,
-                      filter_num_heads=filter_num_heads,
-                      regularization=reasoner_regularization,
-                      dropout_rate=reasoner_dropout_rate))
-
-              elif model_name == 'cdcr':
-                  self.reasoning.append(ClusteredDCRReasoningLayer(
-                      num_formulas=cdcr_num_formulas,
-                      use_positional_embeddings=cdcr_use_positional_embeddings,
-                      templates=rules,
-                      formula_hidden_size=reasoner_formula_hidden_embedding_size,
-                      aggregation_type=aggregation_type,
-                      temperature=temperature,
-                      signed=signed,
-                      filter_num_heads=filter_num_heads,
-                      regularization=reasoner_regularization,
-                      dropout_rate=reasoner_dropout_rate))
-
-              elif model_name == 'r2n':
-                  self.reasoning.append(R2NReasoningLayer(
-                      rules=rules,
-                      formula_hidden_size=reasoner_formula_hidden_embedding_size,
-                      atom_embedding_size=reasoner_atom_embedding_size,
-                      aggregation_type=aggregation_type,
-                      output_layer=self.output_layer,
-                      regularization=reasoner_regularization,
-                      dropout_rate=reasoner_dropout_rate))
-
-              elif model_name == 'sbr':
-                  self.reasoning.append(SBRReasoningLayer(
-                      rules=rules,
-                      aggregation_type=aggregation_type))
-
-              elif model_name == 'gsbr':
-                  self.reasoning.append(GatedSBRReasoningLayer(
-                      rules=rules,
-                      aggregation_type=aggregation_type,
-                      regularization=reasoner_regularization))
-
-              elif model_name == 'rnm':
-                  self.reasoning.append(RNMReasoningLayer(
-                      rules=rules,
-                      aggregation_type=aggregation_type,
-                      regularization=reasoner_regularization))
-
-              else:
-                  assert False, 'Unknown model name %s' % model_name
-
-        self._explain_mode = False
-
-    def explain_mode(self, mode=True):
-        self._explain_mode = mode
-
-    def call(self, inputs, *args, **kwargs):
-        if self._explain_mode:
-            # No explanations are posible when reasoning is disabled.
-            assert self.reasoning is not None
-            # Check that we are using an explainable model.
-            assert self.model_name == 'dcr' or self.model_name == 'cdcr'
-
-        # X_domains type is Dict[str, tensor[constant_indices_in_domain]]
-        # A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
-        #              e.g. mapping predicate_name -> tensor [num_groundings, arity]
-        #                   with constant indices for each grounding.
-        (X_domains, A_predicates, A_rules, Q) = inputs
-        atom_embeddings = self.kge_model((X_domains, A_predicates))
-        tf.print('atom_embeddings.shape', tf.shape(atom_embeddings),atom_embeddings)
-
-        concept_output = tf.expand_dims(self.output_layer(atom_embeddings), -1)
-
-        explanations = None
-        if self.reasoning is not None:
-            task_output = concept_output  # initialization
-            for i in range(self.enabled_reasoner_depth):
-                if self._explain_mode and i == self.enabled_reasoner_depth - 1:
-                    explanations = self.reasoning[i].explain(
-                        [task_output, atom_embeddings, A_rules])
-                task_output, atom_embeddings = self.reasoning[i]([
-                    task_output, atom_embeddings, A_rules])
-        else:
-            task_output = tf.identity(concept_output)
-
-        task_output = tf.gather(params=tf.squeeze(task_output, -1), indices=Q)
-        concept_output = tf.gather(params=tf.squeeze(concept_output, -1),
-                                   indices=Q)
-        if self.resnet and self.reasoning is not None:
-            task_output = self.logic.disj_pair(task_output, concept_output)
-
-        if self._explain_mode:
-            return concept_output, task_output, explanations
-        else:
-            return {'concept':concept_output, 'task':task_output}
