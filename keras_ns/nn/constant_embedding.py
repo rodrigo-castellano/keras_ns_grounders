@@ -162,6 +162,7 @@ class LMEmbeddings():
         super().__init__()
         self.lm = TFAutoModel.from_pretrained(model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.lm.trainable = False
         
     def __call__(self, inputs: tf.Tensor) -> tf.Tensor:
         """
