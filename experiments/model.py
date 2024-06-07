@@ -38,7 +38,9 @@ class KGEModel(Model):
                 predicate_embedding_size,
                 regularization=kge_regularization,
                 has_features=False)
-            self.constant_embedder = ConstantEmbeddings(
+            # self.constant_embedder = ConstantEmbeddingsGlobal(
+            # self.constant_embedder = ConstantEmbeddings(
+            self.constant_embedder = ConstantEmbeddingsTrial(
                 domains=fol.domains,
                 constant_embedding_sizes_per_domain={
                     domain.name: constant_embedding_size
@@ -46,13 +48,6 @@ class KGEModel(Model):
                 regularization=kge_regularization,
                 has_features=False)
             self.dot_product = dot_product
-
-            # self.constant_embedder = ConstantEmbeddingsSparse(
-            #     domains=fol.domains,
-            #     constant_embedding_sizes_per_domain={
-            #         domain.name: constant_embedding_size
-            #         for domain in fol.domains},
-            #     regularization=kge_regularization)
         else: 
             # To adapt the size of the embeddings given by ultra
             self.predicate_projection = Sequential([
@@ -85,10 +80,56 @@ class KGEModel(Model):
         assert self.kge_embedder is not None
 
 
+    # Function to filter and retrieve embeddings as a dense tensor
+    def get_embeddings_idx(self,sparse_tensor, target_indices):
+        # Initialize an empty list to store the embeddings
+        embeddings_list = []
+        # Iterate over the target indices
+        for index in target_indices.numpy():
+            # Extract the sub-tensor for the current index
+            mask = tf.equal(sparse_tensor.indices[:, 0], index)
+            # tf.print('mask', mask)
+            # sub_indices = tf.boolean_mask(sparse_tensor.indices, mask)
+            sub_values = tf.boolean_mask(sparse_tensor.values, mask)
+            embeddings_list.append(tf.expand_dims(sub_values, 0))
+            # tf.print('index',index,'tf.expand_dims(sub_values, 0)',tf.expand_dims(sub_values, 0).shape)
+            # if sub_values.shape == 0:
+            #     tf.print('mask',mask)
+            #     tf.print('sparse_tensor',sparse_tensor)
+            #     tf.print('sub_values',sub_values) 
+        # Concatenate all embeddings to form the final dense tensor if target_indices is not empty, else return an empty tensor
+        dense_embeddings = tf.concat(embeddings_list, axis=0) if embeddings_list else tf.constant([], dtype=tf.float32)
+        
+        return dense_embeddings
+    # check in chatgpt this alternative. I can first extract only the indices of embedds that I need, then do a mapping from embedds to my list
+    # def get_embeddings_idx(self,sparse_tensor, target_indices):
+    #     # Create a mask that identifies which entries in sparse_tensor.indices[:, 0] are in target_indices
+    #     mask = tf.reduce_any(tf.equal(tf.expand_dims(sparse_tensor.indices[:, 0], 1), target_indices), axis=1)
+
+    #     # Use the mask to extract the relevant values
+    #     sub_values = tf.boolean_mask(sparse_tensor.values, mask)
+        
+    #     # Get the indices of the filtered values
+    #     filtered_indices = tf.boolean_mask(sparse_tensor.indices, mask)
+
+    #     # Map the target indices to their corresponding embeddings
+    #     expanded_target_indices = tf.expand_dims(target_indices, axis=1)
+    #     embeddings_per_target = tf.reduce_sum(tf.cast(tf.equal(filtered_indices[:, 0], expanded_target_indices), tf.int32), axis=0)
+        
+    #     # Prepare the list to store the embeddings
+    #     split_indices = tf.cumsum(embeddings_per_target)
+    #     embeddings_list = tf.split(sub_values, split_indices[:-1])
+
+    #     # Concatenate all embeddings to form the final dense tensor
+    #     dense_embeddings = tf.concat([tf.expand_dims(embed, axis=0) for embed in embeddings_list], axis=0)
+        
+    #     return dense_embeddings
+
     def create_triplets(self,
                         constant_embeddings: Dict[str, tf.Tensor],
                         predicate_embeddings: tf.Tensor,
-                        A_predicates: Dict[str, tf.Tensor]):
+                        A_predicates: Dict[str, tf.Tensor],
+                        X_domains: Dict[str, tf.Tensor] = None):
         predicate_embeddings_per_triplets = []
         '''For A_predicates, take the emebdding representation of the predicates and the constants and create the triplets for the KGE model.
         For instance, if I have a predicate with 3 grounded atoms, I will repeat the embedding of that predicate 3 times, and put it with the 
@@ -97,7 +138,12 @@ class KGEModel(Model):
             predicate_embeddings_per_triplets: [n_predicates, n_atoms/grounding per predicate, embed_size_predicate]
             constant_embeddings_for_triplets: [n_atoms,2=n_domains,embed_size_constant]'''
             
-        
+        # tf.print('\nKGE X_domains')
+        # for domain,constant_idx in X_domains.items():
+        #     tf.print('KGE X_domains',domain,constant_idx,summarize=-1)
+        # tf.print('KGE A_predicates')
+        # for p,constant_idx in A_predicates.items():
+        #     tf.print('KGE A_predicates',p,constant_idx,summarize=-1)
 
         for p,indices in A_predicates.items():
             idx = self.fol.name2predicate_idx[p]
@@ -105,11 +151,10 @@ class KGEModel(Model):
             p_embeddings = tf.expand_dims(predicate_embeddings[idx], axis=0)  # [1,1,200]=[1,1, embed_size_predicate]
             predicate_embeddings_per_triplets.append(tf.repeat(p_embeddings, tf.shape(indices)[0], axis=0))  # [1,1918,200]=[1,n_groundings for that predicate, embed_size_predicate]
         predicate_embeddings_per_triplets = tf.concat(predicate_embeddings_per_triplets,axis=0) # shape=[n_predicates, n_groundings for that predicate, embed_size_predicate]
-
         constant_embeddings_for_triplets = []
         for p,constant_idx in A_predicates.items():
-            # tf.print('\npredicate',p)
-            # print('predicate',p,'constant_idx',constant_idx.shape,'constant_idx',constant_idx)
+            # tf.print('A_pred predicate',p)
+            # print('PREDICATE',p,'CONSTANT_IDX',constant_idx.shape,constant_idx)
             constant_idx = tf.cast(constant_idx, tf.int32) # all the groundings idx for that predicate
             predicate = self.fol.name2predicate[p]
             one_predicate_constant_embeddings = []
@@ -117,26 +162,30 @@ class KGEModel(Model):
             # are grounded in that domain. If LocInSR has 58 groundings/atoms, I will get the representation of the subregion constants in 
             # those atoms(58,200). I do the same for the domain region, so I get a tensor of shape [58,2,200] for LocIn where 2 is the arity of the predicate. 
             for i,domain in enumerate(predicate.domains):
-                # print('domain',domain.name)
-                # print('constant_embeddings of domain',constant_embeddings[domain.name].shape)
-                # print('constant_idx',constant_idx.shape,constant_idx)
-                # print('constant_idx[...,i]',constant_idx[...,i].shape,constant_idx[...,i])
-                # Take the embeddings of the constants in the domain i of the predicate
-                # tf.print('constant_idx',constant_idx[...,i].shape,constant_idx[...,i],summarize=-1) if domain.name == 'countries' else None
-                # tf.print('cte_emb',constant_embeddings[domain.name].shape,constant_embeddings[domain.name][:,5],summarize=-1) if domain.name == 'countries' else None
-                # If I have A_pred=[country,region]=[[1,2],[3,4],...], I get for country: [1,3] which are local! they're the pos of the ctes in X_domain
-                # In X_domain, in pos i I have the global idx of that cte (which has been created to create the embedds)
-                constants = tf.gather(constant_embeddings[domain.name],
-                                      constant_idx[..., i], axis=0) # constant_idx[..., i] takes the idx of the constants for that domain (in predicate p)
-                # tf.print('constants',constants.shape,constants[:,5],summarize=-1) if domain.name == 'countries' else None
-                one_predicate_constant_embeddings.append(constants)
+                # # If I have A_pred=[country,region]=[[1,2],[3,4],...], I get for country: [1,3] which are local! they're the pos of the ctes in X_domain
+                # # In X_domain, in pos i I have the global idx of that cte (which has been created to create the embedds)
+                
+                # Step 1: Create a dictionary that maps each index to its embedding
+                index_to_embedding = {index: emb for index, emb in zip(constant_embeddings[domain.name][0].numpy(), constant_embeddings[domain.name][1])}
+                # Step 2: Fetch the embeddings for the indices in `indices_list`
+                resulting_embeddings = [index_to_embedding[idx] for idx in constant_idx[..., i].numpy()]
+                # Step 3: Convert the list of embeddings to a tensor
+                constants = tf.convert_to_tensor(resulting_embeddings)
+
+                # constants = tf.gather(constant_embeddings[domain.name],
+                #                       constant_idx[..., i], axis=0) # constant_idx[..., i] takes the idx of the constants for that domain (in predicate p)
+                # Get the dense embeddings
+                # constants = self.get_embeddings_idx(constant_embeddings[domain.name], constant_idx[..., i]) if constant_embeddings[domain.name] is not None else tf.constant([], dtype=tf.float32)
+                one_predicate_constant_embeddings.append(constants) if len(constants) > 0 else None
             # shape (predicate_batch_size, predicate_arity, constant_embedding_size)
-            one_predicate_constant_embeddings = tf.stack(one_predicate_constant_embeddings,axis=-2)
-            constant_embeddings_for_triplets.append(one_predicate_constant_embeddings)
+            one_predicate_constant_embeddings = tf.stack(one_predicate_constant_embeddings,axis=-2) if len(one_predicate_constant_embeddings) > 0 else tf.constant([], dtype=tf.float32)
+            constant_embeddings_for_triplets.append(one_predicate_constant_embeddings) if len(one_predicate_constant_embeddings) > 0 else None
         # For all the queries, I have divided them by predicates. Once I have, for each predicate, the embeddings of the constants, i.e., 
         # for LocInSR I have 58 atoms -> (58,2,200), for NeighOf .... I concatenate them to get a tensor of shape [58+..,2,200] = [3889,2,200]
-        constant_embeddings_for_triplets = tf.concat(constant_embeddings_for_triplets,
-                                                     axis=0)
+        # tf.print('PREDICATE EMBEDDINGS PER TRIPLETS',predicate_embeddings_per_triplets.shape,predicate_embeddings_per_triplets)
+        # tf.print('CONSTANT EMBEDDINGS FOR TRIPLETS', [tensor.shape for tensor in constant_embeddings_for_triplets])
+
+        constant_embeddings_for_triplets = tf.concat(constant_embeddings_for_triplets,axis=0) 
         tf.debugging.assert_equal(tf.shape(predicate_embeddings_per_triplets)[0],
                                   tf.shape(constant_embeddings_for_triplets)[0])
         # Shape TE, T2E with T number of triplets.
@@ -175,8 +224,8 @@ class KGEModel(Model):
                 for name in X_domains.keys()}
         else: 
             if not self.use_ultra:
+                # print('X_DOMAINS',X_domains)
                 constant_embeddings = self.constant_embedder(X_domains) # For the constant embedds, I always need global idx to get consistent embedds every batch
-        
         if not self.use_ultra:
             print('USING KGE')
             predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor) # Embedds for every pred in fol (global idx)
@@ -190,7 +239,7 @@ class KGEModel(Model):
         # Given the embedds of the constants and the predicates, I create the triplets with the embeddings of the atoms and the predicates. 
         # A_predicates indicates the indeces of the constants for each grounding of the predicate, i.e., the queries
         predicate_embeddings_per_triplets, constant_embeddings_for_triplets = \
-            self.create_triplets(constant_embeddings, predicate_embeddings, A_predicates) 
+            self.create_triplets(constant_embeddings, predicate_embeddings, A_predicates,X_domains) 
         
         # Given the triplets with their embeddings obtained in create_triplets, I get the embeddings of the atoms with e.g. Transe
         atom_embeddings = self.kge_embedder((predicate_embeddings_per_triplets,
@@ -394,6 +443,12 @@ class CollectiveModel(Model):
             assert self.model_name == 'dcr' or self.model_name == 'cdcr'
 
         (X_domains, A_predicates, A_rules, Q, embeddings) = inputs
+
+        # print('\n')
+        # for domain in X_domains.keys():  
+        #     tf.print('MODEL X_domain:',domain,X_domains[domain],summarize=-1)
+        # for p,constant_idx in  A_predicates.items():
+        #     tf.print('MODEL A_predicates:',p,constant_idx,summarize=-1)
         
         if self.use_ultra:
             print('USING ULTRA')
