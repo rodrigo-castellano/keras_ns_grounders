@@ -7,7 +7,8 @@ from typing import Dict, List, Tuple, Union
 from ns_lib.logic.commons import Atom, Domain, Predicate, Rule, RuleGroundings
 import ns_lib as ns
 import timeit
-
+import numpy as np
+import tensorflow as tf
 DomainName = str
 PredicateName = str
 ConstantName = str
@@ -60,13 +61,7 @@ class LogicSerializerFast(IndexerBase):
                         i + offset)
                     self.adaptive_constant2domain[constant] = domain.name
 
-        # # Create a constant_to_global_unique_index in which each constant, even if in different domains, has a unique index. This is useful for ultra
-        # self.constant_to_global_unique_index = defaultdict(OrderedDict)
-        # counter = 0
-        # for domain in domains:
-        #     for constant in domain.constants:
-        #         self.constant_to_global_unique_index[domain.name][constant] = counter
-        #         counter += 1
+
 
         self.predicate_to_domains = {}
         for predicate in self.predicates:
@@ -74,9 +69,18 @@ class LogicSerializerFast(IndexerBase):
                 domain.name for domain in predicate.domains]
         
         # #####################################
-        # self.predicate_to_global_index = defaultdict(dict)  # A_predicates with global index
-        # for i,predicate in enumerate(self.predicates):
-        #     self.predicate_to_global_index[predicate.name] = i
+
+        # Create a constant_to_global_unique_index in which each constant, even if in different domains, has a unique index. This is useful for ultra
+        self.constant_to_global_unique_index = defaultdict(OrderedDict)
+        counter = 0
+        for domain in domains:
+            for constant in domain.constants:
+                self.constant_to_global_unique_index[domain.name][constant] = counter
+                counter += 1
+
+        self.predicate_to_global_index = defaultdict(dict)  # A_predicates with global index
+        for i,predicate in enumerate(self.predicates):
+            self.predicate_to_global_index[predicate.name] = i
 
 
     def serialize(self, queries:List[List[Tuple]],
@@ -99,25 +103,25 @@ class LogicSerializerFast(IndexerBase):
         for atom in all_atoms:
             all_atoms_per_predicate[atom[0]].append(atom)
 
-        # print('\nconstant_to_global_index')
-        # for key, value in self.constant_to_global_index.items():
-        #     print(key, value)
-
-        count_print = 0
         atom_to_index = {}
         count = 0
         for predicate in self.predicates: # A loop iterates over each predicate.
             constant_tuples = [] # For each predicate, a list of constant indices is generated for each atom, e.g. LocIn:[[1,34],[2,3],...]
+            # get the domains of the predicate
+            domains = self.predicate_to_domains[predicate.name]
             for atom in all_atoms_per_predicate[predicate.name]: #For every atom in the bucketed atoms (ordered alphabetically by predicate)
                 # print('atom:',atom) #if count_print <100 else None
                 atom_to_index[atom] = count  # Assigns an index to the atom, e.g. {LocIn(morocco,spain):0,LocIn(morocco,france):1,...}
                 count += 1
                 indices_cs = [] # This is for A_predicates, to get the constant indices in a list format, e.g.  (Morocco,Spain)->[1,34] (from the LocIn(morocco,spain) example)
 
-                for c in atom[1:]: 
+                for c in atom[1:]:
                     domain = (self.constant2domain_name[c]    # get the domain of the constant
                               if c in self.constant2domain_name else
                               self.adaptive_constant2domain[c])
+                    # Check that the domain of the constant i is the corresponding domain of the predicate
+                    assert domain == domains[atom[1:].index(c)], 'Domain of constant does not match the domain of the predicate'
+
                     # get the local indices of the ctes built so far for this batch
                     constant_index = domain_to_local_constant_index[domain] # It is a domain_to_global_index but for the local indices, created for every batch
                     if c not in constant_index:  
@@ -126,23 +130,9 @@ class LogicSerializerFast(IndexerBase):
                             self.constant_to_global_index[domain][c]) # Append it to X_domains
                     indices_cs.append(constant_index[c]) # Append the local index of the constant to A_predicates
                     # indices_cs.append(self.constant_to_global_index[domain][c]) # Append the global index of the constant to A_predicates
-                    count_print +=1
                     # print('     indices:',indices_cs) if count_print <100 else None
                 constant_tuples.append(indices_cs) 
             predicate_to_constant_tuples[predicate.name] = constant_tuples
-
-        # print('\ndomain_to_local_constant_index')
-        # for key, value in domain_to_local_constant_index.items():
-        #     print(key, value)
-
-        # print('\nX_domain')
-        # for key, value in domain_to_global.items():
-        #     print(key, len(value),value)
-
-        # print('\npredicate_to_constant_tuples')
-        # for key, value in predicate_to_constant_tuples.items():
-        #     print(key, value)
-
         
         index_groundings = {}
         for name,rule in rule_groundings.items():
@@ -168,106 +158,128 @@ class LogicSerializerFast(IndexerBase):
             index_groundings,
             # [atom_local_indices_for_query]
             index_queries)
+    
+
+    def serialize_global_A_predicates(self, fol, queries:List[List[Tuple]],
+                  rule_groundings:Dict[str, RuleGroundings]):
+        domain_to_global = defaultdict(list)  # X_domains
+        # domain_to_local_constant_index = defaultdict(dict)  # helper
+        predicate_to_constant_tuples = defaultdict(list)  # A_predicates
 
 
-    # def serialize_global_A_predicates(self, queries:List[List[Tuple]],
-    #               rule_groundings:Dict[str, RuleGroundings]):
-    #     domain_to_global = defaultdict(list)  # X_domains
-    #     domain_to_local_constant_index = defaultdict(dict)  # helper
-    #     predicate_to_constant_tuples = defaultdict(list)  # A_predicates
+        # Set of all atoms in the groundings to index
+        all_atoms = ns.utils.to_flat(queries)
+        for rg in rule_groundings.values():
+            for g in rg.groundings:
+                all_atoms += g[0] # head
+                all_atoms += g[1] # body
+        all_atoms = sorted(list(set(all_atoms)))
 
-    #     # Set of all atoms in the groundings to index
-    #     all_atoms = ns.utils.to_flat(queries)
-    #     for rg in rule_groundings.values():
-    #         for g in rg.groundings:
-    #             all_atoms += g[0] # head
-    #             all_atoms += g[1] # body
-    #     all_atoms = sorted(list(set(all_atoms)))
+        # Bucket them per predicate
+        all_atoms_per_predicate = {predicate.name: []
+                                   for predicate in self.predicates}
+        for atom in all_atoms:
+            all_atoms_per_predicate[atom[0]].append(atom)
 
-    #     # Bucket them per predicate
-    #     all_atoms_per_predicate = {predicate.name: []
-    #                                for predicate in self.predicates}
-    #     for atom in all_atoms:
-    #         all_atoms_per_predicate[atom[0]].append(atom)
+        # print('all_atoms_per_predicate')
+        # for predicate in self.predicates:
+        #     print('\nPredicate',predicate,all_atoms_per_predicate[predicate.name])
 
-    #     # Create the index following the bucketed order:
-    #     # A loop iterates over each predicate.
-    #     # For each atom in the predicate, an index is assigned in atom_to_index.
-    #     # Each constant in the atom is assigned an index relative to its domain.
-    #     # A list of constant indices is generated for each atom.
-    #     atom_to_index = {}
-    #     count = 0
-    #     for predicate in self.predicates:
-    #         constant_tuples = [] # For each predicate, a list of constant indices is generated for each atom, e.g. LocIn:[[1,34],[2,3],...]
-    #         for atom in all_atoms_per_predicate[predicate.name]: #For every atom in the queries
-    #             atom_to_index[atom] = count  # HERE IT ASSIGNS AN INDEX TO EVERY ATOM (FOR EVERY PREDICATE), e.g. {LocIn(morocco,spain):0,LocIn(morocco,france):1,...}
-    #             count += 1
-    #             indices_cs = [] # This is for A_predicates, to get the constant indices in a list format, e.g.  (Morocco,Spain)->[1,34] (from the LocIn(morocco,spain) example)
-    #             for c in atom[1:]: # for every constant in the atom
-    #                 # check if that constant has a domain (in this case should be ctes)
-    #                 domain = (self.constant2domain_name[c]
-    #                           if c in self.constant2domain_name else
-    #                           self.adaptive_constant2domain[c])
-    #                 constant_index = domain_to_local_constant_index[domain] # It is a domain_to_global_index but for the local indices
-    #                 # print('     domain_to_local_constant_index',domain_to_local_constant_index) if count_print <10 else None
-    #                 if c not in constant_index:  # If the constant is not in the  local indices for constants mentioned before
-    #                     constant_index[c] = len(constant_index) # Add it to domain_to_local_constant_index
-    #                     domain_to_global[domain].append(
-    #                         self.constant_to_global_unique_index[domain][c]) # Append it to domain_to_global, which is what I return as X_domains, which is the different constants for each domain
-    #                 # indices_cs.append(constant_index[c]) # Append the local index of the constant to the list of constant indices. INSTEAD, I SHOULD APPEND THE GLOBAL INDEX
-    #                 indices_cs.append(self.constant_to_global_unique_index[domain][c]) # Append the global index of the constant to the list of constant indices
-    #             constant_tuples.append(indices_cs) # Append the list of constant local indices to the list of constant indices for the predicate
-    #         predicate_to_constant_tuples[predicate.name] = constant_tuples
+        # Create the index following the bucketed order:
+        # A loop iterates over each predicate.
+        # For each atom in the predicate, an index is assigned in atom_to_index.
+        # Each constant in the atom is assigned an index relative to its domain.
+        # A list of constant indices is generated for each atom.
+        atom_to_index = {}
+        count = 0
+        for predicate in self.predicates:
+            # print('predicate:',predicate.name)
+            constant_tuples = [] # For each predicate, a list of constant indices is generated for each atom, e.g. LocIn:[[1,34],[2,3],...]
+            for atom in all_atoms_per_predicate[predicate.name]: #For every atom in the queries
+                atom_to_index[atom] = count  # HERE IT ASSIGNS AN INDEX TO EVERY ATOM (FOR EVERY PREDICATE), e.g. {LocIn(morocco,spain):0,LocIn(morocco,france):1,...}
+                count += 1
+                indices_cs = [] # This is for A_predicates, to get the constant indices in a list format, e.g.  (Morocco,Spain)->[1,34] (from the LocIn(morocco,spain) example)
+                for c in atom[1:]: # for every constant in the atom
+                    # check if that constant has a domain (in this case should be ctes)
+                    domain = (self.constant2domain_name[c]
+                              if c in self.constant2domain_name else
+                              self.adaptive_constant2domain[c])
+                    # print('     domain:',domain, c)
+                    # constant_index = domain_to_local_constant_index[domain] # It is a domain_to_global_index but for the local indices
+                    # if c not in constant_index:  # If the constant is not in the  local indices for constants mentioned before
+                    assert c in self.constant_to_global_unique_index[domain], 'Constant not indexed'
+                    if self.constant_to_global_unique_index[domain][c] not in domain_to_global[domain]:
+                        # constant_index[c] = len(constant_index) # Add it to domain_to_local_constant_index
+                        domain_to_global[domain].append(
+                            self.constant_to_global_unique_index[domain][c]) # Append it to domain_to_global, which is what I return as X_domains, which is the different constants for each domain
+                    # indices_cs.append(constant_index[c]) # Append the local index of the constant to the list of constant indices. INSTEAD, I SHOULD APPEND THE GLOBAL INDEX
+                    indices_cs.append(self.constant_to_global_unique_index[domain][c]) # Append the global index of the constant to the list of constant indices
+                # print('     indices:',indices_cs, atom[1:])
+                constant_tuples.append(indices_cs) # Append the list of constant local indices to the list of constant indices for the predicate
+            predicate_to_constant_tuples[predicate.name] = constant_tuples
 
-    #     index_queries = [[atom_to_index[q] for q in Q] for Q in queries]
-    #     index_groundings = {}
-    #     for name,rule in rule_groundings.items():
-    #         if len(rule.groundings) > 0:
-    #             G_body = []
-    #             G_head = []
-    #             for g in rule.groundings:
-    #                 G_body.append([atom_to_index[atom] for atom in g[1]])
-    #                 G_head.append([atom_to_index[atom] for atom in g[0]])
-    #             index_groundings[name] = G_body, G_head
+        index_queries = [[atom_to_index[q] for q in Q] for Q in queries]
+        index_groundings = {}
+        for name,rule in rule_groundings.items():
+            if len(rule.groundings) > 0:
+                G_body = []
+                G_head = []
+                for g in rule.groundings:
+                    G_body.append([atom_to_index[atom] for atom in g[1]])
+                    G_head.append([atom_to_index[atom] for atom in g[0]])
+                index_groundings[name] = G_body, G_head
 
-    #     # Create indices for queries triples, in which, for each query, the index of the h,t,r is stored.
-    #     # I need to do it here because otherwise ultra only gets the local atom index, and I need a global triplet index (which I cannot recover from the local atom index)
-    #     # but also, at the begginging, when I initialize the dataset, I need to compute the triplet indeces for all the queries
-    #     # I need to be careful with the domains. In regions, 1 is Europe, but in countries 1 is Spain. For Ultra, they will be the same
-    #     triplet_index_queries = []
-    #     for query in queries:
-    #         # print('query',query)
-    #         triplet_index_query = []
-    #         for atom in query:
-    #             index_query = []
-    #             for c in atom[1:]:
-    #                 domain = (self.constant2domain_name[c]
-    #                             if c in self.constant2domain_name else
-    #                             self.adaptive_constant2domain[c])
-    #                 index_query.append(self.constant_to_global_index[domain][c])
-    #             # Now get the index of the predicate
-    #             predicate_idx = self.predicate_to_global_index[atom[0]]
-    #             index_query.append(predicate_idx)
-    #             # index_query.append(int(predicate_idx))
-    #             triplet_index_query.append(index_query)
-    #             # print('atom',atom,'constant',c,'index_query',index_query) 
-    #         triplet_index_queries.append(triplet_index_query)
-    #     # print('triplet_index_queries',triplet_index_queries)
+        # Create indices for queries triples, in which, for each query, the index of the h,t,r is stored.
+        # I need to do it here because otherwise ultra only gets the local atom index, and I need a global triplet index (which I cannot recover from the local atom index)
+        # but also, at the begginging, when I initialize the dataset, I need to compute the triplet indeces for all the queries
+        # I need to be careful with the domains. In regions, 1 is Europe, but in countries 1 is Spain. For Ultra, they will be the same
+        queries_global = []
+        for query in queries:
+            triplet_index_query = []
+            for atom in query:
+                index_query = []
+                for c in atom[1:]:
+                    domain = (self.constant2domain_name[c]
+                                if c in self.constant2domain_name else
+                                self.adaptive_constant2domain[c])
+                    index_query.append(self.constant_to_global_index[domain][c])
+                # Now get the index of the predicate
+                predicate_idx = self.predicate_to_global_index[atom[0]]
+                index_query.append(predicate_idx)
+                # index_query.append(int(predicate_idx))
+                triplet_index_query.append(index_query)
+            queries_global.append(triplet_index_query)
 
+        # Create indices for A_predicates triples, in which, for each atom, the index of the h,t,r is stored
+        A_predicates_global = []
+        for predicate in predicate_to_constant_tuples.keys():
+            # Now get the index of the predicate
+            predicate_idx = self.predicate_to_global_index[predicate]
+            for atom in predicate_to_constant_tuples[predicate]:
+                A_predicates_global.append(atom + [predicate_idx]) 
 
-    #     # Create indices for A_predicates triples, in which, for each atom, the index of the h,t,r is stored.
-    #     triplet_index_A_predicates = []
-    #     for predicate in predicate_to_constant_tuples.keys():
-    #         # Now get the index of the predicate
-    #         predicate_idx = self.predicate_to_global_index[predicate]
-    #         for atom in predicate_to_constant_tuples[predicate]:
-    #             triplet_index_A_predicates.append(atom + [predicate_idx])  
-        
+        # print('constant_to_global_unique_index')
+        # for domain in self.constant_to_global_unique_index.keys():
+        #     print(domain,self.constant_to_global_unique_index[domain])   
 
-    #     return (domain_to_global,
-    #             predicate_to_constant_tuples,
-    #             index_groundings,
-    #             index_queries,(triplet_index_queries,triplet_index_A_predicates))
+        # print('\nSERIALIZER X_DOMAIN KEYS: ,',domain_to_global.keys())
+        # for domain in domain_to_global.keys(): # order the constants in the domain
+        #     domain_to_global[domain] = sorted(domain_to_global[domain])
+        #     tf.print('SERIALIZER X_domain:',domain,domain_to_global[domain])
+        # print('SERIALIZER Predicates:',self.predicate_to_global_index.keys())
+        # for p,constant_idx in predicate_to_constant_tuples.items():
+        #     predicate = fol.name2predicate[p]
+            # tf.print('SERIALIZER A_predicate',p,'domains:',[domain.name for domain in predicate.domains],'cte_index',constant_idx)
+            # for i,domain in enumerate(predicate.domains):
+            #     if len(constant_idx) != 0:
+            #         tf.print('SERIALIZER A_predicate:',p,'domain:',domain.name,np.array(constant_idx)[:,i])
+            #     else:
+            #         tf.print('SERIALIZER A_predicate:',p,'domain:',domain.name, 'empty')
+
+        return (domain_to_global,
+                predicate_to_constant_tuples,
+                index_groundings,
+                index_queries,(queries_global,A_predicates_global))
 
 
 #################################################

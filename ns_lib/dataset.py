@@ -40,7 +40,7 @@ AtomTuples = Union[List[List[AtomId]], Tensor] # a list of groundings (lists of 
 
 def _from_strings_to_tensors(fol, serializer,
                              queries, labels, engine, ragged,
-                             constants_features=None, deterministic=True):
+                             constants_features=None, deterministic=True, global_serialization=False):
 
     # Symbolic step
     facts_tuple = tuple(fol.facts)
@@ -71,13 +71,17 @@ def _from_strings_to_tensors(fol, serializer,
 
     - Queries_global  : global indices of the queries. The first index is the original query, the rest are the corruptions of that query. It i as queries, but with (h_id, t_id, r_id)
     '''
-    queries_global = A_predicates_triplets = None
-    (domain_to_global, predicate_tuples, groundings, queries) = (serializer.serialize(queries=queries,
-                                rule_groundings=ground_formulas))   
+    A_predicates_global = queries_global = None
+    if global_serialization:
+        (domain_to_global, predicate_tuples, groundings, queries, (queries_global,A_predicates_global)) = (
+            serializer.serialize_global_A_predicates(fol,queries=queries,
+                                rule_groundings=ground_formulas))
+
+    else:
+        queries_global = A_predicates_triplets = None
+        (domain_to_global, predicate_tuples, groundings, queries) = (serializer.serialize(queries=queries,
+                                    rule_groundings=ground_formulas))   
     
-    # (domain_to_global, predicate_tuples, groundings, queries, (queries_global,A_predicates_triplets)) = (
-    #     serializer.serialize_global_A_predicates(queries=queries,
-    #                          rule_groundings=ground_formulas))
 
 
     # Convert constants(domain) indices from list to tf tensor
@@ -127,7 +131,7 @@ def _from_strings_to_tensors(fol, serializer,
         labels = tf.constant(labels, dtype=tf.float32)
 
     return (input_domains_tf, input_atoms_tuples_tf,
-            input_formulas_tf, queries, (queries_global,A_predicates_triplets)), labels
+            input_formulas_tf, queries, (queries_global,A_predicates_global)), labels
 
 
 class Dataset():
@@ -182,8 +186,9 @@ class DataGenerator(tf.keras.utils.Sequence):
                  ragged: bool=False,
                  name= "None",
                  use_ultra = False,
-                 use_ultra_with_kge = False):
-
+                 use_ultra_with_kge = False,
+                 global_serialization = True):
+        self.global_serialization = global_serialization
         self.dataset = dataset
         self.deterministic = deterministic
         self.fol = fol
@@ -240,7 +245,8 @@ class DataGenerator(tf.keras.utils.Sequence):
             engine=self.engine,
             ragged=self.ragged,
             constants_features=constants_features,
-            deterministic=self.deterministic) 
+            deterministic=self.deterministic,
+            global_serialization=self.global_serialization) 
         
         embeddings = None
         if self.use_ultra_with_kge:  
@@ -275,7 +281,8 @@ class DataGenerator(tf.keras.utils.Sequence):
             engine=None,
             ragged=self.ragged,
             constants_features=constants_features,
-            deterministic=self.deterministic)
+            deterministic=self.deterministic,
+            global_serialization=self.global_serialization)
         
         self.Q_global = Q_global    
         # Here Im interested in Q_global, to get the general info that I pass to ultra. From Q_global I can get the triplets of the queries only by taking the first element in every query
