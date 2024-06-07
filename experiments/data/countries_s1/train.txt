@@ -259,7 +259,6 @@ locatedInCR(mayotte,africa).
 locatedInCS(mayotte,eastern_africa).
 locatedInSR(melanesia,oceania).
 locatedInCS(mexico,northern_america).
-locatedInCS(micronesia,micronesia).
 locatedInSR(micronesia,oceania).
 locatedInSR(middle_africa,africa).
 locatedInCS(moldova,eastern_europe).

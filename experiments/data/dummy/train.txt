@@ -1,0 +1,4 @@
+term1(person1,person2).
+term1(person2,person3).
+term2(person1,person2).
+term2(person2,person3).

@@ -2,15 +2,15 @@ import copy
 import os.path
 import random
 
-from keras_ns.dataset import Dataset, PositiveOnlyDataset, Queries, Labels, Domain, Predicate
+from ns_lib.dataset import Dataset, PositiveOnlyDataset, Queries, Labels, Domain, Predicate
 from typing import List, Union, Set, Tuple
 from os.path import join
 from collections import OrderedDict
-from keras_ns.utils import read_file_as_lines
-from keras_ns.logic.commons import Atom
+from ns_lib.utils import read_file_as_lines
+from ns_lib.logic.commons import Atom
 from itertools import product
 from collections import defaultdict,namedtuple
-from keras_ns.metrics import MRRMetric
+from ns_lib.metrics import MRRMetric
 import numpy as np
 from functools import lru_cache
 
