@@ -127,9 +127,9 @@ if __name__ == '__main__':
         if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'): # For heavy datasets, run only one seed
             args.seed = [0]
         args.kge_atom_embedding_size = e
-        args.batch_size = 128 # 128 # Full batch only for explain.
-        args.val_batch_size = 128
-        args.test_batch_size = 128 #64
+        args.batch_size = 1 # Full batch only for explain.
+        args.val_batch_size = 1
+        args.test_batch_size = 1 
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
