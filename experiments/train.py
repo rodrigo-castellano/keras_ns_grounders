@@ -18,8 +18,8 @@ from ns_lib.grounding.backward_chaining_grounder_nocleanup import BackwardChaini
 import time
 from model_utils import * 
 import wandb
-from wandb.keras import WandbCallback
-from wandb.keras import WandbMetricsLogger
+from wandb.integration.keras import WandbCallback
+from wandb.integration.keras import WandbMetricsLogger
 from ultra_utils import build_relation_graph, Ultra,nested_dict
 explain_enabled: bool = False
 
@@ -154,7 +154,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     data_gen_train = ns.dataset.DataGenerator(
         dataset_train, fol, serializer, engine,
         batch_size=args.batch_size, ragged=ragged,
-        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge)
+        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge, use_llm=args.use_llm)
     end = time.time()
     args.time_ground_train = np.round(end - start,2)
     print("Time to create data generator train: ", np.round(end - start,2),'\n************************************')
@@ -163,7 +163,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     data_gen_valid = ns.dataset.DataGenerator(
        dataset_valid, fol, serializer, engine,
        batch_size=args.val_batch_size, ragged=ragged,
-        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge)
+        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge, use_llm=args.use_llm)
     end = time.time()
     args.time_ground_valid = np.round(end - start,2)
     print("Time to create data generator valid: ",  np.round(end - start,2),'\n************************************') 
@@ -172,7 +172,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     data_gen_test = ns.dataset.DataGenerator(
         dataset_test, fol, serializer, engine,
         batch_size=args.test_batch_size, ragged=ragged,
-        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge)
+        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge, use_llm=args.use_llm)
     end = time.time()
     args.time_ground_test = np.round(end- start,2)
     print("Time to create data generator test: ",  np.round(end - start,2),'\n************************************')
@@ -193,6 +193,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         fol, rules,
         use_ultra=args.use_ultra,
         use_ultra_with_kge=args.use_ultra_with_kge,
+        use_llm=args.use_llm,
         kge=args.kge,
         kge_regularization=args.kge_regularization,
         model_name=get_arg(args, 'model_name', 'dcr'),
@@ -248,7 +249,8 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         checkpoint_load = get_arg(args, 'checkpoint_load', None)
         print('Loading weights from ', checkpoint_load, flush=True)
         _ = model(next(iter(data_gen_train))[0])  # force building the model.
-        model.load_weights(checkpoint_load)
+        if os.path.exists(checkpoint_load):
+            model.load_weights(checkpoint_load)
         model.summary()
 
     # CALLBACKS
@@ -275,7 +277,9 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         filepath=get_arg(args, 'ckpt_filepath', None))
     callbacks.append(best_model_callback)
 
-    if not args.use_ultra:
+    
+    
+    if not args.use_ultra and not args.use_llm:
         kge_filepath = get_arg(args, 'ckpt_filepath', None)
         if kge_filepath is not None:
             kge_filepath =  '%s_kge_model' % kge_filepath

@@ -4,8 +4,11 @@ from keras.regularizers import L2
 from typing import Dict, List, Tuple
 import tensorflow as tf
 import tensorflow_probability as tfp
-
+import torch
+from angle_emb import AnglE, Prompts
 from ns_lib.logic.commons import Domain
+from transformers import AutoModel, AutoTokenizer
+from ns_lib.logic import FOL
 
 class ConstantEmbeddings(Layer):
     """Calls the constant rules_embedders, differenciating the behavior of
@@ -272,3 +275,74 @@ class ExplicitDomainEmbedders(Layer):
         for domain in self.domains:
                 domain_features[domain.name] = self.embedder[domain.name](domain_inputs[domain.name])
         return domain_features
+
+
+    
+class LMEmbeddings():
+    LLM = AnglE.from_pretrained('WhereIsAI/UAE-Large-V1', pooling_strategy='cls').cuda()
+
+    LLM.trainable = False
+    @staticmethod
+    def attended_mean_pooling(model_output, attention_mask) -> tf.Tensor:
+        """
+        Performs mean pooling on the token embeddings based on the attention mask.
+
+        Args:
+            model_output (tf.Tensor): The output of the model.
+            attention_mask (tf.Tensor): The attention mask to indicate which tokens to include in the pooling.
+
+        Returns:
+            tf.Tensor: The mean-pooled token embeddings.
+
+        """
+        token_embeddings = model_output[0] #First element of model_output contains all token embeddings
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+    
+    def __init__(self, fol: FOL, model_name: str):
+        """
+        Initialize the ConstantEmbedding class.
+
+        Args:
+            model_name (str): The name of the pre-trained model.
+
+        Returns:
+            None
+        """
+        # self.lm = AutoModel.from_pretrained(model_name, device_map = 'cuda')
+        self.fol = fol
+        
+        
+        # #Embed relation
+        # self.embedded_relations = []
+        # for predicate in self.fol.predicates:
+        #     self.embedded_relations.append(1)
+                
+        # #Embed constants
+        # self.embedded_constants = []
+        # for domain in self.fol.domains:
+        #     for constant in domain.constants:
+        #         self.embedded_constants.append(1)
+        
+        # self.embedded_relations = tf.concat(self.embedded_relations, 0)
+        # self.embedded_constants = tf.concat(self.embedded_constants, 0)
+        
+    def __call__(self, A_predicates: tf.Tensor) -> tf.Tensor:
+        """
+        Applies the embedding model to the given inputs.
+
+        Args:
+            inputs (tf.Tensor): The input tensor to be embedded.
+
+        Returns:
+            tf.Tensor: The embedded tensor.
+        """
+        # A_predicates_tensor = tf.convert_to_tensor(A_predicates)
+        # batch_size = A_predicates_tensor.shape[0]
+        # A_predicates_costants = tf.gather(self.embedded_constants,A_predicates_tensor[:,:2])
+        # A_predicates_predicates = tf.expand_dims(tf.gather(self.embedded_relations, A_predicates_tensor[:,2]),1)
+        # A_predicates_embeddings = tf.concat([A_predicates_costants, A_predicates_predicates], axis=1)  
+        # #concat on the 2 dimension the embeddings of the constants and the predicates
+        # A_predicates_embeddings  = tf.reshape(A_predicates_embeddings, [batch_size, -1])
+        A_predicates_embeddings = self.LLM.encode(A_predicates)
+        return A_predicates_embeddings

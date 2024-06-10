@@ -1,5 +1,5 @@
 from keras import Model, regularizers, models
-from keras.layers import Dense, Dropout, Lambda, Layer
+from keras.layers import Dense, Dropout, Lambda, Layer, BatchNormalization, Activation
 import ns_lib as ns
 import tensorflow as tf
 from ns_lib.nn.constant_embedding import *
@@ -292,7 +292,36 @@ class ULTRA_bridge(Model):
         atom_outputs = tf.expand_dims(self.output_layer(atom_embeddings), -1) 
         return atom_outputs,atom_embeddings
 
-
+class LLM_Bridge(Model):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)   
+        self.dense_embedding = Sequential([
+                Dense(512),
+                BatchNormalization(axis=1), #InstanceNorm
+                Activation("relu"),
+                Dropout(0.3),
+                Dense(256),
+                BatchNormalization(axis=1), #InstanceNorm
+                Activation("relu"),
+                Dropout(0.3),
+                Activation("relu"),
+                Dense(100),
+                Activation("sigmoid")
+            ])
+            
+        self.dense_output = Sequential([
+            Dense(1),
+            Activation("sigmoid")
+        ]) 
+        self.output_layer = lambda inputs: tf.squeeze(self.dense_output(inputs),1)
+    
+    def call(self,embeddings):
+        # Project embeddings to the new size
+        atom_embeddings = self.dense_embedding(embeddings)
+        # Get the score for each atom
+        atom_outputs = tf.expand_dims(self.output_layer(atom_embeddings), -1) 
+        return atom_outputs,atom_embeddings
+    
 class CollectiveModel(Model):
 
     def __init__(self,
@@ -301,6 +330,7 @@ class CollectiveModel(Model):
                  *,  # all named after this point
                  use_ultra: bool,
                  use_ultra_with_kge: bool,
+                 use_llm: bool,
                  kge: str,
                  kge_regularization: float,
                  constant_embedding_size: int,
@@ -338,7 +368,8 @@ class CollectiveModel(Model):
         self.logic = GodelTNorm()
         self.use_ultra = use_ultra
         self.use_ultra_with_kge = use_ultra_with_kge
-        if not self.use_ultra:
+        self.use_llm = use_llm
+        if not self.use_ultra and not self.use_llm:
             self.kge_model = KGEModel(fol, kge,
                                     kge_regularization,
                                     constant_embedding_size,
@@ -349,8 +380,11 @@ class CollectiveModel(Model):
                                     dot_product,
                                     device='cpu',
                                     use_ultra=self.use_ultra_with_kge)
-        else:
+        elif self.use_ultra:
             self.ULTRA_bridge = ULTRA_bridge()
+        elif self.use_llm:
+            self.LLM_bridge = LLM_Bridge()
+            
         self.model_name = model_name
 
         # REASONING LAYER
@@ -470,6 +504,9 @@ class CollectiveModel(Model):
             concept_output,concept_embeddings = self.ULTRA_bridge(concept_embeddings)
             # print('concept_output',concept_output.shape)
             # print('concept_embeddings',concept_embeddings.shape)
+        elif self.use_llm:
+            (_, concept_embeddings) = embeddings # I don't need the concept_output here, I just need the embeddings
+            concept_output,concept_embeddings = self.LLM_bridge(concept_embeddings)
         else:
             concept_output, concept_embeddings = self.kge_model((X_domains, A_predicates),embeddings=embeddings)
             # print('concept_output',concept_output.shape)
