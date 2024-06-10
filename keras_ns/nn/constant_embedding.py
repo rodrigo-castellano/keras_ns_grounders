@@ -4,9 +4,11 @@ from keras.layers import Dense
 from keras import Sequential
 from keras.regularizers import L2
 from typing import Dict, List, Tuple
+from angle_emb import AnglE, Prompts
+import torch
 from keras_ns.logic.commons import Domain
 import tensorflow as tf
-from transformers import TFAutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer
 
 
 class ConstantEmbeddings(Layer):
@@ -142,12 +144,9 @@ class LMEmbeddings():
             tf.Tensor: The mean-pooled token embeddings.
 
         """
-        token_embeddings = model_output[0] # First element of model_output contains all token embeddings
-        input_mask_expanded = tf.cast(
-            tf.broadcast_to(tf.expand_dims(attention_mask, -1), tf.shape(token_embeddings)),
-            tf.float32
-        )
-        return tf.math.reduce_sum(token_embeddings * input_mask_expanded, axis=1) / tf.clip_by_value(tf.math.reduce_sum(input_mask_expanded, axis=1), 1e-9, tf.float32.max)
+        token_embeddings = model_output[0] #First element of model_output contains all token embeddings
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
     
     def __init__(self, model_name: str):
         """
@@ -160,7 +159,13 @@ class LMEmbeddings():
             None
         """
         super().__init__()
-        self.lm = TFAutoModel.from_pretrained(model_name)
+        # self.lm = AutoModel.from_pretrained(model_name, device_map = 'cuda')
+        self.lm = AnglE.from_pretrained('NousResearch/Llama-2-7b-hf',
+                              pretrained_lora_path='SeanLee97/angle-llama-7b-nli-v2',
+                              pooling_strategy='last',
+                              is_llm=True,
+                              torch_dtype=torch.float16).cuda()
+        print('All predefined prompts:', Prompts.list_prompts())
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.lm.trainable = False
         
@@ -174,9 +179,14 @@ class LMEmbeddings():
         Returns:
             tf.Tensor: The embedded tensor.
         """
-        input_ids = self.tokenizer(inputs, return_tensors="tf", padding=True, truncation=True)['input_ids']
-        model_output = self.lm(input_ids)
-        return self.attended_mean_pooling(model_output, input_ids["attention_mask"])
+        # input_ids = self.tokenizer(inputs, return_tensors="pt", padding=True, truncation=True)
+        # with torch.no_grad():
+        #     model_output = self.lm(**input_ids.to("cuda"))
+        # attended_score = self.attended_mean_pooling(model_output, input_ids["attention_mask"])
+        # normalized_embeddings = torch.nn.functional.normalize(attended_score, p=2, dim=1)
+        # tf_embeddings = tf.convert_to_tensor(normalized_embeddings.cpu().numpy())
+        tf_embeddings = self.lm.encode(inputs)
+        return tf_embeddings
         
 
 class ConstantEmbeddings(Layer):
@@ -208,28 +218,6 @@ class ConstantEmbeddings(Layer):
         # How should I do, before the serializer I work directly with the word to get the text? or once I have the indeces, I retrieve the word from each index?
         return domain_features
     
-class LMCostantEmbeddings(LMEmbeddings):
-    
-    def __init__(self, model_name: str, domains: List[Domain], fol: FOL):
-        """
-        Initialize the ConstantEmbedding class.
 
-        Args:
-            model_name (str): The name of the pre-trained model.
-            constant_embedding_size (int): The size of the constant embedding.
-        """
-        super().__init__(model_name)
-        self._domains = domains
-        self._embedder = {}
-        
-        # Initialize the embeddings for each domain, at least the one that i have at the moment
-        for domain in domains:
-            self._embedder[domain.name] = {}
-            for constant in domain.constants:
-                if self._embedder[domain.name].get(constant) is not None:
-                    print(f"{'Warning'*10}: constant {constant} already exists in domain {domain.name}")
-                self._embedder[domain.name][constant]= self(constant)
-        
-    def __call__(self, constant)
         
         

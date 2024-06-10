@@ -6,11 +6,12 @@
     "configurations": [
 
 
+
         {
             "name": "Python: Terminal",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "experiments/runner.py",
             "console": "integratedTerminal", 
         }
     ]

@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/christian/Dottorato/keras_ns_grounders')
+sys.path.append('/home/dimaio/Dottorato/keras_ns_grounders')
 import os
 import tensorflow as tf
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -26,18 +26,18 @@ if __name__ == '__main__':
 
     # Choose whether to save the results or not, and the folders where to save them
     use_logger = False
-    use_WB = False
+    use_WB = True
     log_folder :str = "tests/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
-    base_path :str = "/home/christian/Dottorato/keras_ns_grounders/experiments/data"
+    base_path :str = "/home/dimaio/Dottorato/keras_ns_grounders/experiments/data"
 
     epochs: int = 100
     DATASET_NAME = ['countries_s1']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1','backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['llmconcate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','r2n',] # ['dcr','sbr','r2n','no_reasoner']  
+    MODEL_NAME = ['r2n',] # ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
-    E = [100,300] 
+    E = [300] 
     DEPTH = [1,3]
     SEED = [[0,1,2]]
     NEG_PER_SIDE = [1]
@@ -45,9 +45,9 @@ if __name__ == '__main__':
     DROPOUT = [0.0,0.1,0,2]
     R = [0.0]
     RR = [0.0]
-    LR = [0.01]
+    LR = [0.001]
     LR_SCHEDULER = ['plateau'] # None
-    OPTIMIZER = ['None','adam']
+    OPTIMIZER = ['adam']
     NUM_RULES = [1] 
     VALID_SIZE = [None]
 
