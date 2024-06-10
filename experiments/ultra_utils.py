@@ -128,7 +128,7 @@ def build_relation_graph(graph):
 
 class EntityNBFNet(BaseNBFNet):
 
-    def __init__(self, input_dim, hidden_dims, num_relation=1,embedd_out=False, **kwargs):
+    def __init__(self, input_dim, hidden_dims, num_relation=1,get_scores=False, **kwargs):
 
         # dummy num_relation = 1 as we won't use it in the NBFNet layer
         super().__init__(input_dim, hidden_dims, num_relation, **kwargs)
@@ -144,33 +144,38 @@ class EntityNBFNet(BaseNBFNet):
         feature_dim = input_dim + (sum(hidden_dims) if self.concat_hidden else hidden_dims[-1])
         self.mlp = nn.Sequential()
         mlp = []
-        self.embedd_out = embedd_out
+        self.get_scores = get_scores
         for i in range(self.num_mlp_layers - 1):
             mlp.append(nn.Linear(feature_dim, feature_dim))
             mlp.append(nn.ReLU())
-        if not embedd_out:
+        # self.mlp = nn.Sequential(*mlp)
+        self.mlp_embedd = nn.Sequential(*mlp)
+        if get_scores:
             mlp.append(nn.Linear(feature_dim, 1))
-        self.mlp = nn.Sequential(*mlp)
- 
+        self.mlp_score = nn.Sequential(*mlp)
     
     def bellmanford(self, data, h_index, r_index, separate_grad=False):
         batch_size = len(r_index)
         # initialize queries (relation types of the given triples)
-        print('torch.arange(batch_size, device=r_index.device)',torch.arange(batch_size, device=r_index.device).shape)
-        print('r_index:',r_index.shape)
+        # print('torch.arange(batch_size, device=r_index.device)',torch.arange(batch_size, device=r_index.device).shape)
+        # print('r_index:',r_index.shape)
         # create a vector which is [range(len of the batch),relations index]. That vector is used to select the self.query(relation embeddings) for each query
         # In few words, for each query, I get the relation embedding of the relation of the query, and that is used as ini of the tail node of each query
         query = self.query[torch.arange(batch_size, device=r_index.device), r_index] #[n_nodes=tail node of each query,embedd_size of each node]
-        print('query:',query.shape)
-        print('h_index.unsqueeze(-1)',h_index.unsqueeze(-1).shape)
+        # print('query:',query.shape, query)
+        # print('h_index.unsqueeze(-1)',h_index.unsqueeze(-1).shape)
         # index goes from [n_queries,1] to [n_queries,node_reperesentation_dim]. It repeats the same index n_nodes times
         index = h_index.unsqueeze(-1).expand_as(query)
-        print('index:',index.shape)#,index)
+        # print('index:',index.shape,index)
         # THE PROBLEM IS THAT THE NUMBER OF NODES IS 248, BUT IN REALITY THERE ARE UP TO 270
         # initial (boundary) condition - initialize all node states as zeros
         boundary = torch.zeros(batch_size, data.num_nodes, self.dims[0], device=h_index.device)
-        print('boundary:',boundary.shape)#,boundary)
+        # print('boundary:',boundary.shape,boundary)
         # by the scatter operation we put query (relation) embeddings as init features of source (index) nodes
+        # print('index.unsqueeze(1):',index.unsqueeze(1).shape)
+        # print('query.unsqueeze(1):',query.unsqueeze(1).shape)
+        # to boundary, I sum the query based on the index. Index_i says to what positions of boundary I should add the query_i
+        # if in index I have the idx 270, in boundary the first dim needs to have shape 270, instead of 248.
         boundary.scatter_add_(1, index.unsqueeze(1), query.unsqueeze(1))
         
         size = (data.num_nodes, data.num_nodes)
@@ -248,8 +253,11 @@ class EntityNBFNet(BaseNBFNet):
             # From these embeddings of the pos and negatives queries, Im just interested in the postive query (self representation)
             feature = feature[:, :1, :]
 
-        embedd = self.mlp(feature)
-        return embedd
+        embedd = self.mlp_embedd(feature)
+        scores = self.mlp_score(feature) if self.get_scores else None
+        # print('embedd:',embedd.shape)
+        # print('scores:',scores.shape)
+        return embedd, scores
 
 
 
@@ -263,8 +271,7 @@ class Ultra(nn.Module):
         # kept that because super Ultra sounds cool
         super(Ultra, self).__init__()
         self.relation_model = RelNBFNet(input_dim=64, hidden_dims=[64, 64, 64, 64, 64, 64], message_func='distmult', aggregate_func='sum', short_cut=True, layer_norm=True)
-        self.entity_model = EntityNBFNet(input_dim=64, hidden_dims=[64, 64, 64, 64, 64, 64], message_func='distmult', aggregate_func='sum', short_cut=True, layer_norm=True,embedd_out=True)
-
+        self.entity_model = EntityNBFNet(input_dim=64, hidden_dims=[64, 64, 64, 64, 64, 64], message_func='distmult', aggregate_func='sum', short_cut=True, layer_norm=True,get_scores=True)
 
     def split_head_tail_negatives(self, batch, relation_representations):
         '''
@@ -359,31 +366,21 @@ class Ultra(nn.Module):
         # Batch: [16=batch_size,1594,3]=[16 heads(tails), 1594 is, for each head(tail), the number of negative tails(heads), 3 is indeces full negative triple(h, t, r)]
         # For all the heads(tails) in the batch, take the first element of the negatives(for all negatives, the relation is the same), and the relation index
         # query_rels: torch.Size([16]) 
-        # batch = tf_to_pytorch(batch,type='int') 
-
-        # if it is a tuple, convert it to numpy, if batch is in numpy format, leave it as it is. If it is a symbolic tensor, leave it as it is
-        # print('before: type(batch)',type(batch),type(batch[0]),type(batch[0][0]),type(batch[0][0][0]))
-        # if isinstance(batch, tuple):
-        #     batch = np.array(batch)
-        # elif isinstance(batch, np.ndarray):
-        #     pass
-        # elif isinstance(batch, torch.Tensor) or isinstance(batch, tf.Tensor):
-        #     batch = batch.detach().numpy()
-        # else:
-        #     batch = batch.numpy()
-        # print('after: type(batch)',type(batch),type(batch[0]),type(batch[0][0]),type(batch[0][0][0]))
-
+        # print('number of queries/A_pred:',len(batch),batch[:10])
         batches = self.split_corruptions(batch)
         for key in batches.keys():
             batches[key] = np.concatenate(batches[key], axis=0)
             batches[key] = torch.tensor(batches[key], dtype=torch.int64)
 
+        
+
         # For each batch, get the relation representations
         all_relation_representations = []
         all_entity_representations = []
+        all_scores = []
         for key,batch in batches.items():
-            print('Batch:',batch.shape)
-            # if the number of dimensions is 2,add a dimension in the middle (it would mean that there are no negatives, only positives)
+            # print('Batch_i:',batch.shape)
+            # if the number of dimensions is 2,add a dimension in the middle (it would mean that there are no negatives, only positives). This is thought for the atom repersentation
             if len(batch.shape) == 2:
                 batch = batch.unsqueeze(1)
             query_rels = batch[:, 0, 2]
@@ -391,22 +388,34 @@ class Ultra(nn.Module):
             # For each query, get a representation of all the relations of dim 64
             # relation_representations:  torch.Size([16, 360, 64])=(queries,n_relationsx2,dim_embedd)
             relation_representations = self.relation_model(data.relation_graph, query=query_rels)
-            print('relation_representations:',relation_representations.shape)
+            # print('relation_representations:',relation_representations.shape)
  
             # Given the batch [16,1594,3], do a prediction, for each of the 16 heads(tails) in the queries, of all possible tails(heads) candidates
             # score:  torch.Size([16, 1594])
 
             # Instead of an array of [n_queries, n_corruptions, 3], I get [n_queries*2, n_corruptions/2, 3] in training, where for each q, half of the corrup. are negatives (head corr) and the other half are tail corruptions
             # I put them as a two different queries, so that I can pass them to the entity model
+            # print('batch:',batch.shape)
+            # print('relation_representations:',relation_representations.shape)
             batch,relation_representations = self.split_head_tail_negatives(batch,relation_representations)
             # It may be that the queries have indices of entities greater than the number of entities in the graph, so I need to filter them. SHUOLD NOT HAPPEN!!!
-            entity_representations = self.entity_model(data, relation_representations, batch,atom_repr=atom_repr) # [16,1594,64] = [batch_size, num_negatives, embedd_size]
+            entity_representations, scores = self.entity_model(data, relation_representations, batch,atom_repr=atom_repr) # [16,1594,64] = [batch_size, num_negatives, embedd_size]
             # PLEASE make sure that in entity_representations:[1,354=n_nodes,64], the first node correspond to the first index and so on
-            print('entity_representations:',entity_representations.shape)
+            # print('entity_representations:',entity_representations.shape)
             all_relation_representations.append(relation_representations)
             all_entity_representations.append(entity_representations)
+            all_scores.append(scores)
 
-        
+        # print('all_entity_representations:')
+        # for i in range(len(all_entity_representations)):
+        #     print(i,all_entity_representations[i].shape)
+        # print('all_scores:')
+        # for i in range(len(all_scores)):
+        #     print(i,all_scores[i].shape)
+        # print('all_relation_representations:')
+        # for i in range(len(all_relation_representations)):
+        #     print(i,all_relation_representations[i].shape)
+
         if not atom_repr:
             # print('relation_representations before:',relation_representations.shape)
             # print('entity_representations before:',entity_representations.shape)
@@ -424,16 +433,20 @@ class Ultra(nn.Module):
         else:
             # For the relations, I shuold take the one associated to the query
             # squeeze the dim in the middle, given we have only the postive query
-            # assert that there is only a positive query
-            assert entity_representations.shape[1] == 1
+            # assert that there is only a positive query, otherwise say that there should be no negatives
+            assert entity_representations.shape[1] == 1, 'There should be only positive queries given to Ultra'
             entity_representations = entity_representations.squeeze(1)
             # convert the atom embedds to tf (I dont need convert_to_domain because I directly get the atom embedds, not the cte embedds)
-            # entity_representations = pytorch_to_tf(entity_representations)
             atom_representations = entity_representations.detach().cpu().numpy()
+
+            assert scores.shape[1] == scores.shape[2] == 1, 'Problem with the shape of the tail entity scores'
+            scores = scores.squeeze(1)
+            scores = scores.detach().cpu().numpy()
+            
             # I DONT CARE ABOUT THE RELATIONS, THIS IS THE ATOMS REPRESENATIONS
-            # print('relation_representations.shape:',relation_representations.shape)
+            # print('scores.shape:',scores.shape)
             # print('entity_representations.shape',entity_representations.shape)
-            return atom_representations
+            return scores, atom_representations
         
  
 

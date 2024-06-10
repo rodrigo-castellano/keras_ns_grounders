@@ -204,10 +204,32 @@ class DataGenerator(tf.keras.utils.Sequence):
         if self.use_ultra or self.use_ultra_with_kge:
             self.global_info_ultra()
             self.Ultra = Ultra()
+
+            # print('\n\nUltra', self.Ultra)
+            # for name, param in self.Ultra.named_parameters():             
+            #     print(name, param.shape)
+            #     print(param[0][:5]) if len(param.shape) > 1 else print(param[:5])
+
             state = torch.load('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\ULTRA\\ckpts\\ultra_4g.pth', map_location="cpu")
+            state = state['model']
+
+            # subsitution of the keys of the state dict. 'mlp.0' by 'mlp_embedd.0' and 'mlp.2' by 'mlp_score.2'
+            state = OrderedDict((key.replace('mlp', 'mlp_embedd'), value) if 'mlp.0' in key else (key.replace('mlp', 'mlp_score'), value) for key, value in state.items())
+
+            # print('\n\nState', state.keys())
+            # for key in state.keys():
+            #     print(key, state[key].shape)
+            #     print(state[key][0][:5]) if len(state[key].shape) > 1 else print(state[key][:5])
+
             # Filter out the keys that correspond to the final layer
-            filtered_state = {k: v for k, v in state.items() if 'mlp.2' not in k}        
-            self.Ultra.load_state_dict(filtered_state, strict=False)
+            self.Ultra.load_state_dict(state, strict=False)
+
+            # # show the parameters of the model
+            # print('\n\nUltra loaded')
+            # for name, param in self.Ultra.named_parameters():             
+            #     print(name, param.shape)
+            #     print(param[0][:5]) if len(param.shape) > 1 else print(param[:5])
+
             self.Ultra = self.Ultra.to('cpu')
 
         self._num_batches = 1
@@ -236,7 +258,7 @@ class DataGenerator(tf.keras.utils.Sequence):
     def _get_batch(self, i, b):
         queries, labels = self.dataset[b*i:b*(i+1)]
         constants_features = self.dataset.constants_features
-
+        
         ((X_domains_data, A_predicates_data, A_rules_data, Q, (Q_global,A_predicates_triplets)), y) = _from_strings_to_tensors(
             fol=self.fol,
             serializer=self.serializer,
@@ -248,6 +270,10 @@ class DataGenerator(tf.keras.utils.Sequence):
             deterministic=self.deterministic,
             global_serialization=self.global_serialization) 
         
+        # print('number of queries global', len(Q_global), Q_global[:10])
+        # print('number of corruption per query', [len(q) for q in Q])
+        # print('number of constants', [(key,len(X_domains_data[key])) for key in X_domains_data])
+        # print('number of atoms per predicate', [(key,len(A_predicates_data[key])) for key in A_predicates_data])
         embeddings = None
         if self.use_ultra_with_kge:  
             constant_embeddings, predicate_embeddings = self.Ultra(self.aux_dataset, Q_global,atom_repr=False) # embedds of the ctes,preds
@@ -256,8 +282,14 @@ class DataGenerator(tf.keras.utils.Sequence):
                 constant_embeddings[key] = tf.constant(constant_embeddings[key])
             embeddings = (constant_embeddings, tf.constant(predicate_embeddings, dtype=tf.float32))
         elif self.use_ultra: 
-            embeddings = self.Ultra(self.aux_dataset, A_predicates_triplets, atom_repr=True) # embedds of the atoms
-            embeddings = tf.constant(embeddings, dtype=tf.float32)
+            scores,atom_embeds = self.Ultra(self.aux_dataset, A_predicates_triplets, atom_repr=True) # embedds of the atoms
+            scores = tf.constant(scores, dtype=tf.float32)
+            atom_embeds = tf.constant(atom_embeds, dtype=tf.float32)
+            embeddings = (scores, atom_embeds)
+
+            # _,atom_embeds = self.Ultra(self.aux_dataset, A_predicates_triplets, atom_repr=True) # embedds of the atoms
+            # atom_embeds = tf.constant(atom_embeds, dtype=tf.float32)
+            # embeddings = (_, atom_embeds)
 
         return (X_domains_data, A_predicates_data, A_rules_data, Q, embeddings), y
     

@@ -27,16 +27,16 @@ wandb.login()
 if __name__ == '__main__':
 
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
-    tf.config.run_functions_eagerly(True)
+    # tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
     use_logger = False
     use_WB = False
-    log_folder :str = "experiments/tests/"
+    log_folder :str = "./experiments/tests/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
     base_path :str = "experiments/data"
-    epochs: int = 1
-    EARLY_STOPPING = True
-    ULTRA = False
+    epochs: int = 2
+    EARLY_STOPPING = False
+    ULTRA = True
     ULTRA_WITH_KGE = False
     DATASET_NAME = ['countries_s1']#,'nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1']#,'backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
@@ -45,13 +45,13 @@ if __name__ == '__main__':
     RULE_MINER = ['amie','None'] 
     E = [100]#,300] 
     DEPTH = [1]#,3]
-    SEED = [0],[[0,1,2]]
+    SEED = [0],#[[0,1,2]]
     NEG_PER_SIDE = [2]#[1]
     WEIGHT_LOSS = [.5]  
     DROPOUT = [0.0,0.1,0,2]
     R = [0.0]
     RR = [0.0]
-    LR = [0.01]
+    LR = [0.0001]
     LR_SCHEDULER = ['plateau'] # None
     OPTIMIZER = ['Adam'] #['None','adam']
     NUM_RULES = [1] 
@@ -181,7 +181,7 @@ if __name__ == '__main__':
         args.weight_loss = w_loss
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
-        args.valid_frequency = 3
+        args.valid_frequency = 1
         args.resnet = True
         args.reasoner_depth = dp if nr > 0 else 0
         args.reasoner_regularization_factor = rr
@@ -196,7 +196,6 @@ if __name__ == '__main__':
         args.filter_num_heads = 3
         args.filter_activity_regularization = 0.0
         # Other
-        args.kge_checkpoint_load = None
         # args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
         # args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
         # args.relation_entity_grounder_max_elements = 20
@@ -205,7 +204,9 @@ if __name__ == '__main__':
         run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg, e)
         args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e',]
         args.run_signature = '-'.join(f'{v}' for v in run_vars)    
-        args.ckpt_filepath = None # (os.path.join(ckpt_folder, args.run_signature) if ckpt_folder else None) 
+        args.ckpt_filepath = (os.path.join(ckpt_folder, args.run_signature) if ckpt_folder else None) 
+        args.checkpoint_load = os.path.join(ckpt_folder,'countries_s1-backward_1-complex-no_reasoner-None-2-100__epoch0.ckpt') #os.path.join(ckpt_folder, args.run_signature)
+        args.kge_checkpoint_load = None
         # append a hard copy of the args to the list of all_args
         all_args.append(copy.deepcopy(args)) 
 

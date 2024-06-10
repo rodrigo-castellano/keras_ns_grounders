@@ -1,0 +1,2 @@
+model_checkpoint_path: "countries_s1-backward_1-complex-no_reasoner-None-2-100__epoch0.ckpt"
+all_model_checkpoint_paths: "countries_s1-backward_1-complex-no_reasoner-None-2-100__epoch0.ckpt"
