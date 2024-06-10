@@ -207,7 +207,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
                         'task': args.weight_loss    
                                     },
                     metrics=metrics,
-                    run_eagerly=False)
+                    run_eagerly=True)
 
     if get_arg(args, 'kge_checkpoint_load', None) is not None:
         kge_checkpoint_load = get_arg(args, 'kge_checkpoint_load', None)
@@ -245,8 +245,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
 
     # Initialize a W&B run
     if use_WB:
-        run = wandb.init(project = "LLM-Logic", name=args.run_signature, config = dict(
-                shuffle_buffer = 1024,
+        run = wandb.init(project = "LLM-as-Embedder", name=args.run_signature, config = dict(
                 batch_size = args.batch_size,
                 learning_rate = args.learning_rate,
                 epochs = args.epochs

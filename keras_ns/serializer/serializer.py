@@ -114,7 +114,7 @@ class LogicSerializerFast(IndexerBase):
                     indices_cs.append(constant_index[c])
                 constant_tuples.append(indices_cs)
             predicate_to_constant_tuples[predicate.name] = constant_tuples
-
+        
         index_queries = [[atom_to_index[q] for q in Q] for Q in queries]
         index_groundings = {}
         for name,rule in rule_groundings.items():
