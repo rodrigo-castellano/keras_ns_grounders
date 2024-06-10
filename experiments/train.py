@@ -274,15 +274,17 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         # if path is not None, checkpoint to file.
         filepath=get_arg(args, 'ckpt_filepath', None))
     callbacks.append(best_model_callback)
-    kge_filepath = get_arg(args, 'ckpt_filepath', None)
-    if kge_filepath is not None:
-        kge_filepath =  '%s_kge_model' % kge_filepath
-    kge_best_model_callback = MMapModelCheckpoint(
-        model.kge_model, 'val_concept_mrr',
-        frequency=args.valid_frequency,
-        # if path is not None, checkpoint to file.
-        filepath=kge_filepath)
-    callbacks.append(kge_best_model_callback)
+
+    if not args.use_ultra:
+        kge_filepath = get_arg(args, 'ckpt_filepath', None)
+        if kge_filepath is not None:
+            kge_filepath =  '%s_kge_model' % kge_filepath
+        kge_best_model_callback = MMapModelCheckpoint(
+            model.kge_model, 'val_concept_mrr',
+            frequency=args.valid_frequency,
+            # if path is not None, checkpoint to file.
+            filepath=kge_filepath)
+        callbacks.append(kge_best_model_callback)
 
 
     # Initialize a W&B run
@@ -317,7 +319,11 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         if output_filename is not None:
             print('Saving model weights to', output_filename)
             model.save_weights(output_filename, overwrite=True)
-
+    # else:
+    #     history = None
+    #     best_model_callback._weights_saved = True
+    #     best_model_callback._last_checkpoint_filename = args.file_name_saved_weights
+    #     best_model_callback.restore_weights()
 
     # EVALUATION
     print("\nEvaluation train", flush=True)
@@ -326,7 +332,6 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     print("\nEvaluation val", flush=True)
     model.test_mode('valid',mode=True)
     valid_accuracy =  model.evaluate(data_gen_valid)#,val_data=True,testing=True) 
-
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
     model.test_mode('test',mode=True)

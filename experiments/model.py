@@ -52,13 +52,15 @@ class KGEModel(Model):
             # To adapt the size of the embeddings given by ultra
             self.predicate_projection = Sequential([
                 Dense(128, activation='relu'),
-                Dense(150, activation='relu'),
-                Dense(200, activation='relu')])
+                Dense(114, activation='relu'),
+                Dense(100, activation='relu'),
+                Dense(100, activation='relu')])
             
             self.constant_projection = Sequential([
                 Dense(128, activation='relu'),
-                Dense(150, activation='relu'),
-                Dense(200, activation='relu')])
+                Dense(114, activation='relu'),
+                Dense(100, activation='relu'),
+                Dense(100, activation='relu')])
         
         if num_adaptive_constants > 0:
             self.adaptive_constant_embedder = AdaptiveConstantEmbeddings(
@@ -144,6 +146,12 @@ class KGEModel(Model):
         # tf.print('KGE A_predicates')
         # for p,constant_idx in A_predicates.items():
         #     tf.print('KGE A_predicates',p,constant_idx,summarize=-1)
+        tf.print('KGE constant_embeddings')
+        for domain,constant_idx in constant_embeddings.items():
+            tf.print('KGE constant_embeddings',domain,constant_idx.shape,summarize=-1)  
+        tf.print('KGE predicate_embeddings')
+        for predicate_embeddings in predicate_embeddings:
+            tf.print('KGE predicate_embeddings',predicate_embeddings.shape,summarize=-1)
 
         for p,indices in A_predicates.items():
             idx = self.fol.name2predicate_idx[p]
@@ -257,9 +265,13 @@ class ULTRA_bridge(Model):
         # To adapt the size of the embeddings given by ultra
         self.atom_projection = Sequential([
             Dense(128, activation='relu'),
+            # Dense(128, activation='relu'),
             Dense(114, activation='relu'),
             Dense(100, activation='relu'),
             Dense(100, activation='relu'),])
+        
+        # self.atom_score_projection = Sequential([
+        #     Dense(1,activation='sigmoid')])
 
         # Define the output layer as a method
         self.output_layer = self._output_layer
@@ -267,12 +279,18 @@ class ULTRA_bridge(Model):
     def _output_layer(self, inputs):
         outputs = tf.reduce_sum(inputs, axis=-1)
         outputs = tf.nn.sigmoid(outputs)
+        # outputs = self.atom_score_projection(inputs)
+        # outputs = tf.squeeze(outputs, 1)
         return outputs
 
     def call(self,embeddings):
         # Project embeddings to the new size
-        atom_embeddings = self.atom_projection(embeddings)  
-        return atom_embeddings
+        atom_embeddings = self.atom_projection(embeddings)
+        # return atom_embeddings
+
+        # Get the score for each atom
+        atom_outputs = tf.expand_dims(self.output_layer(atom_embeddings), -1) 
+        return atom_outputs,atom_embeddings
 
 
 class CollectiveModel(Model):
@@ -443,18 +461,19 @@ class CollectiveModel(Model):
             assert self.model_name == 'dcr' or self.model_name == 'cdcr'
 
         (X_domains, A_predicates, A_rules, Q, embeddings) = inputs
-
-        # print('\n')
-        # for domain in X_domains.keys():  
-        #     tf.print('MODEL X_domain:',domain,X_domains[domain],summarize=-1)
-        # for p,constant_idx in  A_predicates.items():
-        #     tf.print('MODEL A_predicates:',p,constant_idx,summarize=-1)
         
         if self.use_ultra:
             print('USING ULTRA')
-            concept_output, concept_embeddings = self.ULTRA_bridge(embeddings)
+            # (concept_output, concept_embeddings) = embeddings
+            # concept_embeddings = self.ULTRA_bridge(concept_embeddings)
+            (_, concept_embeddings) = embeddings
+            concept_output,concept_embeddings = self.ULTRA_bridge(concept_embeddings)
+            # print('concept_output',concept_output.shape)
+            # print('concept_embeddings',concept_embeddings.shape)
         else:
             concept_output, concept_embeddings = self.kge_model((X_domains, A_predicates),embeddings=embeddings)
+            # print('concept_output',concept_output.shape)
+            # print('concept_embeddings',concept_embeddings.shape)
  
         task_output = tf.identity(concept_output)
 
@@ -467,7 +486,7 @@ class CollectiveModel(Model):
                         [task_output, atom_embeddings, A_rules])
                 task_output, atom_embeddings = self.reasoning[i]([
                     task_output, atom_embeddings, A_rules])
-            if self.embedding_resnet:
+            if self.embedding_resnet: # CAREFUL IN CASE OF ULTRA, THE OUTPUT LAYER SHOULD BE GIVEN BY ULTRA
                 # In this case we need to recompute the output from the updated embeddings.
                 w = tf.clip_by_value(self.embedding_resnet_weight(tf.concat([concept_embeddings, atom_embeddings], axis=-1)), 1e-9, 1.0 - 1e-7)
                 tf.print('embedding_resnet_weight', tf.reduce_mean(w))
