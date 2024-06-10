@@ -1,0 +1,4 @@
+locatedInCR
+locatedInCS
+locatedInSR
+neighborOf
