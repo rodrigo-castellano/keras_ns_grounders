@@ -252,12 +252,20 @@ class LogicSerializerFast(IndexerBase):
 
         # Create indices for A_predicates triples, in which, for each atom, the index of the h,t,r is stored
         A_predicates_global = []
+        A_predicates_global_textualized = []
         for predicate in predicate_to_constant_tuples.keys():
             # Now get the index of the predicate
             predicate_idx = self.predicate_to_global_index[predicate]
+            domains = self.predicate_to_domains[predicate]
+            domain_head = domains[0]
+            domain_tail = domains[1]
             for atom in predicate_to_constant_tuples[predicate]:
                 A_predicates_global.append(atom + [predicate_idx]) 
-
+                head_position = list(self.constant_to_global_unique_index[domain_head].values()).index(atom[0])
+                tail_position = list(self.constant_to_global_unique_index[domain_tail].values()).index(atom[1])
+                head_text = list(self.constant_to_global_unique_index[domain_head].keys())[head_position]
+                tail_text = list(self.constant_to_global_unique_index[domain_tail].keys())[tail_position]
+                A_predicates_global_textualized.append(f"{head_text} is a {domain_head} and it is {predicate} of {tail_text}, which is a {domain_tail}")
         # print('constant_to_global_unique_index')
         # for domain in self.constant_to_global_unique_index.keys():
         #     print(domain,self.constant_to_global_unique_index[domain])   
@@ -279,7 +287,7 @@ class LogicSerializerFast(IndexerBase):
         return (domain_to_global,
                 predicate_to_constant_tuples,
                 index_groundings,
-                index_queries,(queries_global,A_predicates_global))
+                index_queries,(queries_global,A_predicates_global,A_predicates_global_textualized))
 
 
 #################################################

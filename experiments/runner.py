@@ -5,6 +5,7 @@ import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 sys.path.append(os.path.join(current_dir, '..'))
+sys.path.append(os.path.join(current_dir, '..', 'ULTRA'))
 sys.path.append(os.path.join(current_dir, '..', 'ns_lib'))
 import os
 import tensorflow as tf
@@ -34,9 +35,10 @@ if __name__ == '__main__':
     log_folder :str = "./experiments/tests/"
     ckpt_folder :str = os.path.join(log_folder,'checkpoints')
     base_path :str = "experiments/data"
-    epochs: int = 2
+    epochs: int = 100
     EARLY_STOPPING = False
-    ULTRA = True
+    LLM = True
+    ULTRA = False
     ULTRA_WITH_KGE = False
     DATASET_NAME = ['countries_s1']#,'nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1']#,'backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
@@ -118,6 +120,7 @@ if __name__ == '__main__':
         args.device = 'cpu' # if not tf.config.experimental.list_physical_devices('GPU') else 'gpu'
         args.use_ultra = ULTRA
         args.use_ultra_with_kge = ULTRA_WITH_KGE
+        args.use_llm = LLM
         args.dataset_name = dataset_name
         args.grounder = grounder
         args.kge = kge
