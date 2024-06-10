@@ -1,5 +1,5 @@
 from keras import Model
-from keras.layers import Dense, Layer
+from keras.layers import Dense, Layer, BatchNormalization, Activation
 import keras_ns as ns
 import tensorflow as tf
 from keras_ns.nn.constant_embedding import *
@@ -11,7 +11,7 @@ from keras_ns.logic.semantics import GodelTNorm
 from typing import Dict, List, Union
 import tensorflow_probability as tfp
 
-class LMEModel(Layer):
+class LMEModelCostPred(Layer):
     
     def __init__(self, fol:FOL,
                  kge: str,
@@ -27,38 +27,49 @@ class LMEModel(Layer):
         self.predicate_index_tensor = tf.constant(
             [i for i in range(len(self.fol.predicates))], dtype=tf.int32)
         self.grounded_atom_embeddings = {}
-        self.embedder = LMEmbeddings("sentence-transformers/all-MiniLM-L6-v2")
+        self.embedder = LMEmbeddings("sentence-transformers/all-mpnet-base-v2")
         
         #Embed relation
         self.embedded_relations = {}
         for predicate in fol.predicates:
-            self.embedded_relations[predicate.name] = self.get_embedding(predicate.name)
+            self.embedded_relations[predicate.name] = None
         
         #Embed constants
         self.embedded_constants = {}
         for domain in fol.domains:
             self.embedded_constants[domain.name] = {}
             for constant in domain.constants:
-                self.embedded_constants[domain.name][constant] = self.get_embedding(constant)
+                self.embedded_constants[domain.name][constant] = None
         
-        self.dense_merge = Sequential([
-            Dense(384, activation='relu'),
-            Dense(384, activation='relu'),
-            Dense(384, activation='relu'),
-            Dense(384, activation='relu'),
-            Dense(384, activation='relu'),
-            Dense(384, activation='relu'),
-            Dense(300, activation='tanh'),
+        self.dense_embedding = Sequential([
+            Dense(512),
+            BatchNormalization(axis=1), #InstanceNorm
+            Activation("relu"),
+            Dropout(0.3),
+            Dense(400),
+            BatchNormalization(axis=1), #InstanceNorm
+            Activation("relu"),
+            Dropout(0.3),
+            Dense(300),
+            Activation("tanh")
         ])
+        
+        self.dense_output = Sequential([
+            Dense(1),
+            Activation("sigmoid")
+        ]) 
+        
         self.output_layer = self._output_layer
         
     def get_embedding(self, text):
         return self.embedder(f"{text}")
     
     def _output_layer(self, inputs):
-        outputs = tf.reduce_sum(inputs, axis=-1)
-        outputs = tf.nn.sigmoid(outputs)
-        return outputs
+        # Retrieve the dense_merge after the 1st block of the model
+        # Prevent too big input values
+        inputs = tf.clip_by_value(inputs, -1, 1)
+        outputs = self.dense_output(inputs)
+        return tf.squeeze(outputs, axis =1)
     
     def __call__(self, inputs):
         # X_domains type is Dict[str, inputs]
@@ -115,11 +126,125 @@ class LMEModel(Layer):
         for key, costants in A_predicates_text.items():
             for head,tail in costants:
                 try:
-                    _embedding.append(self.dense_merge(self.grounded_atom_embeddings[tuple([head,key,tail])]))
+                    _embedding.append(self.grounded_atom_embeddings[tuple([head,key,tail])])
                 except KeyError:
                     print(f"Key {key} not found in the precomputed embeddings")
-        return tf.concat(_embedding, axis=0)
+        _embedding = self.dense_embedding(tf.concat(_embedding, axis=0))
+        return _embedding
 
+class LMEModel(Layer):
+    
+    def __init__(self, fol:FOL,
+                 kge: str,
+                 kge_regularization: float,
+                 constant_embedding_size: int,
+                 predicate_embedding_size: int,
+                 kge_atom_embedding_size: int,
+                 kge_dropout_rate: float,
+                 num_adaptive_constants: int=0):
+        super().__init__()
+        self.fol = fol
+        
+        self.predicate_index_tensor = tf.constant(
+            [i for i in range(len(self.fol.predicates))], dtype=tf.int32)
+        self.grounded_atom_embeddings = {}
+        self.embedder = LMEmbeddings("sentence-transformers/all-mpnet-base-v2")
+        
+        
+        self.dense_embedding = Sequential([
+            Dense(512),
+            BatchNormalization(axis=1), #InstanceNorm
+            Activation("relu"),
+            Dropout(0.3),
+            Dense(400),
+            BatchNormalization(axis=1), #InstanceNorm
+            Activation("relu"),
+            Dropout(0.3),
+            Dense(300),
+            Activation("tanh")
+        ])
+        
+        self.dense_output = Sequential([
+            BatchNormalization(axis=1), #InstanceNorm
+            Dense(1),
+            Activation("sigmoid")
+        ]) 
+        
+        self.output_layer = self._output_layer
+        
+    def get_embedding(self, text):
+        return self.embedder(f"{text}")
+    
+    def _output_layer(self, inputs):
+        # Retrieve the dense_merge after the 1st block of the model
+        # Prevent too big input values
+        inputs = tf.clip_by_value(inputs, -1, 1)
+        outputs = self.dense_output(inputs)
+        return tf.squeeze(outputs, axis =1)
+    
+    def __call__(self, inputs):
+        # X_domains type is Dict[str, inputs]
+        # A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
+        # For x_domains, I get each domain value (country,region...) represented by a index
+        # For A_predicates, I get the predicate name and the constant indices for each grounding
+        (X_domains, A_predicates) = inputs 
+        X_domains_text: Dict[str, tf.Tensor] = {}
+        A_predicates_text: Dict[str, tuple[str,str]] = {}
+        # Textualize x_domains
+        for domain_name, domain_idxs in X_domains.items():
+            domain = self.fol.name2domain[domain_name]
+            domain_values = [domain.constants[idx] for idx in domain_idxs]
+            X_domains_text[domain_name] = tf.constant(domain_values)
+        
+        # Textualize A_predicates
+        for predicate_name, constants_idxs in A_predicates.items():
+            predicate = self.fol.name2predicate[predicate_name]
+            constant_values = []
+            domains = predicate.domains
+            for constants_idx in constants_idxs:
+                # I can use domain.costants because on serializer (row 51) i use the same ordering as the way serializer define costand_idx in A_predicates
+                constant_values.append(tuple([domain.constants[constant_idx] for domain, constant_idx in zip(domains,constants_idx)]))
+            A_predicates_text[predicate_name] = constant_values
+                
+        for (predicate_name, head_tail_costants), (_predicate_name, idx_head_tail_costants) in zip(A_predicates_text.items(), A_predicates.items()):
+            if predicate_name != _predicate_name:
+                raise ValueError(f"Predicate name {predicate_name} is not equal to {_predicate_name}")
+            predicate_domain = self.fol.name2predicate[predicate_name].domains
+            head_domain_idx = predicate_domain[0].name
+            tail_domain_idx = predicate_domain[1].name
+            predicate_idx = self.fol.name2predicate_idx[predicate_name]
+            for (textualized_head,textualized_tail),idx_costants in zip(head_tail_costants, idx_head_tail_costants):
+                ground_atom_idx = tuple([textualized_head, predicate_name, textualized_tail])
+                if ground_atom_idx not in self.grounded_atom_embeddings:
+                    # self.grounded_atom_embeddings[ground_atom_idx] = self.get_embedding(predicate_name,textualized_head,textualized_tail)
+                    self.grounded_atom_embeddings[ground_atom_idx] = self.get_embedding(" ".join([textualized_head,predicate_name,textualized_tail]))
+                    # add random atom marker
+                    self.grounded_atom_embeddings[ground_atom_idx] = tf.concat([self.grounded_atom_embeddings[ground_atom_idx], tf.random.normal([1,50])], axis=1)
+                    
+        # if not os.path.exists('grounded_atom_embeddings.pkl'):
+        #     pickle.dump(self.grounded_atom_embeddings,open('grounded_atom_embeddings.pkl','wb'))
+            
+        # Check if the precomputed embeddings not differ from the new ones
+        # if dumped_embeddings != self.grounded_atom_embeddings:
+        #     # Find the difference
+        #     for key, value in self.grounded_atom_embeddings.items():
+        #         if key not in dumped_embeddings:
+        #             dumped_embeddings[key] = value
+        #     pickle.dump(dumped_embeddings,open('grounded_atom_embeddings.pkl','wb'))
+        
+        # self.grounded_atom_embeddings = pickle.load(open('prova.pkl','rb'))
+        _embedding = []
+        _predicate_emb = []
+        _head_costants_emb = []
+        for key, costants in A_predicates_text.items():
+            for head,tail in costants:
+                try:
+                    _embedding.append(self.grounded_atom_embeddings[tuple([head,key,tail])])
+                except KeyError:
+                    print(f"Key {key} not found in the precomputed embeddings")
+        _embedding = tf.concat(_embedding, axis=0)
+        return _embedding
+    
 class KGEModel(Model):
 
     def __init__(self, fol:FOL,
@@ -275,7 +400,7 @@ class CollectiveModel(Model):
         self.resnet = resnet
         self.logic = GodelTNorm()
 
-        self.kge_model = KGEModel(fol, kge,
+        self.lme_model = LMEModel(fol, kge,
                                   kge_regularization,
                                   constant_embedding_size,
                                   predicate_embedding_size,
@@ -285,7 +410,7 @@ class CollectiveModel(Model):
         self.model_name = model_name
 
         # CONCEPT LAYER
-        self.output_layer = self.kge_model.output_layer
+        self.output_layer = self.lme_model.output_layer
 
         # REASONING LAYER
         self.reasoning = None
@@ -367,8 +492,7 @@ class CollectiveModel(Model):
         #              e.g. mapping predicate_name -> tensor [num_groundings, arity]
         #                   with constant indices for each grounding.
         (X_domains, A_predicates, A_rules, Q) = inputs
-        atom_embeddings = self.kge_model((X_domains, A_predicates))
-        tf.print('atom_embeddings.shape', tf.shape(atom_embeddings),atom_embeddings)
+        atom_embeddings = self.lme_model((X_domains, A_predicates))
 
         concept_output = tf.expand_dims(self.output_layer(atom_embeddings), -1)
 
