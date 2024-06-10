@@ -11,11 +11,18 @@ import torch
 from keras import Sequential
 from keras.layers import Dense
 import sys
-sys.path.append('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\experiments')
+import os
+
+# Get the directory of the current script
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+sys.path.append(os.path.join(current_dir, '..'))
+sys.path.append(os.path.join(current_dir, '..', 'experiments'))
+
 from ultra_utils import Ultra
 from ultra_utils import build_relation_graph
 from collections import defaultdict, OrderedDict
-
+from ns_lib.nn.constant_embedding import LMEmbeddings
 DomainName = str
 ConstantName = str
 PredicateName = str
@@ -73,10 +80,9 @@ def _from_strings_to_tensors(fol, serializer,
     '''
     A_predicates_global = queries_global = None
     if global_serialization:
-        (domain_to_global, predicate_tuples, groundings, queries, (queries_global,A_predicates_global)) = (
+        (domain_to_global, predicate_tuples, groundings, queries, (queries_global,A_predicates_global,A_predicates_global_textualized)) = (
             serializer.serialize_global_A_predicates(fol,queries=queries,
                                 rule_groundings=ground_formulas))
-
     else:
         queries_global = A_predicates_triplets = None
         (domain_to_global, predicate_tuples, groundings, queries) = (serializer.serialize(queries=queries,
@@ -131,7 +137,7 @@ def _from_strings_to_tensors(fol, serializer,
         labels = tf.constant(labels, dtype=tf.float32)
 
     return (input_domains_tf, input_atoms_tuples_tf,
-            input_formulas_tf, queries, (queries_global,A_predicates_global)), labels
+            input_formulas_tf, queries, (queries_global,A_predicates_global,A_predicates_global_textualized)), labels
 
 
 class Dataset():
@@ -187,6 +193,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                  name= "None",
                  use_ultra = False,
                  use_ultra_with_kge = False,
+                 use_llm = False,
                  global_serialization = True):
         self.global_serialization = global_serialization
         self.dataset = dataset
@@ -201,6 +208,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.name = name
         self.use_ultra = use_ultra
         self.use_ultra_with_kge = use_ultra_with_kge
+        self.use_llm = use_llm
         if self.use_ultra or self.use_ultra_with_kge:
             self.global_info_ultra()
             self.Ultra = Ultra()
@@ -232,6 +240,8 @@ class DataGenerator(tf.keras.utils.Sequence):
 
             self.Ultra = self.Ultra.to('cpu')
 
+        if self.use_llm:
+            self.llm_embedder = LMEmbeddings(self.fol, "")
         self._num_batches = 1
         if self._batch_size > 0:
             if len(self.dataset) % self._batch_size == 0:
@@ -259,7 +269,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         queries, labels = self.dataset[b*i:b*(i+1)]
         constants_features = self.dataset.constants_features
         
-        ((X_domains_data, A_predicates_data, A_rules_data, Q, (Q_global,A_predicates_triplets)), y) = _from_strings_to_tensors(
+        ((X_domains_data, A_predicates_data, A_rules_data, Q, (Q_global,A_predicates_triplets,A_predicates_textualized)), y) = _from_strings_to_tensors(
             fol=self.fol,
             serializer=self.serializer,
             queries=queries,
@@ -286,7 +296,10 @@ class DataGenerator(tf.keras.utils.Sequence):
             scores = tf.constant(scores, dtype=tf.float32)
             atom_embeds = tf.constant(atom_embeds, dtype=tf.float32)
             embeddings = (scores, atom_embeds)
-
+        elif self.use_llm:
+            atom_embeds = self.llm_embedder(A_predicates_textualized)
+            atom_embeds = tf.constant(atom_embeds, dtype=tf.float32)
+            embeddings = (None, atom_embeds)
             # _,atom_embeds = self.Ultra(self.aux_dataset, A_predicates_triplets, atom_repr=True) # embedds of the atoms
             # atom_embeds = tf.constant(atom_embeds, dtype=tf.float32)
             # embeddings = (_, atom_embeds)
