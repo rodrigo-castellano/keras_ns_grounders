@@ -293,7 +293,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
 
     # Initialize a W&B run
     if use_WB:
-        run = wandb.init(project = "LLM-Logic", name=args.run_signature, config = dict(
+        run = wandb.init(project = "LLM-as-Embedder", name=args.run_signature, config = dict(
                 shuffle_buffer = 1024,
                 batch_size = args.batch_size,
                 learning_rate = args.learning_rate,
