@@ -259,13 +259,18 @@ class LogicSerializerFast(IndexerBase):
             domains = self.predicate_to_domains[predicate]
             domain_head = domains[0]
             domain_tail = domains[1]
+            true_flag = True
             for atom in predicate_to_constant_tuples[predicate]:
                 A_predicates_global.append(atom + [predicate_idx]) 
                 head_position = list(self.constant_to_global_unique_index[domain_head].values()).index(atom[0])
                 tail_position = list(self.constant_to_global_unique_index[domain_tail].values()).index(atom[1])
                 head_text = list(self.constant_to_global_unique_index[domain_head].keys())[head_position]
                 tail_text = list(self.constant_to_global_unique_index[domain_tail].keys())[tail_position]
-                A_predicates_global_textualized.append(f"{head_text} is a {domain_head} and it is {predicate} of {tail_text}, which is a {domain_tail}")
+                if true_flag:
+                    A_predicates_global_textualized.append(f"{head_text} is a {domain_head} and it is {predicate} of {tail_text}, which is a {domain_tail}")
+                    true_flag = False
+                    continue
+                A_predicates_global_textualized.append(f"{head_text} is a {domain_head} and it is not {predicate} of {tail_text}, which is a {domain_tail}")
         # print('constant_to_global_unique_index')
         # for domain in self.constant_to_global_unique_index.keys():
         #     print(domain,self.constant_to_global_unique_index[domain])   

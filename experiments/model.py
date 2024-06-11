@@ -296,16 +296,22 @@ class LLM_Bridge(Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)   
         self.dense_embedding = Sequential([
-                Dense(512),
-                BatchNormalization(axis=1), #InstanceNorm
+                Dense(512, kernel_regularizer=regularizers.L1L2(l1=1e-5, l2=1e-4),
+    bias_regularizer=regularizers.L2(1e-4),
+    activity_regularizer=regularizers.L2(1e-5)),
+                BatchNormalization(), #InstanceNorm
                 Activation("relu"),
-                Dropout(0.3),
-                Dense(256),
-                BatchNormalization(axis=1), #InstanceNorm
+                Dropout(0.4),
+                Dense(256, kernel_regularizer=regularizers.L1L2(l1=1e-5, l2=1e-4),
+    bias_regularizer=regularizers.L2(1e-4),
+    activity_regularizer=regularizers.L2(1e-5)),
+                BatchNormalization(), #InstanceNorm
                 Activation("relu"),
-                Dropout(0.3),
+                Dropout(0.4),
                 Activation("relu"),
-                Dense(100),
+                Dense(100, kernel_regularizer=regularizers.L1L2(l1=1e-5, l2=1e-4),
+                    bias_regularizer=regularizers.L2(1e-4),
+                    activity_regularizer=regularizers.L2(1e-5)),
                 Activation("sigmoid")
             ])
             
