@@ -11,6 +11,7 @@ from utils import MRRMetric, HitsMetric
 import sys
 import os
 
+import itertools
 import torch
 # Get the directory of the current script
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -19,10 +20,9 @@ sys.path.append(os.path.join(current_dir, '..'))
 sys.path.append(os.path.join(current_dir, '..', 'experiments'))
 
 # from ultra_utils import Ultra
-# from ultra_utils import build_relation_graph
 from ULTRA.ultra.models import Ultra
 from ULTRA.ultra import tasks
-
+from ULTRA.ultra.tasks import build_relation_graph
 from ns_lib.nn.constant_embedding import LMEmbeddings
 
 DomainName = str
@@ -167,6 +167,56 @@ class Dataset():
     def _get_batch(self, i, b):
 
         return self.queries[b*i:b*(i+1)], self.labels[b*i:b*(i+1)], 
+
+
+def split_by_corruptions(self, batch):
+    '''
+    Given a batch, split it in subbatches with the same number of corruptions in each subbatch. In this way it is easy to convert it to a pytorch version.
+    '''
+    n_queries = len(batch)
+    subbatches = {}
+    for i in range(n_queries):
+        n_corruptions = len(batch[i])
+        if n_corruptions not in subbatches:
+            subbatches[n_corruptions] = []
+        subbatches[n_corruptions].append([batch[i]])
+    return subbatches
+
+def split_positives_negatives(self, batch):
+    '''
+    Given elements in a batch, for every element, if it has head and tail corruption, split it in two elements, one for head and one for tail corruption. 
+    Reference: in each element, the first query is the positive and the rest are the negatives. 
+    batch: list of lists of queries. Each query is a list of triplets.
+    A faster way to implement this function is to use if before entity_representations, because there I work with the tensors, and here I work with the lists.
+    '''
+    new_batch = []
+    for i in range(len(batch)):
+        sample = batch[i]
+        if len(sample) > 1:
+            negs = sample[1:]
+            pos_head = sample[0][0]
+            pos_tail = sample[0][1]
+            # take all the heads of the positives and the tails of the negatives
+            heads = [neg[0] for neg in negs]
+            tails = [neg[1] for neg in negs]
+            # if all the heads are the same, it means that the corruptions are only in the tail
+            # if all the tails are the same, it means that the corruptions are only in the head
+            if all(head == pos_head for head in heads) or all(tail == pos_tail for tail in tails):
+                new_batch.append(sample)
+            else:
+                head_corruptions, tail_corruptions = [], []
+                for neg in negs:
+                    if neg[1] == pos_tail:
+                        head_corruptions.append(neg)
+                    else:
+                        tail_corruptions.append(neg)
+                if head_corruptions:
+                    new_batch.append([sample[0]] + head_corruptions)
+                if tail_corruptions:
+                    new_batch.append([sample[0]] + tail_corruptions)
+        else:   
+            new_batch.append(sample)
+    return new_batch
 
 
 class Dataset_Ultra():
@@ -326,56 +376,6 @@ class DataGenerator(tf.keras.utils.Sequence):
             # embeddings = (_, atom_embeds)
 
         return (X_domains_data, A_predicates_data, A_rules_data, Q, embeddings), y
-
-
-    def split_by_corruptions(self, batch):
-        '''
-        Given a batch, split it in subbatches with the same number of corruptions in each subbatch. In this way it is easy to convert it to a pytorch version.
-        '''
-        n_queries = len(batch)
-        subbatches = {}
-        for i in range(n_queries):
-            n_corruptions = len(batch[i])
-            if n_corruptions not in subbatches:
-                subbatches[n_corruptions] = []
-            subbatches[n_corruptions].append([batch[i]])
-        return subbatches
-    
-    def split_positives_negatives(self, batch):
-        '''
-        Given elements in a batch, for every element, if it has head and tail corruption, split it in two elements, one for head and one for tail corruption. 
-        Reference: in each element, the first query is the positive and the rest are the negatives. 
-        batch: list of lists of queries. Each query is a list of triplets.
-        A faster way to implement this function is to use if before entity_representations, because there I work with the tensors, and here I work with the lists.
-        '''
-        new_batch = []
-        for i in range(len(batch)):
-            sample = batch[i]
-            if len(sample) > 1:
-                negs = sample[1:]
-                pos_head = sample[0][0]
-                pos_tail = sample[0][1]
-                # take all the heads of the positives and the tails of the negatives
-                heads = [neg[0] for neg in negs]
-                tails = [neg[1] for neg in negs]
-                # if all the heads are the same, it means that the corruptions are only in the tail
-                # if all the tails are the same, it means that the corruptions are only in the head
-                if all(head == pos_head for head in heads) or all(tail == pos_tail for tail in tails):
-                    new_batch.append(sample)
-                else:
-                    head_corruptions, tail_corruptions = [], []
-                    for neg in negs:
-                        if neg[1] == pos_tail:
-                            head_corruptions.append(neg)
-                        else:
-                            tail_corruptions.append(neg)
-                    if head_corruptions:
-                        new_batch.append([sample[0]] + head_corruptions)
-                    if tail_corruptions:
-                        new_batch.append([sample[0]] + tail_corruptions)
-            else:   
-                new_batch.append(sample)
-        return new_batch
     
 
     def mimic_test_function_ultra_with_corruptions(self, batch):
@@ -387,10 +387,10 @@ class DataGenerator(tf.keras.utils.Sequence):
         # batch = list(dict.fromkeys(tuple(t) for t in batch))
         print('Batch:', len(batch)  ,'sets of corruptions:', [len(b) for b in batch])
 
-        batch = self.split_positives_negatives(batch)
+        batch = split_positives_negatives(batch)
         print('Batch splitted by positives and negatives:', len(batch), 'sets of corruptions:', [len(b) for b in batch])
 
-        batches = self.split_by_corruptions(batch)
+        batches = split_by_corruptions(batch)
         print('Batch splitted by corruptions:', batches.keys(), [len(b) for b in batches.values()])
         for key in batches.keys():
             if key != 1: # avoid only postivies when the corruption is only tail
@@ -416,211 +416,11 @@ class DataGenerator(tf.keras.utils.Sequence):
         scores_tf = tf.ragged.constant(scores, dtype=tf.float32)
         labels_tf = tf.ragged.constant(labels_new, dtype=tf.float32)  
 
-        metrics = {'MRR': [], 'Hits@1': [], 'Hits@3': [], 'Hits@10': []}
-        for i in range(len(scores)): # calculate the metrics for s (need to convert it to numpy)
-            mrr_metric = MRRMetric()
-            mrr_metric.update_state(labels_tf[i], scores_tf[i])
-            hits_metric_1 = HitsMetric(1)
-            hits_metric_3 = HitsMetric(3)
-            hits_metric_10 = HitsMetric(10)
-            hits_metric_1.update_state(labels_tf[i], scores_tf[i])
-            hits_metric_3.update_state(labels_tf[i], scores_tf[i])
-            hits_metric_10.update_state(labels_tf[i], scores_tf[i])
-            print('MRR:', mrr_metric.result().numpy(), 'Hits@1:', hits_metric_1.result().numpy(), 
-                    'Hits@3:', hits_metric_3.result().numpy(), 'Hits@10:', hits_metric_10.result().numpy())
-            
-            metrics['MRR'].extend([mrr_metric.result().numpy()]*len(scores[i])) 
-            metrics['Hits@1'].extend([hits_metric_1.result().numpy()]*(len(scores[i])))
-            metrics['Hits@3'].extend([hits_metric_3.result().numpy()]*(len(scores[i])))
-            metrics['Hits@10'].extend([hits_metric_10.result().numpy()]*(len(scores[i])))
-        # calculate the average of the metrics
-        print('Metrics tf:',*[f"{key}: {np.mean(value)}" for key, value in metrics.items()], sep='\n')
+        metrics = calculate_metrics(scores,scores_tf, labels_tf)
+
+        return scores_tf, labels_tf
 
 
-
-    # def mimic_test_function_ultra(self, batch):
-
-    #     def lazy_import():
-    #         from ultra_test import preprocess_tf_metrics
-    #         return preprocess_tf_metrics
-    #     preprocess_tf_metrics = lazy_import()
-    #     batch = [q[0] for q in batch] # take only the positives
-    #     # filtered_data = Data(edge_index=dataset._data.target_edge_index, edge_type=dataset._data.target_edge_type, num_nodes=train_data.num_nodes)
-    #     # filtered_data = dataset
-    #     filtered_data = None
-
-    #     val_filtered_data = test_filtered_data = filtered_data
-    #     # metrics = test(self.Ultra, self.aux_dataset, 'cpu', filtered_data=filtered_data, return_metrics=True) 
-
-    #     # 1) From the batch predict all negatives, call the model and then apply the mask -> THIS ONE
-    #     # 2) From the batch divide by tail and head and num_negatives before calling the model
-
-    #     # remove the duplicated triplets
-    #     batch = list(dict.fromkeys(tuple(t) for t in batch))
-    #     # convert the list of lists to torch tensor
-    #     batch = torch.tensor(batch, dtype=torch.int64)
-    #     print('Batch:', batch.shape)
-
-    #     t_batch, h_batch = tasks.all_negative(self.aux_dataset, batch)
-    #     t_pred = self.Ultra(self.aux_dataset, t_batch)
-    #     h_pred = self.Ultra(self.aux_dataset, h_batch)
-
-    #     if filtered_data is None:
-    #         t_mask, h_mask = tasks.strict_negative_mask(self.aux_dataset, batch)
-    #     else:
-    #         t_mask, h_mask = tasks.strict_negative_mask(filtered_data, batch)
-        
-    #     pos_h_index, pos_t_index, pos_r_index = batch.t()
-    #     num_t_negative = t_mask.sum(dim=-1) # number of negatives for each query
-    #     num_h_negative = h_mask.sum(dim=-1) # number of negatives for each query
- 
-    #     # GET THE METRICS FROM TF
-    #     mrr_head, mrr_tail = preprocess_tf_metrics(h_pred, t_pred, pos_h_index, pos_t_index, num_h_negative, num_t_negative, h_batch, t_batch, h_mask, t_mask)
-
-
-    # def mimic_ultra(self):
-
-    #     def lazy_import():
-    #         from ultra_test import test
-    #         return test
-    #     test = lazy_import()
-        # rel_model_cfg = {"class": "RelNBFNet","input_dim": 64,"hidden_dims": [64, 64, 64, 64, 64, 64],"message_func": "distmult","aggregate_func": "sum","short_cut": "yes","layer_norm": "yes"} 
-        # entity_model_cfg= {"class": "EntityNBFNet","input_dim": 64,"hidden_dims": [64, 64, 64, 64, 64, 64],"message_func": "distmult","aggregate_func": "sum","short_cut": "yes","layer_norm": "yes"}
-    #     model = Ultra(rel_model_cfg, entity_model_cfg)                
-    #     ckp = None
-    #     ckp = 'C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\ULTRA\\ckpts\\countries_ft_epoch_10.pth'
-    #     if ckp is not None:
-    #         state = torch.load(ckp, map_location="cpu")
-    #         model.load_state_dict(state["model"])
-    #     model = model.to('cpu')
-
-    #     # filtered_data = Data(edge_index=dataset._data.target_edge_index, edge_type=dataset._data.target_edge_type, num_nodes=train_data.num_nodes)
-    #     # filtered_data = dataset
-    #     filtered_data = None
-
-    #     val_filtered_data = test_filtered_data = filtered_data
-    #     metrics = test(model, self.aux_dataset, 'cpu', filtered_data=filtered_data, return_metrics=True) 
-
-
-    def define_ultra_dataset(self):
-        """
-        Get all the information of the dataset graph, as well as the relational graph.
-        Also, create the triplets for the queries.
-
-        Returns:
-            None
-        """
-        queries, labels = self.dataset[:]
-        constants_features = self.dataset.constants_features
-        # I select engine=None because I dont want to ground the rules, only the queries    
-        ((X_domains_data, A_predicates_data, _, _, (Q_global,_,_)), _) = _from_strings_to_tensors(
-            fol=self.fol,
-            serializer=self.serializer,
-            queries=queries,
-            labels=labels,
-            engine=None,
-            ragged=self.ragged,
-            constants_features=constants_features,
-            deterministic=self.deterministic,
-            global_serialization=self.global_serialization)
-        
-        self.Q_global = Q_global    
-        # Here Im interested in Q_global, to get the general info that I pass to ultra. From Q_global I can get the triplets of the queries only by taking the first element in every query
-        # (the rest are the negative representations)
-        self.queries_global = np.array([q[0] for q in Q_global])  
-
-        self.edge_index = self.queries_global[:, :2].T # For all the queries, this takes in the first dim the head, and in the second the tail
-        self.edge_type = self.queries_global[:, 2] # For all the queries, it takes the relation
-        self.num_relations_no_inv = len(A_predicates_data)
-        self.num_relations = len(A_predicates_data)*2
-        self.num_nodes = sum(len(X_domains_data[key]) for key in X_domains_data)
-        self.num_edges = self.edge_index.shape[1] # it is the number of queries
-        self.device = 'cpu' 
-    
-        # convert edge_index and edge_type to torch tensor to feed it to ULTRA
-        self.edge_index = torch.tensor(self.edge_index, dtype=torch.long)
-        self.edge_type = torch.tensor(self.edge_type, dtype=torch.long)
-
-        self.aux_dataset = Dataset_Ultra(edge_index=self.edge_index, edge_type=self.edge_type, num_relations=self.num_relations, 
-                                    num_nodes=self.num_nodes, num_edges=self.num_edges, device=self.device)
-        self.aux_dataset.device = 'cpu'
-        self.aux_dataset = tasks.build_relation_graph(self.aux_dataset)
-        self.aux_dataset.fol = self.fol
-
-        return None
-
-
-
-    def get_negative_and_outputs(self, model, dataset, batch, atom_repr=True):
-        batch_positive = torch.tensor([q[0] for q in batch], dtype=torch.int64)
-        t_batch, h_batch = tasks.all_negative(self.aux_dataset, batch_positive)
-        t_pred = self.Ultra(self.aux_dataset, t_batch)
-        h_pred = self.Ultra(self.aux_dataset, h_batch)
-        filtered_data = self.aux_dataset
-        if filtered_data is None:
-            t_mask, h_mask = tasks.strict_negative_mask(test_data, batch)
-        else:
-            t_mask, h_mask = tasks.strict_negative_mask(filtered_data, batch)
-        pos_h_index, pos_t_index, pos_r_index = batch.t()
-
-        t_ranking = tasks.compute_ranking(t_pred, pos_t_index, t_mask)
-        h_ranking = tasks.compute_ranking(h_pred, pos_h_index, h_mask)
-
-        num_t_negative = t_mask.sum(dim=-1)
-        num_h_negative = h_mask.sum(dim=-1)
- 
-        # GET THE METRICS FROM TF
-        mrr_head, mrr_tail = preprocess_tf_metrics(h_pred, t_pred, pos_h_index, pos_t_index, num_h_negative, num_t_negative, h_batch, t_batch, h_mask, t_mask)
-        
-        rankings += [t_ranking, h_ranking]
-        num_negatives += [num_t_negative, num_h_negative]
-
-        tail_rankings += [t_ranking]
-        num_tail_negs += [num_t_negative]
-
-
-    def get_ultra_outputs(self, model, dataset, batch, atom_repr=True):
-        """
-        Get the outputs of the ultra model for the queries.
-        Args:
-            model: the ultra model
-            dataset: the dataset
-            queries: the queries
-            atom_repr: if True, the output is the atom representation. If False, the output is the scores.
-
-        Returns:
-            The outputs of the ultra model for the queries.
-        """
-        # print('Batch:', len(batch),'corruptions:', [len(b) for b in batch])
-        batches = self.split_by_corruptions(batch)
-        for key in batches.keys():
-            if key != 1: # avoid only postivies when the corruption is only tail
-                batches[key] = np.concatenate(batches[key], axis=0)
-                batches[key] = torch.tensor(batches[key], dtype=torch.int64)
-        # print('Batches:', batches.keys(), [b.shape for b in batches.values()])
-
-        # For each batch, get the relation representations
-        all_relation_representations = []
-        all_entity_representations = []
-        all_scores = []
-        for key,batch in batches.items():
-            # print('Batch_i:',batch.shape)
-            # if the number of dimensions is 2,add a dimension in the middle (it would mean that there are no negatives, only positives). This is thought for the atom repersentation
-            if len(batch.shape) == 2:
-                batch = batch.unsqueeze(1)
-
-            # call ultra
-            scores = self.Ultra(self.aux_dataset, batch)
-            # query_rels = batch[:, 0, 2]
-            # relation_representations = self.relation_model(dataset.relation_graph, query=query_rels)
-            # batch,relation_representations = self.split_head_tail_negatives(batch,relation_representations)
-            # entity_representations, scores = self.entity_model(dataset, relation_representations, batch,atom_repr=atom_repr) # [16,1594,64] = [batch_size, num_negatives, embedd_size]
-            # all_relation_representations.append(relation_representations)
-            # all_entity_representations.append(entity_representations)
-            all_scores.append(scores)
-        print('All scores:', len(all_scores), [s.shape for s in all_scores])
-
-        return all_scores
 
 
 
@@ -742,3 +542,122 @@ class DataGeneratorTensorFast(tf.keras.utils.Sequence):
         q,l =  self.dataset[b*i:b*(i+1)]
 
         return tf.ragged.constant(q), tf.ragged.constant(l)
+
+
+
+
+def calculate_metrics(scores,scores_tf, labels_tf):
+
+    metrics = {'MRR': [], 'Hits@1': [], 'Hits@3': [], 'Hits@10': []}
+    for i in range(len(scores)): # calculate the metrics for s (need to convert it to numpy)
+        mrr_metric = MRRMetric()
+        mrr_metric.update_state(labels_tf[i], scores_tf[i])
+        hits_metric_1 = HitsMetric(1)
+        hits_metric_3 = HitsMetric(3)
+        hits_metric_10 = HitsMetric(10)
+        hits_metric_1.update_state(labels_tf[i], scores_tf[i])
+        hits_metric_3.update_state(labels_tf[i], scores_tf[i])
+        hits_metric_10.update_state(labels_tf[i], scores_tf[i])
+        print('MRR:', mrr_metric.result().numpy(), 'Hits@1:', hits_metric_1.result().numpy(), 
+                'Hits@3:', hits_metric_3.result().numpy(), 'Hits@10:', hits_metric_10.result().numpy())
+        
+        metrics['MRR'].extend([mrr_metric.result().numpy()]*len(scores[i])) 
+        metrics['Hits@1'].extend([hits_metric_1.result().numpy()]*(len(scores[i])))
+        metrics['Hits@3'].extend([hits_metric_3.result().numpy()]*(len(scores[i])))
+        metrics['Hits@10'].extend([hits_metric_10.result().numpy()]*(len(scores[i])))
+    # calculate the average of the metrics
+    print('Metrics tf:',*[f"{key}: {np.mean(value)}" for key, value in metrics.items()], sep='\n')
+
+
+
+
+def obtain_queries(dataset,data_handler,serializer,engine,ragged,deterministic,global_serialization):
+    queries, labels = dataset[:]
+    constants_features = dataset.constants_features
+    fol = data_handler.fol
+    
+    ((X_domains_data, A_predicates_data, A_rules_data, Q, (Q_global,A_predicates_triplets,A_predicates_textualized)), y) = _from_strings_to_tensors(
+        fol=fol,
+        serializer=serializer,
+        queries=queries,
+        labels=labels,
+        engine=engine,
+        ragged=ragged,
+        constants_features=constants_features,
+        deterministic=deterministic,
+        global_serialization=global_serialization) 
+    Q_global_positive = [q[0] for q in Q_global]
+    # print('\nqueries positive', len(queries), [query[0] for query in queries][:20])
+    # print('Q_global_positive', len(Q_global_positive), Q_global_positive[:20])
+    return X_domains_data, A_predicates_data, Q_global_positive
+
+def get_ultra_datasets(dataset_train, dataset_valid, dataset_test,data_handler,serializer,engine,ragged,deterministic,global_serialization,relation_graph=build_relation_graph):
+
+    # Get the triplets
+    X_domain_train, A_pred_train, train_triplets = obtain_queries(dataset_train,data_handler,serializer,engine,ragged,deterministic,global_serialization)
+    X_domain_valid, A_pred_valid, valid_triplets = obtain_queries(dataset_valid,data_handler,serializer,engine,ragged,deterministic,global_serialization)
+    X_domain_test, A_pred_test, test_triplets = obtain_queries(dataset_test,data_handler,serializer,engine,ragged,deterministic,global_serialization)
+
+    def unique_ordered(triplets):
+        return list(dict.fromkeys(tuple(t) for t in triplets))
+
+    train_triplets = unique_ordered(train_triplets)
+    valid_triplets = unique_ordered(valid_triplets)
+    test_triplets = unique_ordered(test_triplets)
+
+    # get the number of nodes and relations for the train,val,test set. Do it by getting unique the ones in train, val, test
+    train_nodes = [X_domain_train[key].numpy().tolist() for key in X_domain_train]
+    valid_nodes = [X_domain_valid[key].numpy().tolist() for key in X_domain_valid]
+    test_nodes = [X_domain_test[key].numpy().tolist() for key in X_domain_test]
+
+    # Flatten the lists
+    train_nodes = set(itertools.chain(*train_nodes))
+    valid_nodes = set(itertools.chain(*valid_nodes))
+    test_nodes = set(itertools.chain(*test_nodes))
+    num_node = len(train_nodes.union(valid_nodes).union(test_nodes) )
+
+    # do the same for the relations
+    train_relations = [key for key in A_pred_train]
+    valid_relations = [key for key in A_pred_valid]
+    test_relations = [key for key in A_pred_test]
+    # take the unique number of relations
+    unique_relations = list(set(train_relations+valid_relations+test_relations))
+    num_relations_no_inv = torch.tensor(len(unique_relations))
+    # num_relations_no_inv = len(data_handler.fol.predicates)
+    
+    train_target_edges = torch.tensor([[t[0], t[1]] for t in train_triplets], dtype=torch.long).t()
+    train_target_etypes = torch.tensor([t[2] for t in train_triplets])
+    train_edges = torch.cat([train_target_edges, train_target_edges.flip(0)], dim=1)
+    train_etypes = torch.cat([train_target_etypes, train_target_etypes+num_relations_no_inv])
+
+    # valid_edges = torch.tensor([[t[0], t[1]] for t in valid_triplets], dtype=torch.long).t()
+    valid_edges = torch.tensor([[t[0], t[1]] for t in valid_triplets], dtype=torch.long).t()
+    valid_etypes = torch.tensor([t[2] for t in valid_triplets])
+
+    test_edges = torch.tensor([[t[0], t[1]] for t in test_triplets], dtype=torch.long).t()
+    test_etypes = torch.tensor([t[2] for t in test_triplets])
+
+    train_data = Dataset_Ultra(edge_index=train_edges, edge_type=train_etypes, num_nodes=num_node,
+                      target_edge_index=train_target_edges, target_edge_type=train_target_etypes, num_relations=num_relations_no_inv*2)
+    train_data.num_edges = train_data.edge_index.shape[1]
+    valid_data = Dataset_Ultra(edge_index=train_edges, edge_type=train_etypes, num_nodes=num_node,
+                      target_edge_index=valid_edges, target_edge_type=valid_etypes, num_relations=num_relations_no_inv*2)
+    valid_data.num_edges = valid_data.edge_index.shape[1]
+    test_data = Dataset_Ultra(edge_index=train_edges, edge_type=train_etypes, num_nodes=num_node,
+                      target_edge_index=test_edges, target_edge_type=test_etypes, num_relations=num_relations_no_inv*2)
+    test_data.num_edges = test_data.edge_index.shape[1]
+    
+    # edge_index is the sum of all target_edge_index
+    edge_index = torch.cat([train_target_edges, valid_edges, test_edges], dim=1)
+    edge_type = torch.cat([train_target_etypes, valid_etypes, test_etypes])
+    # num_nodes is given by the train set
+    num_edges = None # is not defined in Ultra for the general dataset
+    device = 'cpu'
+    dataset = Dataset_Ultra(edge_index, edge_type, num_relations_no_inv*2, num_node, num_edges, device)
+    filtered_data = dataset 
+
+    train_data = build_relation_graph(train_data)
+    valid_data = build_relation_graph(valid_data)
+    test_data = build_relation_graph(test_data)
+
+    return train_data, valid_data, test_data, filtered_data
