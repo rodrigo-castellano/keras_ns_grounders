@@ -8,207 +8,23 @@ import random
 import pickle
 from typing import List, Tuple, Dict
 
-from dataset import KGCDataHandler, build_domains
+from dataset import KGCDataHandler
 from model import CollectiveModel
 from keras.callbacks import CSVLogger
 from ns_lib.logic.commons import Atom, Domain, FOL, Rule, RuleLoader
 from ns_lib.grounding.grounder_factory import BuildGrounder
 from ns_lib.utils import MMapModelCheckpoint, KgeLossFactory, get_arg
-from ns_lib.grounding.backward_chaining_grounder_nocleanup import BackwardChainingGrounder_nocleanup
-from ns_lib.dataset import _from_strings_to_tensors
+from ns_lib.dataset import get_ultra_datasets
 import time
 from model_utils import * 
 import wandb
 from wandb.integration.keras import WandbCallback
 from wandb.integration.keras import WandbMetricsLogger
 # from ultra_utils import  Ultra,nested_dict
-from ULTRA.ultra.tasks import build_relation_graph
 explain_enabled: bool = False
 
-import itertools
-import torch
-
-class Dataset_Ultra():
-    
-        def __init__(self, edge_index=None, edge_type=None, num_relations=None, num_nodes=None, num_edges=None, device=None, target_edge_index=None, target_edge_type=None):
-            self.edge_index = edge_index
-            self.edge_type = edge_type
-            self.num_relations = num_relations
-            self.num_nodes = num_nodes
-            self.num_edges = num_edges
-            self.device = device
-            self.target_edge_index = target_edge_index
-            self.target_edge_type = target_edge_type
-  
-def obtain_queries(dataset,data_handler,serializer,engine,ragged,deterministic,global_serialization):
-    queries, labels = dataset[:]
-    constants_features = dataset.constants_features
-    fol = data_handler.fol
-    
-    ((X_domains_data, A_predicates_data, A_rules_data, Q, (Q_global,A_predicates_triplets,A_predicates_textualized)), y) = _from_strings_to_tensors(
-        fol=fol,
-        serializer=serializer,
-        queries=queries,
-        labels=labels,
-        engine=engine,
-        ragged=ragged,
-        constants_features=constants_features,
-        deterministic=deterministic,
-        global_serialization=global_serialization) 
-    Q_global_positive = [q[0] for q in Q_global]
-    # print('\nqueries positive', len(queries), [query[0] for query in queries][:20])
-    # print('Q_global_positive', len(Q_global_positive), Q_global_positive[:20])
-    return X_domains_data, A_predicates_data, Q_global_positive
-
-def get_ultra_datasets(dataset_train, dataset_valid, dataset_test,data_handler,serializer,engine,ragged,deterministic,global_serialization,relation_graph=build_relation_graph):
-
-    # Get the triplets
-    X_domain_train, A_pred_train, train_triplets = obtain_queries(dataset_train,data_handler,serializer,engine,ragged,deterministic,global_serialization)
-    X_domain_valid, A_pred_valid, valid_triplets = obtain_queries(dataset_valid,data_handler,serializer,engine,ragged,deterministic,global_serialization)
-    X_domain_test, A_pred_test, test_triplets = obtain_queries(dataset_test,data_handler,serializer,engine,ragged,deterministic,global_serialization)
-
-    def unique_ordered(triplets):
-        return list(dict.fromkeys(tuple(t) for t in triplets))
-
-    train_triplets = unique_ordered(train_triplets)
-    valid_triplets = unique_ordered(valid_triplets)
-    test_triplets = unique_ordered(test_triplets)
-
-    # get the number of nodes and relations for the train,val,test set. Do it by getting unique the ones in train, val, test
-    train_nodes = [X_domain_train[key].numpy().tolist() for key in X_domain_train]
-    valid_nodes = [X_domain_valid[key].numpy().tolist() for key in X_domain_valid]
-    test_nodes = [X_domain_test[key].numpy().tolist() for key in X_domain_test]
-
-    # Flatten the lists
-    train_nodes = set(itertools.chain(*train_nodes))
-    valid_nodes = set(itertools.chain(*valid_nodes))
-    test_nodes = set(itertools.chain(*test_nodes))
-    num_node = len(train_nodes.union(valid_nodes).union(test_nodes) )
-
-    # do the same for the relations
-    train_relations = [key for key in A_pred_train]
-    valid_relations = [key for key in A_pred_valid]
-    test_relations = [key for key in A_pred_test]
-    # take the unique number of relations
-    unique_relations = list(set(train_relations+valid_relations+test_relations))
-    num_relations_no_inv = torch.tensor(len(unique_relations))
-    # num_relations_no_inv = len(data_handler.fol.predicates)
-    
-    train_target_edges = torch.tensor([[t[0], t[1]] for t in train_triplets], dtype=torch.long).t()
-    train_target_etypes = torch.tensor([t[2] for t in train_triplets])
-    train_edges = torch.cat([train_target_edges, train_target_edges.flip(0)], dim=1)
-    train_etypes = torch.cat([train_target_etypes, train_target_etypes+num_relations_no_inv])
-
-    # valid_edges = torch.tensor([[t[0], t[1]] for t in valid_triplets], dtype=torch.long).t()
-    valid_edges = torch.tensor([[t[0], t[1]] for t in valid_triplets], dtype=torch.long).t()
-    valid_etypes = torch.tensor([t[2] for t in valid_triplets])
-
-    test_edges = torch.tensor([[t[0], t[1]] for t in test_triplets], dtype=torch.long).t()
-    test_etypes = torch.tensor([t[2] for t in test_triplets])
-
-    train_data = Dataset_Ultra(edge_index=train_edges, edge_type=train_etypes, num_nodes=num_node,
-                      target_edge_index=train_target_edges, target_edge_type=train_target_etypes, num_relations=num_relations_no_inv*2)
-    train_data.num_edges = train_data.edge_index.shape[1]
-    valid_data = Dataset_Ultra(edge_index=train_edges, edge_type=train_etypes, num_nodes=num_node,
-                      target_edge_index=valid_edges, target_edge_type=valid_etypes, num_relations=num_relations_no_inv*2)
-    valid_data.num_edges = valid_data.edge_index.shape[1]
-    test_data = Dataset_Ultra(edge_index=train_edges, edge_type=train_etypes, num_nodes=num_node,
-                      target_edge_index=test_edges, target_edge_type=test_etypes, num_relations=num_relations_no_inv*2)
-    test_data.num_edges = test_data.edge_index.shape[1]
-    
-    # edge_index is the sum of all target_edge_index
-    edge_index = torch.cat([train_target_edges, valid_edges, test_edges], dim=1)
-    edge_type = torch.cat([train_target_etypes, valid_etypes, test_etypes])
-    # num_nodes is given by the train set
-    num_edges = None # is not defined in Ultra for the general dataset
-    device = 'cpu'
-    dataset = Dataset_Ultra(edge_index, edge_type, num_relations_no_inv*2, num_node, num_edges, device)
-    filtered_data = dataset 
-
-    train_data = build_relation_graph(train_data)
-    valid_data = build_relation_graph(valid_data)
-    test_data = build_relation_graph(test_data)
-
-    return train_data, valid_data, test_data, filtered_data
 
 
-
-def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
-
-    if args.grounder == 'full':
-        engine = ns.grounding.PlaceholderGeneratorFullGrounder(
-                        domains={d.name:d for d in fol.domains},
-                        rules=rules,
-                        domain2adaptive_constants=domain2adaptive_constants,
-                        exclude_symmetric=True,
-                        exclude_query=False)
-    elif args.grounder == 'domain':
-        engine = ns.grounding.DomainFullGrounder(
-                        rules, domains={d.name:d for d in fol.domains},
-                        domain2adaptive_constants=domain2adaptive_constants)
-    elif args.grounder == 'known':
-        engine = ns.grounding.KnownBodyGrounder(rules, facts=facts)
-    
-    elif 'backward' in args.grounder:
-        num_steps = int(args.grounder.split('_')[-1])
-        prune_backward = True # if ( ('backward' in args.grounder) and ('prune'in args.grounder) ) else False
-        if 'noprune' in args.grounder:
-            prune_backward = False
-
-        max_unknown_fact_count_last_step = max_unknown_fact_count = 1
-        if 'unknown1' in args.grounder:
-            max_unknown_fact_count_last_step = max_unknown_fact_count = 1
-        elif 'unknown2' in args.grounder:
-            max_unknown_fact_count_last_step = max_unknown_fact_count = 2
-        elif 'unknown3' in args.grounder:
-            max_unknown_fact_count_last_step = max_unknown_fact_count = 3
-        elif 'unknown0' in args.grounder:
-            max_unknown_fact_count_last_step = max_unknown_fact_count = 0
-
-        print('Grounder: ',args.grounder,'Number of steps:', num_steps, 'Prune:', prune_backward, 'max_unknown_fact_count:', max_unknown_fact_count)
-        engine = ns.grounding.ApproximateBackwardChainingGrounder(
-                        rules, facts=facts, domains={d.name:d for d in fol.domains},
-                        domain2adaptive_constants=domain2adaptive_constants,
-                        pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
-                        num_steps=num_steps,
-                        max_unknown_fact_count=max_unknown_fact_count,
-                        max_groundings_per_rule=get_arg(
-                            args, 'backward_chaining_max_groundings_per_rule', -1),
-                        prune_incomplete_proofs=prune_backward)
-
-        if 'original' in args.grounder:
-            engine = ns.grounding.BackwardChainingGrounder(
-                        rules, facts=facts,
-                        domains={d.name:d for d in fol.domains},
-                        domain2adaptive_constants=domain2adaptive_constants,
-                        pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
-                        num_steps=get_arg(args, 'backward_chaining_depth', 1)) 
-
-        if  'relationentity' in args.grounder:
-            engine = ns.grounding.RelationEntityGraphGrounder(
-            rules, facts=facts,
-            # TODO: Domain support is not added yet.
-            #domains={d.name:d for d in fol.domains},
-            #domain2adaptive_constants=domain2adaptive_constants,
-            build_cartesian_product=True,
-            max_elements=get_arg(
-                args, 'relation_entity_grounder_max_elements', -1))
-        
-
-            
-    elif args.grounder == 'domainbody':
-        engine = ns.grounding.DomainBodyGrounder(domains={d.name:d for d in fol.domains},
-                                                rules=rules,
-                                                exclude_symmetric=True,
-                                                exclude_query=False)
-    elif args.grounder == 'relationentity':
-        engine = ns.grounding.RelationEntityGraphGrounder(
-            rules, facts=facts,
-            build_cartesian_product=True,
-            max_elements=20)
-    return engine
-
- 
 def main(base_path, output_filename, log_filename, use_WB, args):
 
     print('\nARGS', args,'\n')
@@ -219,6 +35,8 @@ def main(base_path, output_filename, log_filename, use_WB, args):
 
     ragged = get_arg(args, 'ragged', None, True)
     start_train = time.time()
+
+
 
     # DATASET PREPARATION
     data_handler = KGCDataHandler(
@@ -243,6 +61,8 @@ def main(base_path, output_filename, log_filename, use_WB, args):
 
     num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
 
+
+
     # DEFINING RULES AND GROUNDING ENGINE
     rules = []
     engine = None
@@ -262,6 +82,9 @@ def main(base_path, output_filename, log_filename, use_WB, args):
                                                                                            deterministic=True,global_serialization=args.global_serialization)
     else:
         train_ultra, valid_ultra, test_ultra, _ = None, None, None, None
+
+
+
     # DATA GENERATORS
     print('***********Generating train data**************')
     start = time.time()
@@ -295,6 +118,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     print('*********************')
     data_gen_train.__getitem__(0)
     print('*********************')
+
 
 
     # COMPILING MODEL
@@ -332,6 +156,8 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         device=args.device,
     )
 
+
+
     #LOSS
     loss_name = get_arg(args, 'loss', 'binary_crossentropy')
     loss = KgeLossFactory(loss_name)
@@ -363,6 +189,8 @@ def main(base_path, output_filename, log_filename, use_WB, args):
             print('Weights loaded from', checkpoint_load, flush=True)
         model.summary()
 
+
+
     # CALLBACKS
     callbacks = []
     if log_filename is not None:
@@ -387,8 +215,6 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         filepath=get_arg(args, 'ckpt_filepath', None))
     callbacks.append(best_model_callback)
 
-    
-    
     if not args.use_ultra and not args.use_llm:
         kge_filepath = get_arg(args, 'ckpt_filepath', None)
         if kge_filepath is not None:
@@ -411,9 +237,10 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         callbacks.append(WandbMetricsLogger(log_freq=10))
 
 
+
+    # TRAIN
     if args.epochs > 0:
 
-        # TRAIN
         history = model.fit(data_gen_train,
                 epochs=args.epochs,
                 callbacks=callbacks,
@@ -439,6 +266,8 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     #     best_model_callback._last_checkpoint_filename = args.file_name_saved_weights
     #     best_model_callback.restore_weights()
 
+
+
     # EVALUATION
     print("\nEvaluation train", flush=True)
     model.test_mode('train',mode=True)
@@ -460,6 +289,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
           '\nVal', np.round(valid_accuracy,3),
           '\nTest', np.round(test_accuracy,3),
           flush=True)
+
 
     if explain_enabled and enable_rules and (args.model_name == 'dcr' or args.model_name == 'cdcr'):
         model.explain_mode(True)

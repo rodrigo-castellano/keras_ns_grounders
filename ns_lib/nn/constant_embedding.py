@@ -42,7 +42,7 @@ class ConstantEmbeddings(Layer):
         return domain_features
     
 
-class ConstantEmbeddingsTrial(Layer):
+class ConstantEmbeddings_Global(Layer):
     """Calls the constant rules_embedders, differenciating the behavior of
        the single domains."""
     def __init__(self, domains: List[Domain],
@@ -68,88 +68,6 @@ class ConstantEmbeddingsTrial(Layer):
                 domain_inputs[domain.name]))
         return domain_features
 
-class ConstantEmbeddingsGlobal_old(Layer):
-    """Calls the constant rules_embedders, differenciating the behavior of
-       the single domains."""
-    def __init__(self, domains: List[Domain],
-                 constant_embedding_sizes_per_domain: Dict[str, int],
-                 regularization: float=0.0,
-                 has_features: bool=False):
-        super().__init__()
-        self.embedder = {}
-        self.domains = domains
-        self.constant_embedding_sizes_per_domain = constant_embedding_sizes_per_domain
-        self.regularization = regularization
-        self.has_features = has_features
-        # I could make this more efficient: for domain 1, it goes from 0 to len(domain1), for dom2, it goes from (dom1,dom1+dom2)...
-        max_index = sum([len(domain.constants) for domain in domains]) 
-        for domain in domains:
-            if self.has_features:
-                # This should be replaced with the actual embedder,
-                # make this a factory function call.
-                self.embedder[domain.name] = Sequential([
-                    Dense(self.constant_embedding_sizes_per_domain[domain.name],
-                        kernel_regularizer=L2(self.regularization))])
-            else:
-                self.embedder[domain.name] = Embedding(
-                    max_index+ 1,
-                    self.constant_embedding_sizes_per_domain[domain.name],
-                    embeddings_regularizer=L2(self.regularization))
-
-    # domain_inputs is Dict domain->tensor of idx
-    def call(self, domain_inputs: Dict[str, tf.Tensor], **kwargs):
-        domain_features = {}
-        cte_embeddings = {}
-        for domain in self.domains:
-            tf.print('X_Domain:', domain.name,summarize=-1)
-            tf.print('Domain inputs:', domain_inputs[domain.name],summarize=-1)
-            if domain_inputs[domain.name].shape[0] != 0:
-                # if self.has_features:
-                #     # This should be replaced with the actual embedder,
-                #     # make this a factory function call.
-                #     self.embedder[domain.name] = Sequential([
-                #         Dense(self.constant_embedding_sizes_per_domain[domain.name],
-                #             kernel_regularizer=L2(self.regularization))])
-                # else:
-                #     self.embedder[domain.name] = Embedding(
-                #         tf.reduce_max(domain_inputs[domain.name]) + 1,
-                #         self.constant_embedding_sizes_per_domain[domain.name],
-                #         embeddings_regularizer=L2(self.regularization))
-
-                domain_features[domain.name] = self.embedder[domain.name](
-                    domain_inputs[domain.name])  #CE
-                
-                # Get the embeddings for the domain [200]
-                embedding_size = self.constant_embedding_sizes_per_domain[domain.name] 
-                # Assuming embeddings is a 2D tensor of shape (168, 200)
-                embeddings = domain_features[domain.name]
-                # tf.print('Embeddings:', embeddings.shape, embeddings[:,:3], summarize=-1)
-                # Flatten the embeddings to have the shape (168 * 200,)
-                embeddings_flattened = tf.reshape(embeddings, [-1])
-
-                # The indices tensor
-                indices = domain_inputs[domain.name]
-                # Create the coordinates for each embedding. Each index should correspond to all 200 dimensions of an embedding
-                indices_expanded = tf.expand_dims(indices, axis=1)
-                coords = tf.concat([tf.repeat(indices_expanded, embedding_size, axis=0), 
-                                    tf.tile(tf.range(embedding_size, dtype=tf.int32)[:, tf.newaxis], [indices.shape[0], 1])], axis=1)
-                coords = tf.cast(coords, tf.int64)
-
-                # The dense shape should reflect the maximum index and the size of each embedding
-                dense_shape = [tf.reduce_max(indices).numpy() + 1, self.constant_embedding_sizes_per_domain[domain.name]]
-
-                # Create the sparse tensor
-                sparse_tensor = tf.SparseTensor(
-                    indices=coords,  # List of coordinates
-                    values=embeddings_flattened,  # List of values at those coordinates
-                    dense_shape=dense_shape  # Shape of the dense tensor if it were fully populated
-                )
-
-                cte_embeddings[domain.name] = sparse_tensor 
-            else:
-                cte_embeddings[domain.name] = None
-            print('Embeddings:', cte_embeddings[domain.name])
-        return cte_embeddings
 
 
 class PredicateEmbeddings(Layer):

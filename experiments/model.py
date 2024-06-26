@@ -42,8 +42,7 @@ class KGEModel(Model):
                 regularization=kge_regularization,
                 has_features=False)
             if self.global_serialization:
-                cte_embedder = ConstantEmbeddingsTrial
-                # cte_embedder = ConstantEmbeddingsGlobal
+                cte_embedder = ConstantEmbeddings_Global
             else:
                 cte_embedder = ConstantEmbeddings
             self.constant_embedder = cte_embedder( 
@@ -511,8 +510,7 @@ class CollectiveModel(Model):
             assert self.model_name == 'dcr' or self.model_name == 'cdcr'
 
         (X_domains, A_predicates, A_rules, Q, embeddings) = inputs
-        print('X_domains',[len(X_domains[domain]) for domain in X_domains.keys()])
-        print('A_predicates',[len(A_predicates[p]) for p in A_predicates.keys()])
+        
         if self.use_ultra:
             print('USING ULTRA')
             (concept_output, concept_embeddings) = embeddings
