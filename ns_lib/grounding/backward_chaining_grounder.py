@@ -81,10 +81,11 @@ def approximate_backward_chaining_grounding_one_rule(
     build_proofs: bool = (proofs is not None)
 
     new_ground_atoms = set()
-
+    
+    # cont = 0
     for q in queries:
     #   groundings_per_query = 0
-      cont += 1 
+    #   cont += 1 
     #   print('\n\n***************q', q,'********************') if cont< lim else None
       if q[0] != head[0]:  # predicates must match.
         continue
