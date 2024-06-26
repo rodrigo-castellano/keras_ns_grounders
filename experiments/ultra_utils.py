@@ -55,69 +55,69 @@ def tf_to_pytorch(tf_tensor,type='float'):
 
 
 
-def build_relation_graph(graph):
+# def build_relation_graph(graph):
 
-    # expect the graph is already with inverse edges
+#     # expect the graph is already with inverse edges
 
-    edge_index, edge_type = graph.edge_index, graph.edge_type
-    num_nodes, num_rels = graph.num_nodes, graph.num_relations
-    device = graph.device
+#     edge_index, edge_type = graph.edge_index, graph.edge_type
+#     num_nodes, num_rels = graph.num_nodes, graph.num_relations
+#     device = graph.device
 
-    # Here I need that, if there are 30 entites, the max index is 30. Because the indeces are for the train and test set, it may happen that in the test set that there are indices greater than 30. 
-    # Therefore, since here the indices can be local. I create a mapping from (0,1,4,10,120,250,1122)->{0:0,1:1,4:2,10:3,120:4,250:5,1122:6}. 
-    ent_idx = graph.edge_index.numpy()
-    if graph.num_nodes < torch.max(graph.edge_index):
-        mapping = {int(i): idx for idx, i in enumerate(torch.unique(graph.edge_index))} 
-        edge_index = torch.tensor([[mapping[int(ent_idx[0,i])],mapping[int(ent_idx[1,i])]] for i in range(ent_idx.shape[1])], device=device).T
+#     # Here I need that, if there are 30 entites, the max index is 30. Because the indeces are for the train and test set, it may happen that in the test set that there are indices greater than 30. 
+#     # Therefore, since here the indices can be local. I create a mapping from (0,1,4,10,120,250,1122)->{0:0,1:1,4:2,10:3,120:4,250:5,1122:6}. 
+#     ent_idx = graph.edge_index.numpy()
+#     if graph.num_nodes < torch.max(graph.edge_index):
+#         mapping = {int(i): idx for idx, i in enumerate(torch.unique(graph.edge_index))} 
+#         edge_index = torch.tensor([[mapping[int(ent_idx[0,i])],mapping[int(ent_idx[1,i])]] for i in range(ent_idx.shape[1])], device=device).T
 
-    Eh = torch.vstack([edge_index[0], edge_type]).T.unique(dim=0)  # (num_edges, 2) # I concatenate the heads and the relations and remove the duplicates (h,r) in the queries/edges   
-    Dh = scatter_add(torch.ones_like(Eh[:, 1]), Eh[:, 0])
+#     Eh = torch.vstack([edge_index[0], edge_type]).T.unique(dim=0)  # (num_edges, 2) # I concatenate the heads and the relations and remove the duplicates (h,r) in the queries/edges   
+#     Dh = scatter_add(torch.ones_like(Eh[:, 1]), Eh[:, 0])
 
-    EhT = torch.sparse_coo_tensor(
-        torch.flip(Eh, dims=[1]).T, 
-        torch.ones(Eh.shape[0], device=device) / Dh[Eh[:, 0]], 
-        (num_rels, num_nodes)
-    )
-    Eh = torch.sparse_coo_tensor(
-        Eh.T, 
-        torch.ones(Eh.shape[0], device=device), 
-        (num_nodes, num_rels)
-    )
-    Et = torch.vstack([edge_index[1], edge_type]).T.unique(dim=0)  # (num_edges, 2)
+#     EhT = torch.sparse_coo_tensor(
+#         torch.flip(Eh, dims=[1]).T, 
+#         torch.ones(Eh.shape[0], device=device) / Dh[Eh[:, 0]], 
+#         (num_rels, num_nodes)
+#     )
+#     Eh = torch.sparse_coo_tensor(
+#         Eh.T, 
+#         torch.ones(Eh.shape[0], device=device), 
+#         (num_nodes, num_rels)
+#     )
+#     Et = torch.vstack([edge_index[1], edge_type]).T.unique(dim=0)  # (num_edges, 2)
 
-    Dt = scatter_add(torch.ones_like(Et[:, 1]), Et[:, 0])
-    assert not (Dt[Et[:, 0]] == 0).any()
+#     Dt = scatter_add(torch.ones_like(Et[:, 1]), Et[:, 0])
+#     assert not (Dt[Et[:, 0]] == 0).any()
 
-    EtT = torch.sparse_coo_tensor(
-        torch.flip(Et, dims=[1]).T, 
-        torch.ones(Et.shape[0], device=device) / Dt[Et[:, 0]], 
-        (num_rels, num_nodes)
-    )
-    Et = torch.sparse_coo_tensor(
-        Et.T, 
-        torch.ones(Et.shape[0], device=device), 
-        (num_nodes, num_rels)
-    )
+#     EtT = torch.sparse_coo_tensor(
+#         torch.flip(Et, dims=[1]).T, 
+#         torch.ones(Et.shape[0], device=device) / Dt[Et[:, 0]], 
+#         (num_rels, num_nodes)
+#     )
+#     Et = torch.sparse_coo_tensor(
+#         Et.T, 
+#         torch.ones(Et.shape[0], device=device), 
+#         (num_nodes, num_rels)
+#     )
 
-    Ahh = torch.sparse.mm(EhT, Eh).coalesce()
-    Att = torch.sparse.mm(EtT, Et).coalesce()
-    Aht = torch.sparse.mm(EhT, Et).coalesce()
-    Ath = torch.sparse.mm(EtT, Eh).coalesce()
+#     Ahh = torch.sparse.mm(EhT, Eh).coalesce()
+#     Att = torch.sparse.mm(EtT, Et).coalesce()
+#     Aht = torch.sparse.mm(EhT, Et).coalesce()
+#     Ath = torch.sparse.mm(EtT, Eh).coalesce()
 
-    hh_edges = torch.cat([Ahh.indices().T, torch.zeros(Ahh.indices().T.shape[0], 1, dtype=torch.long).fill_(0)], dim=1)  # head to head
-    tt_edges = torch.cat([Att.indices().T, torch.zeros(Att.indices().T.shape[0], 1, dtype=torch.long).fill_(1)], dim=1)  # tail to tail
-    ht_edges = torch.cat([Aht.indices().T, torch.zeros(Aht.indices().T.shape[0], 1, dtype=torch.long).fill_(2)], dim=1)  # head to tail
-    th_edges = torch.cat([Ath.indices().T, torch.zeros(Ath.indices().T.shape[0], 1, dtype=torch.long).fill_(3)], dim=1)  # tail to head
+#     hh_edges = torch.cat([Ahh.indices().T, torch.zeros(Ahh.indices().T.shape[0], 1, dtype=torch.long).fill_(0)], dim=1)  # head to head
+#     tt_edges = torch.cat([Att.indices().T, torch.zeros(Att.indices().T.shape[0], 1, dtype=torch.long).fill_(1)], dim=1)  # tail to tail
+#     ht_edges = torch.cat([Aht.indices().T, torch.zeros(Aht.indices().T.shape[0], 1, dtype=torch.long).fill_(2)], dim=1)  # head to tail
+#     th_edges = torch.cat([Ath.indices().T, torch.zeros(Ath.indices().T.shape[0], 1, dtype=torch.long).fill_(3)], dim=1)  # tail to head
     
-    rel_graph = Data(
-        edge_index=torch.cat([hh_edges[:, [0, 1]].T, tt_edges[:, [0, 1]].T, ht_edges[:, [0, 1]].T, th_edges[:, [0, 1]].T], dim=1), 
-        edge_type=torch.cat([hh_edges[:, 2], tt_edges[:, 2], ht_edges[:, 2], th_edges[:, 2]], dim=0),
-        num_nodes=num_rels, 
-        num_relations=4
-    )
+#     rel_graph = Data(
+#         edge_index=torch.cat([hh_edges[:, [0, 1]].T, tt_edges[:, [0, 1]].T, ht_edges[:, [0, 1]].T, th_edges[:, [0, 1]].T], dim=1), 
+#         edge_type=torch.cat([hh_edges[:, 2], tt_edges[:, 2], ht_edges[:, 2], th_edges[:, 2]], dim=0),
+#         num_nodes=num_rels, 
+#         num_relations=4
+#     )
 
-    graph.relation_graph = rel_graph
-    return graph
+#     graph.relation_graph = rel_graph
+#     return graph
 
 
 
@@ -141,7 +141,7 @@ class EntityNBFNet(BaseNBFNet):
                     self.dims[0], self.message_func, self.aggregate_func, self.layer_norm,
                     self.activation, dependent=False, project_relations=True)
             )
-        feature_dim = input_dim + (sum(hidden_dims) if self.concat_hidden else hidden_dims[-1])
+        feature_dim = (sum(hidden_dims) if self.concat_hidden else hidden_dims[-1]) + input_dim
         self.mlp = nn.Sequential()
         mlp = []
         self.get_scores = get_scores
@@ -227,7 +227,6 @@ class EntityNBFNet(BaseNBFNet):
             # UPDATE THE NUMBER OF EDGES
             data.num_edges = data.edge_index.shape[1]
 
-
         shape = h_index.shape
         # turn all triples in a batch into a tail prediction mode
         h_index, t_index, r_index = self.negative_sample_to_tail(h_index, t_index, r_index, num_direct_rel=data.num_relations // 2)
@@ -245,7 +244,7 @@ class EntityNBFNet(BaseNBFNet):
         output = self.bellmanford(data, h_index[:, 0], r_index[:, 0])  # (num_nodes, batch_size, feature_dim）
         feature = output["node_feature"]
 
-        if atom_repr:
+        if atom_repr:                                                                                                                                                                                                                     
             # Get the tail indices [19,num_negative+1], then unesqueeze it to [19,num_negative+1,1], then expand (repeat) it to [19,num_negative+1,64] 
             index = t_index.unsqueeze(-1).expand(-1, -1, feature.shape[-1])
             # here, for every query (pos and neg), I get the tail embeddings

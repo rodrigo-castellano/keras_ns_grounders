@@ -1,5 +1,3 @@
-import sys
-sys.path.append('C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders')
 from abc import ABC, abstractmethod
 from collections import defaultdict, OrderedDict
 import traceback
@@ -7,8 +5,6 @@ from typing import Dict, List, Tuple, Union
 from ns_lib.logic.commons import Atom, Domain, Predicate, Rule, RuleGroundings
 import ns_lib as ns
 import timeit
-import numpy as np
-import tensorflow as tf
 DomainName = str
 PredicateName = str
 ConstantName = str
@@ -78,6 +74,12 @@ class LogicSerializerFast(IndexerBase):
                 self.constant_to_global_unique_index[domain.name][constant] = counter
                 counter += 1
 
+        # dic = {'afghanistan': 0, 'asia': 1, 'southern_asia': 2, 'aland_islands': 3, 'europe': 4, 'northern_europe': 5, 'albania': 6, 'southern_europe': 7, 'algeria': 8, 'africa': 9, 'northern_africa': 10, 'american_samoa': 11, 'oceania': 12, 'polynesia': 13, 'andorra': 14, 'angola': 15, 'middle_africa': 16, 'anguilla': 17, 'americas': 18, 'caribbean': 19, 'antigua_and_barbuda': 20, 'argentina': 21, 'south_america': 22, 'armenia': 23, 'western_asia': 24, 'aruba': 25, 'australia_and_new_zealand': 26, 'australia': 27, 'austria': 28, 'western_europe': 29, 'azerbaijan': 30, 'bahamas': 31, 'bahrain': 32, 'bangladesh': 33, 'barbados': 34, 'belarus': 35, 'eastern_europe': 36, 'belgium': 37, 'belize': 38, 'central_america': 39, 'benin': 40, 'western_africa': 41, 'bermuda': 42, 'northern_america': 43, 'bhutan': 44, 'bolivia': 45, 'bosnia_and_herzegovina': 46, 'botswana': 47, 'southern_africa': 48, 'brazil': 49, 'british_indian_ocean_territory': 50, 'eastern_africa': 51, 'british_virgin_islands': 52, 'brunei': 53, 'south_eastern_asia': 54, 'bulgaria': 55, 'burkina_faso': 56, 'burundi': 57, 'cambodia': 58, 'cameroon': 59, 'canada': 60, 'cape_verde': 61, 'cayman_islands': 62, 'central_african_republic': 63, 'central_asia': 64, 'central_europe': 65, 'chad': 66, 'chile': 67, 'china': 68, 'eastern_asia': 69, 'christmas_island': 70, 'cocos_keeling_islands': 71, 'colombia': 72, 'comoros': 73, 'cook_islands': 74, 'costa_rica': 75, 'croatia': 76, 'cuba': 77, 'curacao': 78, 'cyprus': 79, 'czechia': 80, 'denmark': 81, 'djibouti': 82, 'dominica': 83, 'dominican_republic': 84, 'dr_congo': 85, 'ecuador': 86, 'egypt': 87, 'el_salvador': 88, 'equatorial_guinea': 89, 'eritrea': 90, 'estonia': 91, 'ethiopia': 92, 'falkland_islands': 93, 'faroe_islands': 94, 'fiji': 95, 'melanesia': 96, 'finland': 97, 'france': 98, 'french_guiana': 99, 'french_polynesia': 100, 'gabon': 101, 'gambia': 102, 'georgia': 103, 'germany': 104, 'ghana': 105, 'gibraltar': 106, 'greece': 107, 'greenland': 108, 'grenada': 109, 'guadeloupe': 110, 'guam': 111, 'micronesia': 112, 'guatemala': 113, 'guernsey': 114, 'guinea': 115, 'guinea_bissau': 116, 'guyana': 117, 'haiti': 118, 'honduras': 119, 'hong_kong': 120, 'hungary': 121, 'iceland': 122, 'india': 123, 'indonesia': 124, 'iran': 125, 'iraq': 126, 'ireland': 127, 'isle_of_man': 128, 'israel': 129, 'italy': 130, 'ivory_coast': 131, 'jamaica': 132, 'japan': 133, 'jersey': 134, 'jordan': 135, 'kazakhstan': 136, 'kenya': 137, 'kiribati': 138, 'kosovo': 139, 'kuwait': 140, 'kyrgyzstan': 141, 'laos': 142, 'latvia': 143, 'lebanon': 144, 'lesotho': 145, 'liberia': 146, 'libya': 147, 'liechtenstein': 148, 'lithuania': 149, 'luxembourg': 150, 'macau': 151, 'macedonia': 152, 'madagascar': 153, 'malawi': 154, 'malaysia': 155, 'maldives': 156, 'mali': 157, 'malta': 158, 'marshall_islands': 159, 'martinique': 160, 'mauritania': 161, 'mauritius': 162, 'mayotte': 163, 'mexico': 164, 'moldova': 165, 'monaco': 166, 'mongolia': 167, 'montenegro': 168, 'montserrat': 169, 'morocco': 170, 'mozambique': 171, 'myanmar': 172, 'namibia': 173, 'nauru': 174, 'nepal': 175, 'netherlands': 176, 'new_caledonia': 177, 'new_zealand': 178, 'nicaragua': 179, 'niger': 180, 'nigeria': 181, 'niue': 182, 'norfolk_island': 183, 'northern_mariana_islands': 184, 'north_korea': 185, 'norway': 186, 'oman': 187, 'pakistan': 188, 'palau': 189, 'palestine': 190, 'panama': 191, 'papua_new_guinea': 192, 'paraguay': 193, 'peru': 194, 'philippines': 195, 'pitcairn_islands': 196, 'poland': 197, 'portugal': 198, 'puerto_rico': 199, 'qatar': 200, 'republic_of_the_congo': 201, 'reunion': 202, 'romania': 203, 'russia': 204, 'rwanda': 205, 'saint_barthelemy': 206, 'saint_kitts_and_nevis': 207, 'saint_lucia': 208, 'saint_martin': 209, 'saint_pierre_and_miquelon': 210, 'saint_vincent_and_the_grenadines': 211, 'samoa': 212, 'san_marino': 213, 'sao_tome_and_principe': 214, 'saudi_arabia': 215, 'senegal': 216, 'serbia': 217, 'seychelles': 218, 'sierra_leone': 219, 'singapore': 220, 'sint_maarten': 221, 'slovakia': 222, 'slovenia': 223, 'solomon_islands': 224, 'somalia': 225, 'south_africa': 226, 'south_georgia': 227, 'south_korea': 228, 'south_sudan': 229, 'spain': 230, 'sri_lanka': 231, 'sudan': 232, 'suriname': 233, 'svalbard_and_jan_mayen': 234, 'swaziland': 235, 'sweden': 236, 'switzerland': 237, 'syria': 238, 'taiwan': 239, 'tajikistan': 240, 'tanzania': 241, 'thailand': 242, 'timor_leste': 243, 'togo': 244, 'tokelau': 245, 'tonga': 246, 'trinidad_and_tobago': 247, 'tunisia': 248, 'turkey': 249, 'turkmenistan': 250, 'turks_and_caicos_islands': 251, 'tuvalu': 252, 'uganda': 253, 'ukraine': 254, 'united_arab_emirates': 255, 'united_kingdom': 256, 'united_states_minor_outlying_islands': 257, 'united_states': 258, 'united_states_virgin_islands': 259, 'uruguay': 260, 'uzbekistan': 261, 'vanuatu': 262, 'vatican_city': 263, 'venezuela': 264, 'vietnam': 265, 'wallis_and_futuna': 266, 'western_sahara': 267, 'yemen': 268, 'zambia': 269, 'zimbabwe': 270}
+        # self.constant_to_global_unique_index = defaultdict(dict) 
+        # for domain in domains:
+        #     for constant in domain.constants:
+        #         self.constant_to_global_unique_index[domain.name][constant] = dic[constant]
+
         self.predicate_to_global_index = defaultdict(dict)  # A_predicates with global index
         for i,predicate in enumerate(self.predicates):
             self.predicate_to_global_index[predicate.name] = i
@@ -129,11 +131,9 @@ class LogicSerializerFast(IndexerBase):
                         domain_to_global[domain].append(
                             self.constant_to_global_index[domain][c]) # Append it to X_domains
                     indices_cs.append(constant_index[c]) # Append the local index of the constant to A_predicates
-                    # indices_cs.append(self.constant_to_global_index[domain][c]) # Append the global index of the constant to A_predicates
-                    # print('     indices:',indices_cs) if count_print <100 else None
                 constant_tuples.append(indices_cs) 
             predicate_to_constant_tuples[predicate.name] = constant_tuples
-        
+
         index_groundings = {}
         for name,rule in rule_groundings.items():
             if len(rule.groundings) > 0:
@@ -242,7 +242,8 @@ class LogicSerializerFast(IndexerBase):
                     domain = (self.constant2domain_name[c]
                                 if c in self.constant2domain_name else
                                 self.adaptive_constant2domain[c])
-                    index_query.append(self.constant_to_global_index[domain][c])
+                    # index_query.append(self.constant_to_global_index[domain][c])
+                    index_query.append(self.constant_to_global_unique_index[domain][c])
                 # Now get the index of the predicate
                 predicate_idx = self.predicate_to_global_index[atom[0]]
                 index_query.append(predicate_idx)
@@ -271,6 +272,7 @@ class LogicSerializerFast(IndexerBase):
                     true_flag = False
                     continue
                 A_predicates_global_textualized.append(f"{head_text} is a {domain_head} and it is not {predicate} of {tail_text}, which is a {domain_tail}")
+
         # print('constant_to_global_unique_index')
         # for domain in self.constant_to_global_unique_index.keys():
         #     print(domain,self.constant_to_global_unique_index[domain])   

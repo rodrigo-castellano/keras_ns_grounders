@@ -1,0 +1,116 @@
+wandb_version: 1
+
+shuffle_buffer:
+  desc: null
+  value: 1024
+batch_size:
+  desc: null
+  value: 1
+learning_rate:
+  desc: null
+  value: 0.0001
+epochs:
+  desc: null
+  value: 100
+_wandb:
+  desc: null
+  value:
+    python_version: 3.10.14
+    cli_version: 0.16.6
+    framework: huggingface
+    huggingface_version: 4.41.2
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1718188730.0
+    t:
+      1:
+      - 1
+      - 2
+      - 3
+      - 5
+      - 11
+      - 49
+      - 51
+      - 53
+      - 55
+      - 71
+      - 77
+      - 98
+      2:
+      - 1
+      - 2
+      - 3
+      - 5
+      - 11
+      - 49
+      - 51
+      - 53
+      - 55
+      - 71
+      - 77
+      - 98
+      3:
+      - 7
+      - 13
+      - 16
+      - 23
+      - 38
+      4: 3.10.14
+      5: 0.16.6
+      6: 4.41.2
+      8:
+      - 3
+      - 5
+      13: windows-amd64
+    m:
+    - 1: batch/batch_step
+      6:
+      - 3
+    - 1: batch/loss
+      5: 1
+      6:
+      - 1
+    - 1: batch/concept_loss
+      5: 1
+      6:
+      - 1
+    - 1: batch/task_loss
+      5: 1
+      6:
+      - 1
+    - 1: batch/concept_mrr
+      5: 1
+      6:
+      - 1
+    - 1: batch/concept_hits@1@1
+      5: 1
+      6:
+      - 1
+    - 1: batch/concept_hits@3@3
+      5: 1
+      6:
+      - 1
+    - 1: batch/concept_hits@10@10
+      5: 1
+      6:
+      - 1
+    - 1: batch/task_mrr
+      5: 1
+      6:
+      - 1
+    - 1: batch/task_hits@1@1
+      5: 1
+      6:
+      - 1
+    - 1: batch/task_hits@3@3
+      5: 1
+      6:
+      - 1
+    - 1: batch/task_hits@10@10
+      5: 1
+      6:
+      - 1
+    - 1: batch/learning_rate
+      5: 1
+      6:
+      - 1
