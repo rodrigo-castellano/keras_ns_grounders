@@ -767,16 +767,18 @@ class MRRMetric(tf.keras.metrics.Metric):
            for tensor in [labels, predictions]):
       labels, predictions, _, _ = ragged_to_dense(labels, predictions, None)
 
-    topn = tf.shape(predictions)[1]
-    sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None)
-    sorted_list_size = tf.shape(input=sorted_labels)[1]
+    topn = tf.shape(predictions)[1] #  number of predictions per sample, which is the size of the second dimension of the predictions tensor
+    sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None) # sort the labels by the predictions
+    sorted_list_size = tf.shape(input=sorted_labels)[1] # usually is the same as topn, unless for example I only care about the top 3 predictions
     # Relevance = 1.0 when labels >= 1.0 to accommodate graded relevance.
-    relevance = tf.cast(tf.greater_equal(sorted_labels, 1.0), dtype=tf.float32)
+    relevance = tf.cast(tf.greater_equal(sorted_labels, 1.0), dtype=tf.float32) # if the label is greater or equal to 1, then the relevance is 1, otherwise 0
     reciprocal_rank = 1.0 / tf.cast(
-        tf.range(1, sorted_list_size + 1), dtype=tf.float32)
+        tf.range(1, sorted_list_size + 1), dtype=tf.float32) #  This generates a range of ranks from 1 to the size of the sorted list. The reciprocal rank is 1/rank
     # MRR has a shape of [batch_size, 1].
+    # Element-wise Multiplication: relevance * reciprocal_rank computes the reciprocal rank for relevant items (i.e., where relevance is 1.0)
+    # Maximum Reciprocal Rank: tf.reduce_max(..., axis=1, keepdims=True) finds the maximum reciprocal rank for each sample across the list of predictions. This is because MRR considers the highest (earliest) rank of a relevant item.
     mrr = tf.reduce_max(
-        input_tensor=relevance * reciprocal_rank, axis=1, keepdims=True)
+        input_tensor=relevance * reciprocal_rank, axis=1, keepdims=True) 
     return mrr
 
 # Wrapper around tf.keras.metrics.AUC adding the convertion to ragged tensors.

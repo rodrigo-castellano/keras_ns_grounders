@@ -1,7 +1,7 @@
 import os
 
-path = 'C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\experiments\\data\\countries_s1'
-path_dest = 'C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\experiments\\data\\countries_s1_triplets'
+path = 'C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\experiments\\data\\kinship_family'
+path_dest = 'C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\experiments\\data\\kinship_family_triplets'
 # path_dest = 'C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\countries_s1_triplets'
 # assert that the paths are not the same
 assert path != path_dest, 'The paths are the same'

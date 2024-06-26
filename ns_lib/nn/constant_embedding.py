@@ -7,7 +7,7 @@ import tensorflow_probability as tfp
 import torch
 from angle_emb import AnglE, Prompts
 from ns_lib.logic.commons import Domain
-from transformers import AutoModel, AutoTokenizer
+# from transformers import AutoModel, AutoTokenizer
 from ns_lib.logic import FOL
 
 class ConstantEmbeddings(Layer):
@@ -68,7 +68,7 @@ class ConstantEmbeddingsTrial(Layer):
                 domain_inputs[domain.name]))
         return domain_features
 
-class ConstantEmbeddingsGlobal(Layer):
+class ConstantEmbeddingsGlobal_old(Layer):
     """Calls the constant rules_embedders, differenciating the behavior of
        the single domains."""
     def __init__(self, domains: List[Domain],
