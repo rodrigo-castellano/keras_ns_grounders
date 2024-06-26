@@ -24,11 +24,14 @@ class KGEModel(Model):
                  num_adaptive_constants: int=0,
                  dot_product: bool=False,
                  use_ultra: bool=False,
-                 device: str = 'cpu'):
+                 device: str = 'cpu',
+                 global_serialization: bool = False):
         super().__init__()
         self.fol = fol
         self.predicate_index_tensor = tf.constant(
             [i for i in range(len(self.fol.predicates))], dtype=tf.int32)
+        
+        self.global_serialization = global_serialization
         
         # CONSTANT AND PREDICATE EMBEDDINGS
         self.use_ultra = use_ultra
@@ -38,9 +41,12 @@ class KGEModel(Model):
                 predicate_embedding_size,
                 regularization=kge_regularization,
                 has_features=False)
-            # self.constant_embedder = ConstantEmbeddingsGlobal(
-            # self.constant_embedder = ConstantEmbeddings(
-            self.constant_embedder = ConstantEmbeddingsTrial(
+            if self.global_serialization:
+                cte_embedder = ConstantEmbeddingsTrial
+                # cte_embedder = ConstantEmbeddingsGlobal
+            else:
+                cte_embedder = ConstantEmbeddings
+            self.constant_embedder = cte_embedder( 
                 domains=fol.domains,
                 constant_embedding_sizes_per_domain={
                     domain.name: constant_embedding_size
@@ -103,6 +109,7 @@ class KGEModel(Model):
         dense_embeddings = tf.concat(embeddings_list, axis=0) if embeddings_list else tf.constant([], dtype=tf.float32)
         
         return dense_embeddings
+    
     # check in chatgpt this alternative. I can first extract only the indices of embedds that I need, then do a mapping from embedds to my list
     # def get_embeddings_idx(self,sparse_tensor, target_indices):
     #     # Create a mask that identifies which entries in sparse_tensor.indices[:, 0] are in target_indices
@@ -131,7 +138,7 @@ class KGEModel(Model):
                         constant_embeddings: Dict[str, tf.Tensor],
                         predicate_embeddings: tf.Tensor,
                         A_predicates: Dict[str, tf.Tensor],
-                        X_domains: Dict[str, tf.Tensor] = None):
+                        X_domains: Dict[str, tf.Tensor]):
         predicate_embeddings_per_triplets = []
         '''For A_predicates, take the emebdding representation of the predicates and the constants and create the triplets for the KGE model.
         For instance, if I have a predicate with 3 grounded atoms, I will repeat the embedding of that predicate 3 times, and put it with the 
@@ -146,12 +153,12 @@ class KGEModel(Model):
         # tf.print('KGE A_predicates')
         # for p,constant_idx in A_predicates.items():
         #     tf.print('KGE A_predicates',p,constant_idx,summarize=-1)
-        tf.print('KGE constant_embeddings')
-        for domain,constant_idx in constant_embeddings.items():
-            tf.print('KGE constant_embeddings',domain,constant_idx.shape,summarize=-1)  
-        tf.print('KGE predicate_embeddings')
-        for predicate_embeddings in predicate_embeddings:
-            tf.print('KGE predicate_embeddings',predicate_embeddings.shape,summarize=-1)
+        # tf.print('KGE constant_embeddings')
+        # for domain,constant_idx in constant_embeddings.items():
+        #     tf.print('KGE constant_embeddings',domain,constant_idx.shape,summarize=-1)  
+        # tf.print('KGE predicate_embeddings')
+        # for predicate_embeddings in predicate_embeddings:
+        #     tf.print('KGE predicate_embeddings',predicate_embeddings.shape,summarize=-1)
 
         for p,indices in A_predicates.items():
             idx = self.fol.name2predicate_idx[p]
@@ -160,38 +167,40 @@ class KGEModel(Model):
             predicate_embeddings_per_triplets.append(tf.repeat(p_embeddings, tf.shape(indices)[0], axis=0))  # [1,1918,200]=[1,n_groundings for that predicate, embed_size_predicate]
         predicate_embeddings_per_triplets = tf.concat(predicate_embeddings_per_triplets,axis=0) # shape=[n_predicates, n_groundings for that predicate, embed_size_predicate]
         constant_embeddings_for_triplets = []
+
         for p,constant_idx in A_predicates.items():
-            # tf.print('A_pred predicate',p)
-            # print('PREDICATE',p,'CONSTANT_IDX',constant_idx.shape,constant_idx)
             constant_idx = tf.cast(constant_idx, tf.int32) # all the groundings idx for that predicate
             predicate = self.fol.name2predicate[p]
             one_predicate_constant_embeddings = []
-            # Here, for each domain of the predicate (LocInSR(subregion,region)->for subregion), I get the embeddings of the constants that
-            # are grounded in that domain. If LocInSR has 58 groundings/atoms, I will get the representation of the subregion constants in 
-            # those atoms(58,200). I do the same for the domain region, so I get a tensor of shape [58,2,200] for LocIn where 2 is the arity of the predicate. 
+            '''Here, for each domain of the predicate (LocInSR(subregion,region)->for subregion), I get the embeddings of the constants that
+            are grounded in that domain. If LocInSR has 58 groundings/atoms, I will get the representation of the subregion constants in 
+            those atoms(58,200). I do the same for the domain region, so I get a tensor of shape [58,2,200] for LocIn where 2 is the arity of the predicate.''' 
             for i,domain in enumerate(predicate.domains):
-                # # If I have A_pred=[country,region]=[[1,2],[3,4],...], I get for country: [1,3] which are local! they're the pos of the ctes in X_domain
-                # # In X_domain, in pos i I have the global idx of that cte (which has been created to create the embedds)
-                
-                # Step 1: Create a dictionary that maps each index to its embedding
-                index_to_embedding = {index: emb for index, emb in zip(constant_embeddings[domain.name][0].numpy(), constant_embeddings[domain.name][1])}
-                # Step 2: Fetch the embeddings for the indices in `indices_list`
-                resulting_embeddings = [index_to_embedding[idx] for idx in constant_idx[..., i].numpy()]
-                # Step 3: Convert the list of embeddings to a tensor
-                constants = tf.convert_to_tensor(resulting_embeddings)
-
-                # constants = tf.gather(constant_embeddings[domain.name],
-                #                       constant_idx[..., i], axis=0) # constant_idx[..., i] takes the idx of the constants for that domain (in predicate p)
+                '''If I have A_pred=[country,region]=[[1,2],[3,4],...], I get for country: [1,3] which are local! they're the pos of the ctes in X_domain
+                In X_domain, in pos i I have the global idx of that cte (which has been created to create the embedds)'''
+                if self.global_serialization:
+                    # Step 1: Create a dictionary that maps each index to its embedding
+                    index_to_embedding = {index: emb for index, emb in zip(constant_embeddings[domain.name][0].numpy(), constant_embeddings[domain.name][1])}
+                    # Step 2: Fetch the embeddings for the indices in `indices_list`
+                    resulting_embeddings = [index_to_embedding[idx] for idx in constant_idx[..., i].numpy()]
+                    # Step 3: Convert the list of embeddings to a tensor
+                    constants = tf.convert_to_tensor(resulting_embeddings)
+                    one_predicate_constant_embeddings.append(constants) if len(constants) > 0 else None
+                else:
+                    constants = tf.gather(constant_embeddings[domain.name],
+                                        constant_idx[..., i], axis=0) # constant_idx[..., i] takes the idx of the constants for that domain (in predicate p)
                 # Get the dense embeddings
                 # constants = self.get_embeddings_idx(constant_embeddings[domain.name], constant_idx[..., i]) if constant_embeddings[domain.name] is not None else tf.constant([], dtype=tf.float32)
-                one_predicate_constant_embeddings.append(constants) if len(constants) > 0 else None
+                one_predicate_constant_embeddings.append(constants)#  if len(constants) > 0 else None
+
             # shape (predicate_batch_size, predicate_arity, constant_embedding_size)
-            one_predicate_constant_embeddings = tf.stack(one_predicate_constant_embeddings,axis=-2) if len(one_predicate_constant_embeddings) > 0 else tf.constant([], dtype=tf.float32)
-            constant_embeddings_for_triplets.append(one_predicate_constant_embeddings) if len(one_predicate_constant_embeddings) > 0 else None
-        # For all the queries, I have divided them by predicates. Once I have, for each predicate, the embeddings of the constants, i.e., 
-        # for LocInSR I have 58 atoms -> (58,2,200), for NeighOf .... I concatenate them to get a tensor of shape [58+..,2,200] = [3889,2,200]
-        # tf.print('PREDICATE EMBEDDINGS PER TRIPLETS',predicate_embeddings_per_triplets.shape,predicate_embeddings_per_triplets)
-        # tf.print('CONSTANT EMBEDDINGS FOR TRIPLETS', [tensor.shape for tensor in constant_embeddings_for_triplets])
+            one_predicate_constant_embeddings = tf.stack(one_predicate_constant_embeddings,axis=-2)# if len(one_predicate_constant_embeddings) > 0 else tf.constant([], dtype=tf.float32)
+            constant_embeddings_for_triplets.append(one_predicate_constant_embeddings)# if len(one_predicate_constant_embeddings) > 0 else None
+            
+        '''For all the queries, I have divided them by predicates. Once I have, for each predicate, the embeddings of the constants, i.e., 
+        for LocInSR I have 58 atoms -> (58,2,200), for NeighOf .... I concatenate them to get a tensor of shape [58+..,2,200] = [3889,2,200]
+        tf.print('PREDICATE EMBEDDINGS PER TRIPLETS',predicate_embeddings_per_triplets.shape,predicate_embeddings_per_triplets)
+        tf.print('CONSTANT EMBEDDINGS FOR TRIPLETS', [tensor.shape for tensor in constant_embeddings_for_triplets])'''
 
         constant_embeddings_for_triplets = tf.concat(constant_embeddings_for_triplets,axis=0) 
         tf.debugging.assert_equal(tf.shape(predicate_embeddings_per_triplets)[0],
@@ -200,9 +209,7 @@ class KGEModel(Model):
         # At the end I get for both predicates and embeddings a tensor of shape [n_atoms,ctes_in_atoms(arity),embed_size_predicate] and [n_atoms,2,embed_size_constant]
         return predicate_embeddings_per_triplets, constant_embeddings_for_triplets
 
-    def call(self, inputs,
-            embeddings=None # For ULTRA
-            ):
+    def call(self, inputs,embeddings=None):
         '''
         X_domains type is Dict[str, inputs]
         A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
@@ -232,8 +239,8 @@ class KGEModel(Model):
                 for name in X_domains.keys()}
         else: 
             if not self.use_ultra:
-                # print('X_DOMAINS',X_domains)
                 constant_embeddings = self.constant_embedder(X_domains) # For the constant embedds, I always need global idx to get consistent embedds every batch
+
         if not self.use_ultra:
             print('USING KGE')
             predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor) # Embedds for every pred in fol (global idx)
@@ -286,11 +293,11 @@ class ULTRA_bridge(Model):
     def call(self,embeddings):
         # Project embeddings to the new size
         atom_embeddings = self.atom_projection(embeddings)
-        # return atom_embeddings
+        return atom_embeddings
 
-        # Get the score for each atom
-        atom_outputs = tf.expand_dims(self.output_layer(atom_embeddings), -1) 
-        return atom_outputs,atom_embeddings
+        # # Get the score for each atom
+        # atom_outputs = tf.expand_dims(self.output_layer(atom_embeddings), -1) 
+        # return atom_outputs,atom_embeddings
 
 class LLM_Bridge(Model):
     def __init__(self, *args, **kwargs):
@@ -362,7 +369,8 @@ class CollectiveModel(Model):
                  cdcr_use_positional_embeddings: bool,
                  cdcr_num_formulas: int,
                  r2n_prediction_type: str,
-                 device: str = 'cpu'):
+                 device: str = 'cpu',
+                 global_serialization: bool = False):
         super().__init__()
 
         self.testing = False
@@ -375,6 +383,7 @@ class CollectiveModel(Model):
         self.use_ultra = use_ultra
         self.use_ultra_with_kge = use_ultra_with_kge
         self.use_llm = use_llm
+        self.global_serialization = global_serialization
         if not self.use_ultra and not self.use_llm:
             self.kge_model = KGEModel(fol, kge,
                                     kge_regularization,
@@ -385,7 +394,8 @@ class CollectiveModel(Model):
                                     num_adaptive_constants,
                                     dot_product,
                                     device='cpu',
-                                    use_ultra=self.use_ultra_with_kge)
+                                    use_ultra=self.use_ultra_with_kge,
+                                    global_serialization=self.global_serialization)
         elif self.use_ultra:
             self.ULTRA_bridge = ULTRA_bridge()
         elif self.use_llm:
@@ -501,22 +511,18 @@ class CollectiveModel(Model):
             assert self.model_name == 'dcr' or self.model_name == 'cdcr'
 
         (X_domains, A_predicates, A_rules, Q, embeddings) = inputs
-        
+        print('X_domains',[len(X_domains[domain]) for domain in X_domains.keys()])
+        print('A_predicates',[len(A_predicates[p]) for p in A_predicates.keys()])
         if self.use_ultra:
             print('USING ULTRA')
-            # (concept_output, concept_embeddings) = embeddings
-            # concept_embeddings = self.ULTRA_bridge(concept_embeddings)
-            (_, concept_embeddings) = embeddings
-            concept_output,concept_embeddings = self.ULTRA_bridge(concept_embeddings)
-            # print('concept_output',concept_output.shape)
-            # print('concept_embeddings',concept_embeddings.shape)
+            (concept_output, concept_embeddings) = embeddings
+            concept_embeddings = self.ULTRA_bridge(concept_embeddings)
         elif self.use_llm:
             (_, concept_embeddings) = embeddings # I don't need the concept_output here, I just need the embeddings
             concept_output,concept_embeddings = self.LLM_bridge(concept_embeddings)
         else:
             concept_output, concept_embeddings = self.kge_model((X_domains, A_predicates),embeddings=embeddings)
-            # print('concept_output',concept_output.shape)
-            # print('concept_embeddings',concept_embeddings.shape)
+            print('Concept embeddings',concept_embeddings.shape, '. Concept_output',concept_output.shape)
  
         task_output = tf.identity(concept_output)
 

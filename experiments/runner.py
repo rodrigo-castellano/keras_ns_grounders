@@ -31,18 +31,19 @@ if __name__ == '__main__':
     # tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
     use_logger = False
-    use_WB = True
+    use_WB = False
     log_folder :str = "./experiments/tests/"
-    ckpt_folder :str = os.path.join(log_folder,'checkpoints')
+    ckpt_folder :str = None # os.path.join(log_folder,'checkpoints')
+    load_checkpoint = None # 'countries_s1-backward_1-complex-no_reasoner-None-2-100__epoch0.ckpt'
     base_path :str = "experiments/data"
     epochs: int = 100
-    EARLY_STOPPING = False
-    LLM = True
+    EARLY_STOPPING = True
+    LLM = False
     ULTRA = False
     ULTRA_WITH_KGE = False
-    DATASET_NAME = ['kinship_family']#,'nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
+    DATASET_NAME = ['countries_s1']#,'nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1']#,'backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
-    KGE = ['none']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
+    KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['no_reasoner']#,'r2n']#,'no_reasoner','r2n',] # ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
     E = [100]#,300] 
@@ -53,9 +54,9 @@ if __name__ == '__main__':
     DROPOUT = [0.0,0.1,0,2]
     R = [0.0]
     RR = [0.0]
-    LR = [0.0001]
+    LR = [0.01]
     LR_SCHEDULER = ['plateau'] # None
-    OPTIMIZER = ['Adam'] #['None','adam']
+    OPTIMIZER = ['adam'] #['None','adam']
     NUM_RULES = [1] 
     VALID_SIZE = [None]
 
@@ -120,6 +121,7 @@ if __name__ == '__main__':
             continue
 
         args.device = 'cpu' # if not tf.config.experimental.list_physical_devices('GPU') else 'gpu'
+        args.global_serialization = True
         args.use_ultra = ULTRA
         args.use_ultra_with_kge = ULTRA_WITH_KGE
         args.use_llm = LLM
@@ -132,9 +134,9 @@ if __name__ == '__main__':
         if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'): # For heavy datasets, run only one seed
             args.seed = [0]
         args.kge_atom_embedding_size = e
-        args.batch_size = 1 # Full batch only for explain.
-        args.val_batch_size = 1
-        args.test_batch_size = 1 
+        args.batch_size = 128 # Full batch only for explain.
+        args.val_batch_size = 128
+        args.test_batch_size = 128 
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
@@ -217,7 +219,7 @@ if __name__ == '__main__':
             args.run_signature = 'llm-'+args.run_signature
         
         args.ckpt_filepath = (os.path.join(ckpt_folder, args.run_signature) if ckpt_folder else None) 
-        args.checkpoint_load = os.path.join(ckpt_folder,'countries_s1-backward_1-complex-no_reasoner-None-2-100__epoch0.ckpt') #os.path.join(ckpt_folder, args.run_signature)
+        args.checkpoint_load = os.path.join(ckpt_folder,load_checkpoint) if load_checkpoint is not None else None  #os.path.join(ckpt_folder, args.run_signature)
         args.kge_checkpoint_load = None
         # append a hard copy of the args to the list of all_args
         all_args.append(copy.deepcopy(args)) 

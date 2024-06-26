@@ -216,6 +216,8 @@ class KGCEvalDataset(Dataset):
 
         #Sample the corruptions
         facts_to_corrupt = [q[0] for q in queries] # Get positive to corrupt
+        # This will return a list of corruptions for each query, with a total of (2xqueries,n_corruptions). we have for each query a list of positive
+        # corruptions and a list of negative corruptions
         corruptions_per_query = KGCDataHandler.create_corruptions(
             queries=facts_to_corrupt,
             known_facts=self.known_facts,
@@ -388,18 +390,21 @@ class KGCDataHandler():
 
                 if corrupt_mode == 'HEAD_AND_TAIL' or corrupt_mode == 'TAIL':
                     o_domain = constant2domain[o_idx]
+                    # print('domain', o_domain,'number of constants in domain', len(domain2constants[o_domain]), flush=True)
                     for entity in domain2constants[o_domain]:
                         a1 = (r_idx,s_idx,entity)
-                        if a1 not in known_facts:
+                        if a1 not in known_facts: # discards the corruptions in known facts
                             ret1.append(a1)
 
                 if corrupt_mode == 'HEAD_AND_TAIL' or corrupt_mode == 'HEAD':
                     s_domain = constant2domain[s_idx]
+                    # print('domain', s_domain,'number of constants in domain', len(domain2constants[s_domain]), flush=True)
                     for entity in domain2constants[s_domain]:
                         a2 = (r_idx, entity, o_idx)
                         if a2 not in known_facts:
                             ret2.append(a2)
                 Q.append(Corruption(head=ret1, tail=ret2)) 
+                # print('number of corruptions for query', i, 'is', len(ret1)+len(ret2), flush=True)
 
             elif len(q) == 2:
                 print('Exception: query with one var, not possible to corrupt in that way',q, flush=True)
