@@ -1,4 +1,54 @@
-    def get_negative_and_outputs(self, model, dataset, batch, atom_repr=True):
+    # Function to filter and retrieve embeddings as a dense tensor
+    def get_embeddings_idx(self,sparse_tensor, target_indices):
+        # Initialize an empty list to store the embeddings
+        embeddings_list = []
+        # Iterate over the target indices
+        for index in target_indices.numpy():
+            # Extract the sub-tensor for the current index
+            mask = tf.equal(sparse_tensor.indices[:, 0], index)
+            # tf.print('mask', mask)
+            # sub_indices = tf.boolean_mask(sparse_tensor.indices, mask)
+            sub_values = tf.boolean_mask(sparse_tensor.values, mask)
+            embeddings_list.append(tf.expand_dims(sub_values, 0))
+            # tf.print('index',index,'tf.expand_dims(sub_values, 0)',tf.expand_dims(sub_values, 0).shape)
+            # if sub_values.shape == 0:
+            #     tf.print('mask',mask)
+            #     tf.print('sparse_tensor',sparse_tensor)
+            #     tf.print('sub_values',sub_values) 
+        # Concatenate all embeddings to form the final dense tensor if target_indices is not empty, else return an empty tensor
+        dense_embeddings = tf.concat(embeddings_list, axis=0) if embeddings_list else tf.constant([], dtype=tf.float32)
+        
+        return dense_embeddings
+    
+    # check in chatgpt this alternative. I can first extract only the indices of embedds that I need, then do a mapping from embedds to my list
+    # def get_embeddings_idx(self,sparse_tensor, target_indices):
+    #     # Create a mask that identifies which entries in sparse_tensor.indices[:, 0] are in target_indices
+    #     mask = tf.reduce_any(tf.equal(tf.expand_dims(sparse_tensor.indices[:, 0], 1), target_indices), axis=1)
+
+    #     # Use the mask to extract the relevant values
+    #     sub_values = tf.boolean_mask(sparse_tensor.values, mask)
+        
+    #     # Get the indices of the filtered values
+    #     filtered_indices = tf.boolean_mask(sparse_tensor.indices, mask)
+
+    #     # Map the target indices to their corresponding embeddings
+    #     expanded_target_indices = tf.expand_dims(target_indices, axis=1)
+    #     embeddings_per_target = tf.reduce_sum(tf.cast(tf.equal(filtered_indices[:, 0], expanded_target_indices), tf.int32), axis=0)
+        
+    #     # Prepare the list to store the embeddings
+    #     split_indices = tf.cumsum(embeddings_per_target)
+    #     embeddings_list = tf.split(sub_values, split_indices[:-1])
+
+    #     # Concatenate all embeddings to form the final dense tensor
+    #     dense_embeddings = tf.concat([tf.expand_dims(embed, axis=0) for embed in embeddings_list], axis=0)
+        
+    #     return dense_embeddings
+
+
+
+
+
+def get_negative_and_outputs(self, model, dataset, batch, atom_repr=True):
         batch_positive = torch.tensor([q[0] for q in batch], dtype=torch.int64)
         t_batch, h_batch = tasks.all_negative(self.aux_dataset, batch_positive)
         t_pred = self.Ultra(self.aux_dataset, t_batch)
