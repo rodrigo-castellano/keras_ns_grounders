@@ -16,18 +16,18 @@ def get_arg(args, name: str, default=None, assert_defined: bool=False):
 def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
 
     if args.grounder == 'full':
-        engine = ns.grounding.PlaceholderGeneratorFullGrounder(
+        engine = PlaceholderGeneratorFullGrounder(
                         domains={d.name:d for d in fol.domains},
                         rules=rules,
                         domain2adaptive_constants=domain2adaptive_constants,
                         exclude_symmetric=True,
                         exclude_query=False)
     elif args.grounder == 'domain':
-        engine = ns.grounding.DomainFullGrounder(
+        engine = DomainFullGrounder(
                         rules, domains={d.name:d for d in fol.domains},
                         domain2adaptive_constants=domain2adaptive_constants)
     elif args.grounder == 'known':
-        engine = ns.grounding.KnownBodyGrounder(rules, facts=facts)
+        engine = KnownBodyGrounder(rules, facts=facts)
     
     elif 'backward' in args.grounder:
         num_steps = int(args.grounder.split('_')[-1])
@@ -46,7 +46,7 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
             max_unknown_fact_count_last_step = max_unknown_fact_count = 0
 
         print('Grounder: ',args.grounder,'Number of steps:', num_steps, 'Prune:', prune_backward, 'max_unknown_fact_count:', max_unknown_fact_count)
-        engine = ns.grounding.ApproximateBackwardChainingGrounder(
+        engine = ApproximateBackwardChainingGrounder(
                         rules, facts=facts, domains={d.name:d for d in fol.domains},
                         domain2adaptive_constants=domain2adaptive_constants,
                         pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
@@ -57,7 +57,7 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
                         prune_incomplete_proofs=prune_backward)
 
         if 'original' in args.grounder:
-            engine = ns.grounding.BackwardChainingGrounder(
+            engine = BackwardChainingGrounder(
                         rules, facts=facts,
                         domains={d.name:d for d in fol.domains},
                         domain2adaptive_constants=domain2adaptive_constants,
@@ -65,7 +65,7 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
                         num_steps=get_arg(args, 'backward_chaining_depth', 1)) 
 
         if  'relationentity' in args.grounder:
-            engine = ns.grounding.RelationEntityGraphGrounder(
+            engine = RelationEntityGraphGrounder(
             rules, facts=facts,
             # TODO: Domain support is not added yet.
             #domains={d.name:d for d in fol.domains},
@@ -77,12 +77,12 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
 
             
     elif args.grounder == 'domainbody':
-        engine = ns.grounding.DomainBodyGrounder(domains={d.name:d for d in fol.domains},
+        engine = DomainBodyGrounder(domains={d.name:d for d in fol.domains},
                                                 rules=rules,
                                                 exclude_symmetric=True,
                                                 exclude_query=False)
     elif args.grounder == 'relationentity':
-        engine = ns.grounding.RelationEntityGraphGrounder(
+        engine = RelationEntityGraphGrounder(
             rules, facts=facts,
             build_cartesian_product=True,
             max_elements=20)
