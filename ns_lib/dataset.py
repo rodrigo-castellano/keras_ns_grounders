@@ -367,7 +367,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 self.Ultra.eval()
                 # self.mimic_ultra()
                 # self.mimic_test_function_ultra(Q_global_positive)
-                scores = self.mimic_test_function_ultra_with_our_corruptions(Q_global)
+                scores,_ = self.mimic_test_function_ultra_with_our_corruptions(Q_global)
                 embeddings  = (scores, None)
 
         elif self.use_llm:
@@ -457,7 +457,9 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         # convert scores and labels to tf
         scores = [score.detach().numpy() for score in scores]
+        print('Scores:', len(scores), [s.shape for s in scores])
         scores_tf = tf.ragged.constant(scores, dtype=tf.float32)
+        print('Scores tf:', get_ragged_tensor_shape(scores_tf))
         labels_tf = tf.ragged.constant(labels_new, dtype=tf.float32)  
 
         metrics = calculate_metrics(scores,scores_tf, labels_tf)
@@ -705,3 +707,20 @@ def get_ultra_datasets(dataset_train, dataset_valid, dataset_test,data_handler,s
     test_data = build_relation_graph(test_data)
 
     return train_data, valid_data, test_data, filtered_data
+
+
+
+
+def get_ragged_tensor_shape(rt):
+    if not isinstance(rt, tf.RaggedTensor):
+        return None
+    
+    row_lengths = rt.nested_row_lengths()
+    shapes = []
+    current_shape = tf.shape(rt.flat_values)
+    for lengths in reversed(row_lengths):
+        current_shape = tf.concat([[tf.shape(lengths)[0]], current_shape], axis=0)
+        shapes.append(current_shape)
+    shapes.reverse()
+    
+    return [shape.numpy().tolist() for shape in shapes]

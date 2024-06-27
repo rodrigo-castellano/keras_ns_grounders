@@ -38,13 +38,14 @@ if __name__ == '__main__':
     base_path :str = "experiments/data"
     epochs: int = 100
     EARLY_STOPPING = True
+    GLOBAL_SERIALIZATION = True
     LLM = False
-    ULTRA = False
+    ULTRA = True
     ULTRA_WITH_KGE = False
     DATASET_NAME = ['countries_s1']#,'nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1']#,'backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner']#,'no_reasoner','r2n',] # ['dcr','sbr','r2n','no_reasoner']  
+    MODEL_NAME = ['r2n'] # ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
     E = [100]#,300] 
     DEPTH = [1]#,3]
@@ -121,7 +122,7 @@ if __name__ == '__main__':
             continue
 
         args.device = 'cpu' # if not tf.config.experimental.list_physical_devices('GPU') else 'gpu'
-        args.global_serialization = True
+        args.global_serialization = GLOBAL_SERIALIZATION
         args.use_ultra = ULTRA
         args.use_ultra_with_kge = ULTRA_WITH_KGE
         args.use_llm = LLM
