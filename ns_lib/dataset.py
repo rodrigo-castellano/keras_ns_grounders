@@ -135,7 +135,6 @@ def _from_strings_to_tensors(fol, serializer,
     else:
         queries = tf.constant(queries, dtype=tf.int32)
         labels = tf.constant(labels, dtype=tf.float32)
-
     return (input_domains_tf, input_atoms_tuples_tf,
             input_formulas_tf, queries, (queries_global,A_predicates_global,A_predicates_global_textualized)), labels
 
@@ -169,7 +168,7 @@ class Dataset():
         return self.queries[b*i:b*(i+1)], self.labels[b*i:b*(i+1)], 
 
 
-def split_by_corruptions(self, batch):
+def split_by_corruptions(batch):
     '''
     Given a batch, split it in subbatches with the same number of corruptions in each subbatch. In this way it is easy to convert it to a pytorch version.
     '''
@@ -182,7 +181,7 @@ def split_by_corruptions(self, batch):
         subbatches[n_corruptions].append([batch[i]])
     return subbatches
 
-def split_positives_negatives(self, batch):
+def split_positives_negatives(batch):
     '''
     Given elements in a batch, for every element, if it has head and tail corruption, split it in two elements, one for head and one for tail corruption. 
     Reference: in each element, the first query is the positive and the rest are the negatives. 
@@ -221,21 +220,24 @@ def split_positives_negatives(self, batch):
 
 class Dataset_Ultra():
     
-        def __init__(self, edge_index, edge_type, num_relations, num_nodes, num_edges, device):
+        def __init__(self, edge_index=None, edge_type=None, num_relations=None, num_nodes=None, num_edges=None, device=None, target_edge_index=None, target_edge_type=None):
             self.edge_index = edge_index
             self.edge_type = edge_type
             self.num_relations = num_relations
             self.num_nodes = num_nodes
             self.num_edges = num_edges
             self.device = device
+            self.target_edge_index = target_edge_index
+            self.target_edge_type = target_edge_type
 
-def load_ultra_model():
+
+def load_ultra_model(model):
     # self.define_ultra_dataset()
     # self.Ultra = Ultra()
 
     rel_model_cfg = {"class": "RelNBFNet","input_dim": 64,"hidden_dims": [64, 64, 64, 64, 64, 64],"message_func": "distmult","aggregate_func": "sum","short_cut": "yes","layer_norm": "yes"} 
     entity_model_cfg= {"class": "EntityNBFNet","input_dim": 64,"hidden_dims": [64, 64, 64, 64, 64, 64],"message_func": "distmult","aggregate_func": "sum","short_cut": "yes","layer_norm": "yes"}
-    Ultra = Ultra(rel_model_cfg, entity_model_cfg)
+    model = model(rel_model_cfg, entity_model_cfg)
 
     # print('\n\nUltra', Ultra)
     # for name, param in Ultra.named_parameters():             
@@ -253,7 +255,7 @@ def load_ultra_model():
     #     print(key, state[key].shape)
     #     print(state[key][0][:5]) if len(state[key].shape) > 1 else print(state[key][:5])
 
-    Ultra.load_state_dict(state, strict=False) # Filter out the keys that correspond to the final layer
+    model.load_state_dict(state, strict=False) # Filter out the keys that correspond to the final layer
 
     # # show the parameters of the model
     # print('\n\nUltra loaded')
@@ -261,8 +263,8 @@ def load_ultra_model():
     #     print(name, param.shape)
     #     print(param[0][:5]) if len(param.shape) > 1 else print(param[:5])
 
-    Ultra = Ultra.to('cpu')
-    return Ultra
+    model = model.to('cpu')
+    return model
 
 class DataGenerator(tf.keras.utils.Sequence):
 
@@ -299,7 +301,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         if self.use_ultra or self.use_ultra_with_kge:
             assert dataset_ultra is not None, 'You need to provide the aux dataset_ultra'
             self.aux_dataset = dataset_ultra
-            self.Ultra = load_ultra_model()
+            self.Ultra = load_ultra_model(Ultra)
 
         if self.use_llm:
             self.llm_embedder = LMEmbeddings(self.fol, "")
@@ -331,7 +333,6 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         queries, labels = self.dataset[b*i:b*(i+1)]
         constants_features = self.dataset.constants_features
-        
         ((X_domains_data, A_predicates_data, A_rules_data, Q, (Q_global,A_predicates_triplets,A_predicates_textualized)), y) = _from_strings_to_tensors(
             fol=self.fol,
             serializer=self.serializer,
@@ -355,16 +356,18 @@ class DataGenerator(tf.keras.utils.Sequence):
         elif self.use_ultra: 
             use_ultra_original = True
             if not use_ultra_original:
-                scores,atom_embeds = self.Ultra(self.aux_dataset, A_predicates_triplets, atom_repr=True) # embedds of the atoms
-                scores = tf.constant(scores, dtype=tf.float32)
-                atom_embeds = tf.constant(atom_embeds, dtype=tf.float32)
+
+                # scores,atom_embeds = self.Ultra(self.aux_dataset, A_predicates_triplets, atom_repr=True) # embedds of the atoms
+                # scores = tf.constant(scores, dtype=tf.float32)
+                # atom_embeds = tf.constant(atom_embeds, dtype=tf.float32)
+
+                scores, _, atom_embeds = self.get_ultra_embeddings(A_predicates_data)
                 embeddings = (scores, atom_embeds)
             else:
                 self.Ultra.eval()
-
                 # self.mimic_ultra()
                 # self.mimic_test_function_ultra(Q_global_positive)
-                scores = self.mimic_test_function_ultra_with_corruptions(Q_global)
+                scores = self.mimic_test_function_ultra_with_our_corruptions(Q_global)
                 embeddings  = (scores, None)
 
         elif self.use_llm:
@@ -376,15 +379,14 @@ class DataGenerator(tf.keras.utils.Sequence):
             # embeddings = (_, atom_embeds)
 
         return (X_domains_data, A_predicates_data, A_rules_data, Q, embeddings), y
-    
 
-    def mimic_test_function_ultra_with_corruptions(self, batch):
-        # 1) From the batch predict all negatives, call the model and then apply the mask
-        # 2) From the batch divide by tail and head and num_negatives before calling the model -> THIS ONE
 
-        # remove the duplicated triplets
-        # print('Batch:', len(batch), batch)
-        # batch = list(dict.fromkeys(tuple(t) for t in batch))
+    def get_ultra_embeddings(self, batch):
+        '''
+        Option 1: get the embeddings of the atoms in A_predicates_data. But then I would need to calculate the negatives of the atoms in A_predicates_data
+        Option 2: for every atom in Q_global, calculate the embeddings of the atom and the negatives
+        '''
+        embeddings = None
         print('Batch:', len(batch)  ,'sets of corruptions:', [len(b) for b in batch])
 
         batch = split_positives_negatives(batch)
@@ -402,6 +404,48 @@ class DataGenerator(tf.keras.utils.Sequence):
             score = self.Ultra(self.aux_dataset, batch)
             scores.append(score)
         print('All scores:', len(scores), [s.shape for s in scores])
+
+        labels_new = np.empty(len(scores), dtype=object)
+        for i in range(len(scores)): 
+            labels_new[i] = np.zeros(tuple(scores[i].shape)) 
+            
+        for l  in labels_new:
+            l[:,0] = 1
+
+        # convert scores and labels to tf
+        scores = [score.detach().numpy() for score in scores]
+        scores_tf = tf.ragged.constant(scores, dtype=tf.float32)
+        labels_tf = tf.ragged.constant(labels_new, dtype=tf.float32)  
+
+        # metrics = calculate_metrics(scores,scores_tf, labels_tf)
+
+        return scores_tf, labels_tf, embeddings
+
+
+
+    def mimic_test_function_ultra_with_our_corruptions(self, batch):
+        # 1) From the batch predict all negatives, call the model and then apply the mask
+        # 2) From the batch divide by tail and head and num_negatives before calling the model -> THIS ONE
+        # remove the duplicated triplets
+        # print('Batch:', len(batch), batch)
+        # batch = list(dict.fromkeys(tuple(t) for t in batch))
+        # print('Batch:', len(batch)  ,'sets of corruptions:', [len(b) for b in batch])
+
+        batch = split_positives_negatives(batch)
+        # print('Batch splitted by positives and negatives:', len(batch), 'sets of corruptions:', [len(b) for b in batch])
+
+        batches = split_by_corruptions(batch)
+        # print('Batch splitted by corruptions:', batches.keys(), [len(b) for b in batches.values()])
+        for key in batches.keys():
+            if key != 1: # avoid only postivies when the corruption is only tail
+                batches[key] = np.concatenate(batches[key], axis=0)
+                batches[key] = torch.tensor(batches[key], dtype=torch.int64)
+
+        scores = []
+        for key,batch in batches.items():
+            score = self.Ultra(self.aux_dataset, batch)
+            scores.append(score)
+        # print('All scores:', len(scores), [s.shape for s in scores])
 
         # since the order of labels is not preserved, I need to create the labels again (always the first element is 1)            
         labels_new = np.empty(len(scores), dtype=object)
@@ -591,7 +635,7 @@ def obtain_queries(dataset,data_handler,serializer,engine,ragged,deterministic,g
     # print('Q_global_positive', len(Q_global_positive), Q_global_positive[:20])
     return X_domains_data, A_predicates_data, Q_global_positive
 
-def get_ultra_datasets(dataset_train, dataset_valid, dataset_test,data_handler,serializer,engine,ragged,deterministic,global_serialization,relation_graph=build_relation_graph):
+def get_ultra_datasets(dataset_train, dataset_valid, dataset_test,data_handler,serializer,engine,ragged=True,deterministic=True,global_serialization=False):
 
     # Get the triplets
     X_domain_train, A_pred_train, train_triplets = obtain_queries(dataset_train,data_handler,serializer,engine,ragged,deterministic,global_serialization)
