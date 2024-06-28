@@ -290,27 +290,27 @@ class ULTRA_bridge(Model):
             Dense(100, activation='relu'),
             Dense(100, activation='relu'),])
         
-        # self.atom_score_projection = Sequential([
-        #     Dense(1,activation='sigmoid')])
+        self.atom_score_projection = Sequential([
+            Dense(1,activation='sigmoid')])
 
         # Define the output layer as a method
         self.output_layer = self._output_layer
 
     def _output_layer(self, inputs):
-        outputs = tf.reduce_sum(inputs, axis=-1)
-        outputs = tf.nn.sigmoid(outputs)
-        # outputs = self.atom_score_projection(inputs)
-        # outputs = tf.squeeze(outputs, 1)
+        # outputs = tf.reduce_sum(inputs, axis=-1)
+        # outputs = tf.nn.sigmoid(outputs)
+        outputs = self.atom_score_projection(inputs)
+        outputs = tf.squeeze(outputs, 1)
         return outputs
 
     def call(self,embeddings):
         # Project embeddings to the new size
         atom_embeddings = self.atom_projection(embeddings)
-        return atom_embeddings
+        # return atom_embeddings
 
-        # # Get the score for each atom
-        # atom_outputs = tf.expand_dims(self.output_layer(atom_embeddings), -1) 
-        # return atom_outputs,atom_embeddings
+        # Get the score for each atom
+        atom_outputs = tf.expand_dims(self.output_layer(atom_embeddings), -1) 
+        return atom_outputs,atom_embeddings
 
 class LLM_Bridge(Model):
     def __init__(self, *args, **kwargs):
@@ -531,23 +531,27 @@ class CollectiveModel(Model):
         if self.use_ultra:
             print('USING ULTRA')
             (concept_output, concept_embeddings) = embeddings
-            # concept_embeddings = self.ULTRA_bridge(concept_embeddings)
+            concept_output,concept_embeddings = self.ULTRA_bridge(concept_embeddings)
+            print('concept_output',concept_output.shape)
+            print('concept_embeddings',concept_embeddings.shape)
         elif self.use_llm:
             (_, concept_embeddings) = embeddings # I don't need the concept_output here, I just need the embeddings
             concept_output,concept_embeddings = self.LLM_bridge(concept_embeddings)
         else:
             concept_output, concept_embeddings = self.kge_model((X_domains, A_predicates),embeddings=embeddings)
  
-        # create a tensor to test the model
-        shape = sum([len(v) for v in A_predicates.values()])
-        task_output = tf.ones([shape, 1], dtype=tf.float32)*0.5
-        concept_embeddings = tf.ones([shape, 100], dtype=tf.float32)*0.5
-        print('types','concept_embeddings',type(concept_embeddings),'concept_output',type(concept_output),'task_output',type(task_output))
-        print('Concept embeddings',concept_embeddings.shape) 
-        print('Concept output',concept_output.shape)
-        print('Task output',task_output.shape)
+        task_output = tf.identity(concept_output) # (len(sum A_pred),1)
 
-        # task_output = tf.identity(concept_output) # (len(sum A_pred),1)
+
+        # create a tensor to test the model:  
+        # shape = sum([len(v) for v in A_predicates.values()])
+        # task_output = tf.ones([shape, 1], dtype=tf.float32)*0.5
+        # concept_embeddings = tf.ones([shape, 100], dtype=tf.float32)*0.5
+        # print('types','concept_embeddings',type(concept_embeddings),'concept_output',type(concept_output),'task_output',type(task_output))
+        # print('Concept embeddings',concept_embeddings.shape) 
+        # print('Concept output',concept_output.shape, concept_output[:10])
+        # print('Task output',task_output.shape, task_output[:10])
+
 
         explanations = None
         if self.reasoning is not None:
@@ -566,7 +570,9 @@ class CollectiveModel(Model):
                 task_output = tf.expand_dims(self.output_layer(atom_embeddings), axis=-1)
 
         task_output = tf.gather(params=tf.squeeze(task_output, -1), indices=Q)
-        # concept_output = tf.gather(params=tf.squeeze(concept_output, -1),indices=Q)
+        concept_output = tf.gather(params=tf.squeeze(concept_output, -1),indices=Q)
+        # print('latest task_output',task_output.shape, task_output[:10])
+        # print('latest concept_output',concept_output.shape, concept_output[:10])
         if self.resnet and self.reasoning is not None:
             task_output = self.logic.disj_pair(task_output, concept_output)
 

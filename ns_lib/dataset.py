@@ -19,7 +19,7 @@ sys.path.append(current_dir)
 sys.path.append(os.path.join(current_dir, '..'))
 sys.path.append(os.path.join(current_dir, '..', 'experiments'))
 
-# from ultra_utils import Ultra
+from ultra_utils import Ultra as Ultra_modified
 from ULTRA.ultra.models import Ultra
 from ULTRA.ultra import tasks
 from ULTRA.ultra.tasks import build_relation_graph
@@ -231,13 +231,13 @@ class Dataset_Ultra():
             self.target_edge_type = target_edge_type
 
 
-def load_ultra_model(model):
-    # self.define_ultra_dataset()
-    # self.Ultra = Ultra()
-
-    rel_model_cfg = {"class": "RelNBFNet","input_dim": 64,"hidden_dims": [64, 64, 64, 64, 64, 64],"message_func": "distmult","aggregate_func": "sum","short_cut": "yes","layer_norm": "yes"} 
-    entity_model_cfg= {"class": "EntityNBFNet","input_dim": 64,"hidden_dims": [64, 64, 64, 64, 64, 64],"message_func": "distmult","aggregate_func": "sum","short_cut": "yes","layer_norm": "yes"}
-    model = model(rel_model_cfg, entity_model_cfg)
+def load_ultra_model(model, original=True):
+    if original:
+        rel_model_cfg = {"class": "RelNBFNet","input_dim": 64,"hidden_dims": [64, 64, 64, 64, 64, 64],"message_func": "distmult","aggregate_func": "sum","short_cut": "yes","layer_norm": "yes"} 
+        entity_model_cfg= {"class": "EntityNBFNet","input_dim": 64,"hidden_dims": [64, 64, 64, 64, 64, 64],"message_func": "distmult","aggregate_func": "sum","short_cut": "yes","layer_norm": "yes"}
+        model = model(rel_model_cfg, entity_model_cfg)
+    else:
+        model = model()
 
     # print('\n\nUltra', Ultra)
     # for name, param in Ultra.named_parameters():             
@@ -301,7 +301,8 @@ class DataGenerator(tf.keras.utils.Sequence):
         if self.use_ultra or self.use_ultra_with_kge:
             assert dataset_ultra is not None, 'You need to provide the aux dataset_ultra'
             self.aux_dataset = dataset_ultra
-            self.Ultra = load_ultra_model(Ultra)
+            self.Ultra = load_ultra_model(Ultra, original=True)
+            self.Ultra_modified = load_ultra_model(Ultra_modified, original=False)
 
         if self.use_llm:
             self.llm_embedder = LMEmbeddings(self.fol, "")
@@ -354,20 +355,23 @@ class DataGenerator(tf.keras.utils.Sequence):
             embeddings = (constant_embeddings, tf.constant(predicate_embeddings, dtype=tf.float32))
 
         elif self.use_ultra: 
-            use_ultra_original = True
+            use_ultra_original = False
             if not use_ultra_original:
 
                 # scores,atom_embeds = self.Ultra(self.aux_dataset, A_predicates_triplets, atom_repr=True) # embedds of the atoms
                 # scores = tf.constant(scores, dtype=tf.float32)
                 # atom_embeds = tf.constant(atom_embeds, dtype=tf.float32)
 
-                scores, _, atom_embeds = self.get_ultra_embeddings(A_predicates_data)
+                scores, atom_embeds = self.get_ultra_embeddings(A_predicates_triplets)
                 embeddings = (scores, atom_embeds)
             else:
                 self.Ultra.eval()
                 # self.mimic_ultra()
                 # self.mimic_test_function_ultra(Q_global_positive)
-                scores,_ = self.mimic_test_function_ultra_with_our_corruptions(Q_global)
+                # scores,_ = self.mimic_test_function_ultra_with_our_corruptions(Q_global)
+                scores, labels = self.get_ultra_outputs(Q_global)
+                y = labels
+                # I should still substitute the concept embeddings by random matrix, and create random matrices for the reasoner
                 embeddings  = (scores, None)
 
         elif self.use_llm:
@@ -381,19 +385,70 @@ class DataGenerator(tf.keras.utils.Sequence):
         return (X_domains_data, A_predicates_data, A_rules_data, Q, embeddings), y
 
 
-    def get_ultra_embeddings(self, batch):
+    def get_ultra_embeddings(self,A_pred):
         '''
-        Option 1: get the embeddings of the atoms in A_predicates_data. But then I would need to calculate the negatives of the atoms in A_predicates_data
-        Option 2: for every atom in Q_global, calculate the embeddings of the atom and the negatives
+        Do the preprocessing of the data to give it to ultra. Take a modified ultra to get the embeddings of the atoms of A_pred.
+        Return the embeddings of the atoms and the scores of the atoms of A_pred.
+        # Option 1: get the embeddings of the atoms in A_predicates_data. But then I would need to calculate the negatives of the atoms in A_predicates_data
+        # Option 2: for every atom in Q_global, calculate the embeddings of the atom and the negatives
         '''
-        embeddings = None
+
+        '''Process: use A_pred_global, get negatives for each triplet. Give it as input to ultra, and get the embeddings and the scores of the atoms.'''
+        # Convert A_pred to a format that ultra can understand. For every atom in A_pred, create a list of the atom and the negatives
+
+        # print('len A_pred:', len(A_pred))
+        batch = torch.tensor(A_pred, dtype=torch.int64)
+        # print('Batch:', batch.shape, batch[:15])
+        # Get the negatives of the atoms in A_pred. Take into account to filter atoms from edge_index, edge_type, target_edge_index, target_edge_type. 
+        t_batch, h_batch = tasks.all_negative(self.aux_dataset, batch)
+        # print('t_batch:', t_batch.shape, 'h_batch:', h_batch.shape)
+        # print('t_batch:', t_batch[:5])
+        # print('h_batch:', h_batch[:5])
+        # Get the embeddings of the atoms in A_pred and the negatives
+        t_pred_scores, t_pred_embedd = self.Ultra_modified(self.aux_dataset, t_batch)
+        h_pred_scores, h_pred_embedd = self.Ultra_modified(self.aux_dataset, h_batch)
+        
+        # Now, for the embeddings, I can return them in different ways. It is better to obtain the scores from the embeddings in our mode. 
+
+        # # i) Do the average of the embeddings of all the entities. This is the most general way, but it is not the best way to represent the entities
+        # t_pred_embedd = torch.mean(t_pred_embedd, dim=1)
+        # h_pred_embedd = torch.mean(h_pred_embedd, dim=1)
+
+        # ii) Take the embeddings of the entitiy that is in the positive query.
+        # In t corruptions, the original index is the tail of the first element of the list, in h corruptions, the original index is the head of the first element of the list  
+        t_index = batch[:,1]#.unsqueeze(1)
+        h_index = batch[:,0]#.unsqueeze(1)
+        # in the embeddings, the representation given by the index, in the first dimension, is the original representation of the entity
+        t_embedd = torch.zeros(t_index.shape[0], t_pred_embedd.shape[2])
+        h_embedd = torch.zeros(h_index.shape[0], h_pred_embedd.shape[2])
+        for i in range(len(t_index)):
+            t_embedd[i] = t_pred_embedd[i][t_index[i]]
+            h_embedd[i] = h_pred_embedd[i][h_index[i]]
+        # Squeeze the embeddings to remove the first dimension
+        t_embedd = torch.squeeze(t_embedd, dim=1)
+        h_embedd = torch.squeeze(h_embedd, dim=1)
+
+        # convert the scores and embeddings to tf
+        t_pred_scores = tf.constant(t_pred_scores.detach().numpy(), dtype=tf.float32)
+        t_embedd = tf.constant(t_embedd.detach().numpy(), dtype=tf.float32)
+        h_pred_scores = tf.constant(h_pred_scores.detach().numpy(), dtype=tf.float32)
+        h_embedd = tf.constant(h_embedd.detach().numpy(), dtype=tf.float32)
+        return t_pred_scores, t_embedd
+
+    def get_ultra_outputs(self, batch):
+        '''
+        What I need to do is to get the outputs from ultra, and create labels that mimic those outputs, give those labels as y. I need to create the concept
+        embeddings and outputs in the model according to that. 
+            -concept (task) output initial, concept embedd initial needs to be shape (len(sum A_pred), 1), (len(sum A_pred), embed size)
+            -concept (task) output final, labels needs to be shape (n_queries, num_negatives->triplets), (n_queries, num_negatives->int 1/0)
+        '''
         print('Batch:', len(batch)  ,'sets of corruptions:', [len(b) for b in batch])
 
         batch = split_positives_negatives(batch)
         print('Batch splitted by positives and negatives:', len(batch), 'sets of corruptions:', [len(b) for b in batch])
 
         batches = split_by_corruptions(batch)
-        print('Batch splitted by corruptions:', batches.keys(), [len(b) for b in batches.values()])
+        print('Batch splitted by corruptions {#number of samples:#number of negatives}:', batches.keys(), [len(b) for b in batches.values()])
         for key in batches.keys():
             if key != 1: # avoid only postivies when the corruption is only tail
                 batches[key] = np.concatenate(batches[key], axis=0)
@@ -403,7 +458,6 @@ class DataGenerator(tf.keras.utils.Sequence):
         for key,batch in batches.items():
             score = self.Ultra(self.aux_dataset, batch)
             scores.append(score)
-        print('All scores:', len(scores), [s.shape for s in scores])
 
         labels_new = np.empty(len(scores), dtype=object)
         for i in range(len(scores)): 
@@ -414,12 +468,20 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         # convert scores and labels to tf
         scores = [score.detach().numpy() for score in scores]
-        scores_tf = tf.ragged.constant(scores, dtype=tf.float32)
-        labels_tf = tf.ragged.constant(labels_new, dtype=tf.float32)  
+        # print('All scores:', len(scores), [s.shape for s in scores])
+        # scores_tf = tf.ragged.constant(scores, dtype=tf.float32)
+        # for scores, create a ragged tensor where all the elements (np arrays) are concatenated in the first dimension
+        ragged_scores = [tf.RaggedTensor.from_tensor(score) for score in scores]
+        scores_tf = tf.concat(ragged_scores, axis=0)
+        # print('Scores tf shape:', scores_tf.shape)
+        # labels_tf = tf.ragged.constant(labels_new, dtype=tf.float32)  
+        ragged_labels = [tf.RaggedTensor.from_tensor(label) for label in labels_new]
+        labels_tf = tf.concat(ragged_labels, axis=0)
+        # print('Labels tf shape:', labels_tf.shape)
 
-        # metrics = calculate_metrics(scores,scores_tf, labels_tf)
+        metrics = calculated_metrics_batched(scores_tf, labels_tf)
 
-        return scores_tf, labels_tf, embeddings
+        return scores_tf, labels_tf
 
 
 
@@ -457,9 +519,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         # convert scores and labels to tf
         scores = [score.detach().numpy() for score in scores]
-        print('Scores:', len(scores), [s.shape for s in scores])
         scores_tf = tf.ragged.constant(scores, dtype=tf.float32)
-        print('Scores tf:', get_ragged_tensor_shape(scores_tf))
         labels_tf = tf.ragged.constant(labels_new, dtype=tf.float32)  
 
         metrics = calculate_metrics(scores,scores_tf, labels_tf)
@@ -614,8 +674,19 @@ def calculate_metrics(scores,scores_tf, labels_tf):
     # calculate the average of the metrics
     print('Metrics tf:',*[f"{key}: {np.mean(value)}" for key, value in metrics.items()], sep='\n')
 
+def calculated_metrics_batched(scores_tf, labels_tf):
 
-
+    mrr_metric = MRRMetric()
+    hits_metric_1 = HitsMetric(1)
+    hits_metric_3 = HitsMetric(3)
+    hits_metric_10 = HitsMetric(10)
+    mrr_metric.update_state(labels_tf, scores_tf)
+    hits_metric_1.update_state(labels_tf, scores_tf)
+    hits_metric_3.update_state(labels_tf, scores_tf)
+    hits_metric_10.update_state(labels_tf, scores_tf)
+    print('MRR:', mrr_metric.result().numpy(), 'Hits@1:', hits_metric_1.result().numpy(),
+            'Hits@3:', hits_metric_3.result().numpy(), 'Hits@10:', hits_metric_10.result().numpy())
+    
 
 def obtain_queries(dataset,data_handler,serializer,engine,ragged,deterministic,global_serialization):
     queries, labels = dataset[:]
