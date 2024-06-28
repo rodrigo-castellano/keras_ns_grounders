@@ -28,7 +28,7 @@ wandb.login()
 if __name__ == '__main__':
 
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
-    # tf.config.run_functions_eagerly(True)
+    tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
     use_logger = False
     use_WB = False
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     ckpt_folder :str = None # os.path.join(log_folder,'checkpoints')
     load_checkpoint = None # 'countries_s1-backward_1-complex-no_reasoner-None-2-100__epoch0.ckpt'
     base_path :str = "experiments/data"
-    epochs: int = 100
+    epochs: int = 1500
     EARLY_STOPPING = True
     GLOBAL_SERIALIZATION = True
     LLM = False
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     DATASET_NAME = ['countries_s1']#,'nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
     GROUNDER = ['backward_1']#,'backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
     KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['r2n'] # ['dcr','sbr','r2n','no_reasoner']  
+    MODEL_NAME = ['no_reasoner'] # ['dcr','sbr','r2n','no_reasoner']  
     RULE_MINER = ['amie','None'] 
     E = [100]#,300] 
     DEPTH = [1]#,3]
