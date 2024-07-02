@@ -532,8 +532,8 @@ class CollectiveModel(Model):
             print('USING ULTRA')
             (concept_output, concept_embeddings) = embeddings
             concept_output,concept_embeddings = self.ULTRA_bridge(concept_embeddings)
-            print('concept_output',concept_output.shape)
-            print('concept_embeddings',concept_embeddings.shape)
+            # print('concept_output',concept_output.shape)
+            # print('concept_embeddings',concept_embeddings.shape)
         elif self.use_llm:
             (_, concept_embeddings) = embeddings # I don't need the concept_output here, I just need the embeddings
             concept_output,concept_embeddings = self.LLM_bridge(concept_embeddings)
