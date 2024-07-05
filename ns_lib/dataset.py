@@ -266,12 +266,9 @@ class DataGenerator(tf.keras.utils.Sequence):
             # embeddings = (scores, atom_embeds)
 
         elif self.use_llm:
-            atom_embeds = self.llm_embedder(A_predicates_textualized)
-            atom_embeds = tf.constant(atom_embeds, dtype=tf.float32)
-            embeddings = (None, atom_embeds)
-            # _,atom_embeds = self.Ultra(self.aux_dataset, A_predicates_triplets, atom_repr=True) # embedds of the atoms
-            # atom_embeds = tf.constant(atom_embeds, dtype=tf.float32)
-            # embeddings = (_, atom_embeds)
+            constant_embeddings, predicate_embeddings = self.llm_embedder(A_predicates_triplets)
+            embeddings = (constant_embeddings, predicate_embeddings)
+
 
         return (X_domains_data, A_predicates_data, A_rules_data, Q, embeddings), y
 
