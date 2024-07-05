@@ -258,7 +258,7 @@ class KGEModel(Model):
             print('USING KGE')
             predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor) # Embedds for every pred in fol (global idx)
         else: 
-            print('USING ULTRA WITH KGE')
+            print('USING ULTRA/LLM WITH KGE')
             (constant_embeddings, predicate_embeddings) = embeddings
             # Project embeddings to the new size
             predicate_embeddings = self.predicate_projection(predicate_embeddings)
@@ -315,25 +315,15 @@ class ULTRA_bridge(Model):
 class LLM_Bridge(Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)   
-        self.dense_embedding = Sequential([
-                Dense(512, kernel_regularizer=regularizers.L1L2(l1=1e-5, l2=1e-4),
-    bias_regularizer=regularizers.L2(1e-4),
-    activity_regularizer=regularizers.L2(1e-5)),
-                BatchNormalization(), #InstanceNorm
-                Activation("relu"),
-                Dropout(0.4),
-                Dense(256, kernel_regularizer=regularizers.L1L2(l1=1e-5, l2=1e-4),
-    bias_regularizer=regularizers.L2(1e-4),
-    activity_regularizer=regularizers.L2(1e-5)),
-                BatchNormalization(), #InstanceNorm
-                Activation("relu"),
-                Dropout(0.4),
-                Activation("relu"),
-                Dense(100, kernel_regularizer=regularizers.L1L2(l1=1e-5, l2=1e-4),
-                    bias_regularizer=regularizers.L2(1e-4),
-                    activity_regularizer=regularizers.L2(1e-5)),
-                Activation("sigmoid")
-            ])
+        self.predicate_projection = Sequential([
+                Dense(128, activation='relu'),
+                Dense(64, activation='relu'),
+                Dense(32, activation='relu')])
+            
+        self.constant_projection = Sequential([
+            Dense(128, activation='relu'),
+            Dense(64, activation='relu'),
+            Dense(32, activation='relu')])
             
         self.dense_output = Sequential([
             Dense(1),
@@ -343,7 +333,11 @@ class LLM_Bridge(Model):
     
     def call(self,embeddings):
         # Project embeddings to the new size
-        atom_embeddings = self.dense_embedding(embeddings)
+        (constant_embeddings, predicate_embeddings) = embeddings
+        constant_embeddings_head = self.constant_projection(constant_embeddings[:,0,:])
+        constant_embeddings_tail = self.constant_projection(constant_embeddings[:,1,:])
+        predicate_embeddings = self.predicate_projection(predicate_embeddings)[:,0,:]
+        atom_embeddings = tf.concat([constant_embeddings_head, constant_embeddings_tail, predicate_embeddings], axis=-1)
         # Get the score for each atom
         atom_outputs = tf.expand_dims(self.output_layer(atom_embeddings), -1) 
         return atom_outputs,atom_embeddings
@@ -535,8 +529,7 @@ class CollectiveModel(Model):
             # print('concept_output',concept_output.shape)
             # print('concept_embeddings',concept_embeddings.shape)
         elif self.use_llm:
-            (_, concept_embeddings) = embeddings # I don't need the concept_output here, I just need the embeddings
-            concept_output,concept_embeddings = self.LLM_bridge(concept_embeddings)
+            concept_output,concept_embeddings = self.LLM_bridge(embeddings)
         else:
             concept_output, concept_embeddings = self.kge_model((X_domains, A_predicates),embeddings=embeddings)
  

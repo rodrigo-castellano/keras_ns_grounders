@@ -1,3 +1,6 @@
+from collections import OrderedDict, defaultdict
+import os
+import pickle
 from keras.layers import Dense, Embedding, Layer
 from keras.models import Sequential
 from keras.regularizers import L2
@@ -5,10 +8,15 @@ from typing import Dict, List, Tuple
 import tensorflow as tf
 import tensorflow_probability as tfp
 import torch
-from angle_emb import AnglE, Prompts
 from ns_lib.logic.commons import Domain
 # from transformers import AutoModel, AutoTokenizer
 from ns_lib.logic import FOL
+import wikipediaapi as wk
+from transformers import AutoTokenizer, AutoModel
+import torch.nn.functional as F
+from tqdm import tqdm
+import numpy as np 
+from sklearn.decomposition import PCA
 
 class ConstantEmbeddings(Layer):
     """Calls the constant rules_embedders, differenciating the behavior of
@@ -197,11 +205,12 @@ class ExplicitDomainEmbedders(Layer):
 
     
 class LMEmbeddings():
-    LLM = AnglE.from_pretrained('WhereIsAI/UAE-Large-V1', pooling_strategy='cls').cuda()
-
-    LLM.trainable = False
+    # Load model from HuggingFace Hub
+    tokenizer = AutoTokenizer.from_pretrained('cross-encoder/ms-marco-MiniLM-L-12-v2')
+    model = AutoModel.from_pretrained('cross-encoder/ms-marco-MiniLM-L-12-v2')
+    embedded_constants = {}
     @staticmethod
-    def attended_mean_pooling(model_output, attention_mask) -> tf.Tensor:
+    def encode(sentences) -> tf.Tensor:
         """
         Performs mean pooling on the token embeddings based on the attention mask.
 
@@ -213,9 +222,17 @@ class LMEmbeddings():
             tf.Tensor: The mean-pooled token embeddings.
 
         """
+        # Tokenize sentences
+        encoded_input = LMEmbeddings.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt')
+
+        # Compute token embeddings
+        with torch.no_grad():
+            model_output = LMEmbeddings.model(**encoded_input)
+    
         token_embeddings = model_output[0] #First element of model_output contains all token embeddings
-        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+        input_mask_expanded = encoded_input['attention_mask'].unsqueeze(-1).expand(token_embeddings.size()).float()
+        embedding = torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+        return F.normalize(embedding, p=2, dim=1)
     
     def __init__(self, fol: FOL, model_name: str):
         """
@@ -229,19 +246,64 @@ class LMEmbeddings():
         """
         # self.lm = AutoModel.from_pretrained(model_name, device_map = 'cuda')
         self.fol = fol
+        self.constant_to_global_unique_index = defaultdict(OrderedDict)
+        self.global_unique_index_to_constant = defaultdict(OrderedDict)
+        counter = 0
+        for domain in self.fol.domains:
+            for constant in domain.constants:
+                self.constant_to_global_unique_index[domain.name][constant] = counter
+                self.global_unique_index_to_constant[counter] = [domain.name, constant]
+                counter += 1
+        
+        self.predicate_to_global_unique_index = defaultdict(OrderedDict)
+        self.global_unique_index_to_predicate = defaultdict(OrderedDict)
+        counter = 0
+        for predicate in self.fol.predicates:
+            self.predicate_to_global_unique_index[predicate] = counter
+            self.global_unique_index_to_predicate[counter] = predicate
+            counter += 1
+            
+        self.wikipedia = wk.Wikipedia('MyProjectName (merlin@example.com)', 'en')
+        
+
+        #Embed relation
+        predicates_description = ["""The predicate locatedInCR(countries,regions)locatedInCR(countries,regions) indicates a relationship where a country is geographically situated within a specified region. It asserts that the entity represented by "countries" is contained within the spatial boundaries of the entity represented by "regions.""",
+                                """The predicate asserts that a country is situated within a specific subregion. Here, "countries" represents the country or countries, and "subregions" represents the subregions within which these countries are located.""",
+                                """The predicate asserts that a subregion is situated within a specific region. In this context, "subregions" represents the subregion or subregions, and "regions" represents the regions within which these subregions are located.""",
+                                """The predicate asserts that two countries share a common border. Here, both arguments represent countries that are geographically adjacent to each other."""]
         
         
-        # #Embed relation
-        # self.embedded_relations = []
-        # for predicate in self.fol.predicates:
-        #     self.embedded_relations.append(1)
+        if os.path.exists("constants_pca.pkl") and os.path.exists("relations_pca.pkl"):
+            self.embedded_constants_tensor = pickle.load(open("constants_pca.pkl", "rb"))
+            self.embedded_relations_tensor = pickle.load(open("relations_pca.pkl", "rb"))
+            return
+        
+        self.embedded_relations = []
+        for predicate, description in zip(self.fol.predicates,predicates_description):
+            self.embedded_relations.append(self.encode(description))
+        self.embedded_relations_tensor = tf.convert_to_tensor(np.array(self.embedded_relations))
                 
-        # #Embed constants
-        # self.embedded_constants = []
-        # for domain in self.fol.domains:
-        #     for constant in domain.constants:
-        #         self.embedded_constants.append(1)
+        #Embed constants
         
+        print("Embedding constants...")
+        self.embedded_constants_tensor = []
+        for domain in self.fol.domains:
+            print("Embedding constants for domain: ", domain.name)
+            LMEmbeddings.embedded_constants[domain.name] = {}
+            for constant in tqdm(domain.constants):
+                if constant in LMEmbeddings.embedded_constants[domain.name]:
+                    continue
+                self.embedded_constants[domain.name][constant] = self.encode(self.wikipedia.page(constant).summary.split(".")[0])
+                self.embedded_constants_tensor.append(self.embedded_constants[domain.name][constant])
+        self.embedded_constants_tensor = tf.convert_to_tensor(np.array(self.embedded_constants_tensor))
+        
+        self.pca = PCA(n_components=128)
+        self.embedded_constants_tensor = pickle.load(open("constants.pkl", "rb"))
+        self.pca.fit(tf.concat([self.embedded_relations_tensor, self.embedded_constants_tensor], 0)[:,0,:]) # (num_predicates + num_constants, embedding_size)
+        self.embedded_relations_tensor = self.pca.transform(self.embedded_relations_tensor[:,0,:])
+        self.embedded_constants_tensor = self.pca.transform(self.embedded_constants_tensor[:,0,:])
+        pickle.dump(self.embedded_constants_tensor, open("constants_pca.pkl", "wb"))
+        pickle.dump(self.embedded_relations_tensor, open("relations_pca.pkl", "wb"))
         # self.embedded_relations = tf.concat(self.embedded_relations, 0)
         # self.embedded_constants = tf.concat(self.embedded_constants, 0)
         
@@ -255,12 +317,10 @@ class LMEmbeddings():
         Returns:
             tf.Tensor: The embedded tensor.
         """
-        # A_predicates_tensor = tf.convert_to_tensor(A_predicates)
-        # batch_size = A_predicates_tensor.shape[0]
-        # A_predicates_costants = tf.gather(self.embedded_constants,A_predicates_tensor[:,:2])
-        # A_predicates_predicates = tf.expand_dims(tf.gather(self.embedded_relations, A_predicates_tensor[:,2]),1)
-        # A_predicates_embeddings = tf.concat([A_predicates_costants, A_predicates_predicates], axis=1)  
-        # #concat on the 2 dimension the embeddings of the constants and the predicates
-        # A_predicates_embeddings  = tf.reshape(A_predicates_embeddings, [batch_size, -1])
-        A_predicates_embeddings = self.LLM.encode(A_predicates)
-        return A_predicates_embeddings
+        A_as_np_array = tf.convert_to_tensor(A_predicates)
+        
+        constants_embeddings = tf.gather(self.embedded_constants_tensor, A_as_np_array[:,:2]) # (batch_size, 2, embedding_size)
+        
+        predicate_embeddings = tf.gather(self.embedded_relations_tensor, A_as_np_array[:,2]) # (batch_size, embedding_size)
+        predicate_embeddings = tf.expand_dims(predicate_embeddings, 1) # (batch_size, 1, embedding_size)
+        return constants_embeddings, predicate_embeddings
