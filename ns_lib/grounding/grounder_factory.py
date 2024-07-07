@@ -13,117 +13,59 @@ def get_arg(args, name: str, default=None, assert_defined: bool=False):
 
 
 
-def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
+# def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
 
-    if args.grounder == 'full':
-        engine = PlaceholderGeneratorFullGrounder(
-                        domains={d.name:d for d in fol.domains},
-                        rules=rules,
-                        domain2adaptive_constants=domain2adaptive_constants,
-                        exclude_symmetric=True,
-                        exclude_query=False)
-    elif args.grounder == 'domain':
-        engine = DomainFullGrounder(
-                        rules, domains={d.name:d for d in fol.domains},
-                        domain2adaptive_constants=domain2adaptive_constants)
-    elif args.grounder == 'known':
-        engine = KnownBodyGrounder(rules, facts=facts)
+#     if args.grounder == 'full':
+#         engine = PlaceholderGeneratorFullGrounder(
+#                         domains={d.name:d for d in fol.domains},
+#                         rules=rules,
+#                         domain2adaptive_constants=domain2adaptive_constants,
+#                         exclude_symmetric=True,
+#                         exclude_query=False)
+#     elif args.grounder == 'domain':
+#         engine = DomainFullGrounder(
+#                         rules, domains={d.name:d for d in fol.domains},
+#                         domain2adaptive_constants=domain2adaptive_constants)
+#     elif args.grounder == 'known':
+#         engine = KnownBodyGrounder(rules, facts=facts)
     
-    elif 'backward' in args.grounder:
-        num_steps = int(args.grounder.split('_')[-1])
-        prune_backward = True # if ( ('backward' in args.grounder) and ('prune'in args.grounder) ) else False
-        if 'noprune' in args.grounder:
-            prune_backward = False
+#     elif 'backward' in args.grounder:
+#         num_steps = int(args.grounder.split('_')[-1])
+#         prune_backward = True # if ( ('backward' in args.grounder) and ('prune'in args.grounder) ) else False
+#         if 'noprune' in args.grounder:
+#             prune_backward = False
 
-        max_unknown_fact_count_last_step = max_unknown_fact_count = 1
-        if 'unknown1' in args.grounder:
-            max_unknown_fact_count_last_step = max_unknown_fact_count = 1
-        elif 'unknown2' in args.grounder:
-            max_unknown_fact_count_last_step = max_unknown_fact_count = 2
-        elif 'unknown3' in args.grounder:
-            max_unknown_fact_count_last_step = max_unknown_fact_count = 3
-        elif 'unknown0' in args.grounder:
-            max_unknown_fact_count_last_step = max_unknown_fact_count = 0
+#         max_unknown_fact_count_last_step = max_unknown_fact_count = 1
+#         if 'unknown1' in args.grounder:
+#             max_unknown_fact_count_last_step = max_unknown_fact_count = 1
+#         elif 'unknown2' in args.grounder:
+#             max_unknown_fact_count_last_step = max_unknown_fact_count = 2
+#         elif 'unknown3' in args.grounder:
+#             max_unknown_fact_count_last_step = max_unknown_fact_count = 3
+#         elif 'unknown0' in args.grounder:
+#             max_unknown_fact_count_last_step = max_unknown_fact_count = 0
 
-        print('Grounder: ',args.grounder,'Number of steps:', num_steps, 'Prune:', prune_backward, 'max_unknown_fact_count:', max_unknown_fact_count)
-        engine = ApproximateBackwardChainingGrounder(
-                        rules, facts=facts, domains={d.name:d for d in fol.domains},
-                        domain2adaptive_constants=domain2adaptive_constants,
-                        pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
-                        num_steps=num_steps,
-                        max_unknown_fact_count=max_unknown_fact_count,
-                        max_groundings_per_rule=get_arg(
-                            args, 'backward_chaining_max_groundings_per_rule', -1),
-                        prune_incomplete_proofs=prune_backward)
+#         print('Grounder: ',args.grounder,'Number of steps:', num_steps, 'Prune:', prune_backward, 'max_unknown_fact_count:', max_unknown_fact_count)
+#         engine = ApproximateBackwardChainingGrounder(
+#                         rules, facts=facts, domains={d.name:d for d in fol.domains},
+#                         domain2adaptive_constants=domain2adaptive_constants,
+#                         pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
+#                         num_steps=num_steps,
+#                         max_unknown_fact_count=max_unknown_fact_count,
+#                         max_groundings_per_rule=get_arg(
+#                             args, 'backward_chaining_max_groundings_per_rule', -1),
+#                         prune_incomplete_proofs=prune_backward)
 
-        if 'original' in args.grounder:
-            engine = BackwardChainingGrounder(
-                        rules, facts=facts,
-                        domains={d.name:d for d in fol.domains},
-                        domain2adaptive_constants=domain2adaptive_constants,
-                        pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
-                        num_steps=get_arg(args, 'backward_chaining_depth', 1)) 
+#         if 'original' in args.grounder:
+#             engine = BackwardChainingGrounder(
+#                         rules, facts=facts,
+#                         domains={d.name:d for d in fol.domains},
+#                         domain2adaptive_constants=domain2adaptive_constants,
+#                         pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
+#                         num_steps=get_arg(args, 'backward_chaining_depth', 1)) 
 
-        if  'relationentity' in args.grounder:
-            engine = RelationEntityGraphGrounder(
-            rules, facts=facts,
-            # TODO: Domain support is not added yet.
-            #domains={d.name:d for d in fol.domains},
-            #domain2adaptive_constants=domain2adaptive_constants,
-            build_cartesian_product=True,
-            max_elements=get_arg(
-                args, 'relation_entity_grounder_max_elements', -1))
-        
-
-            
-    elif args.grounder == 'domainbody':
-        engine = DomainBodyGrounder(domains={d.name:d for d in fol.domains},
-                                                rules=rules,
-                                                exclude_symmetric=True,
-                                                exclude_query=False)
-    elif args.grounder == 'relationentity':
-        engine = RelationEntityGraphGrounder(
-            rules, facts=facts,
-            build_cartesian_product=True,
-            max_elements=20)
-    return engine
-
-
-
-
-
-
-# def BuildGrounder(args, rules: List[Rule], facts: List[Tuple], fol: FOL,
-#                   domain2adaptive_constants: Dict[str, List[str]]):
-#     type = get_arg(args, 'grounding_type', 'BackwardChainingGrounder')
-#     print('Building Grounder', type, flush=True)
-
-#     if type == 'ApproximateBackwardChainingGrounder':
-#         # Requires Horn Clauses.
-#         return ApproximateBackwardChainingGrounder(
-#             rules, facts=facts, domains={d.name:d for d in fol.domains},
-#             domain2adaptive_constants=domain2adaptive_constants,
-#             pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
-#             num_steps=get_arg(args, 'backward_chaining_depth', 1),
-#             max_unknown_fact_count=get_arg(
-#                 args, 'backward_chaining_max_unknown_fact_count', 1),
-#             max_groundings_per_rule=get_arg(
-#                 args, 'backward_chaining_max_groundings_per_rule', -1),
-#             prune_incomplete_proofs=get_arg(
-#                 args, 'backward_chaining_prune_incomplete', True))
-
-#     elif type == 'BackwardChainingGrounder':
-#         # Requires Horn Clauses.
-#         return BackwardChainingGrounder(
-#             rules, facts=facts,
-#             domains={d.name:d for d in fol.domains},
-#             domain2adaptive_constants=domain2adaptive_constants,
-#             pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
-#             num_steps=get_arg(args, 'backward_chaining_depth', 1))
-
-#     elif type == 'RelationEntityGraphGrounder':
-#         # Requires Horn Clauses.
-#         return RelationEntityGraphGrounder(
+#         if  'relationentity' in args.grounder:
+#             engine = RelationEntityGraphGrounder(
 #             rules, facts=facts,
 #             # TODO: Domain support is not added yet.
 #             #domains={d.name:d for d in fol.domains},
@@ -131,38 +73,108 @@ def BuildGrounder(args, fol, rules, facts, domain2adaptive_constants):
 #             build_cartesian_product=True,
 #             max_elements=get_arg(
 #                 args, 'relation_entity_grounder_max_elements', -1))
+        
 
-#     elif type == 'KnownBodyGrounder':
-#         # Requires Horn Clauses.
-#         return KnownBodyGrounder(rules, facts=facts)
+            
+#     elif args.grounder == 'domainbody':
+#         engine = DomainBodyGrounder(domains={d.name:d for d in fol.domains},
+#                                                 rules=rules,
+#                                                 exclude_symmetric=True,
+#                                                 exclude_query=False)
+#     elif args.grounder == 'relationentity':
+#         engine = RelationEntityGraphGrounder(
+#             rules, facts=facts,
+#             build_cartesian_product=True,
+#             max_elements=20)
+#     return engine
 
-#     elif type == 'DomainFullGrounder':
-#         return DomainFullGrounder(
-#             rules, domains={d.name:d for d in fol.domains},
-#             domain2adaptive_constants=domain2adaptive_constants)
 
-#     elif type == 'DomainBodyFullGrounder':
-#         # It currently requires Horn Clauses, but it could be extended.
-#         return DomainBodyFullGrounder(
-#             rules, domains={d.name:d for d in fol.domains},
-#             domain2adaptive_constants=domain2adaptive_constants,
-#             pure_adaptive=get_arg(args, 'engine_pure_adaptive', False))
 
-#     elif type == 'NonHornDomainFullGrounder':
-#         # It works with any clause (even non Horn), but it has to be tested.
-#         return NonHornDomainFullGrounder(
-#             rules, domains={d.name:d for d in fol.domains},
-#             domain2adaptive_constants=domain2adaptive_constants,
-#             pure_adaptive=get_arg(args, 'engine_pure_adaptive', False))
 
-#     elif type == 'FlatGrounder':
-#         # This grounder is very fast but it works only for rules with
-#         # no free variables after the query is selected. It is typically
-#         # used for rule like A(x,y) ^ B(x,y) ^ ... ^ Z(x,y).
-#         # If the rule is not in this form the code will exit with an error.
-#         return FlatGrounder(rules)
 
-#     else:
-#         assert False, 'Unknown grounder %s' % type
 
-#     return None
+def BuildGrounder(args, rules: List[Rule], facts: List[Tuple], fol: FOL,
+                  domain2adaptive_constants: Dict[str, List[str]]):
+    type = args.grounder
+    print('Building Grounder:', type, flush=True)
+
+    if 'backward' in type:
+        # if the count of '_' the name is 2, it means that the parameter 'a' is included. Else there is no parameter a. It goes after the first '_'
+        backward_width = None
+        if type.count('_') == 2:
+            backward_width = int(type[type.index('_')+1]) # take the first character after the first '_'
+            backward_depth = int(type[-1])
+            type = 'ApproximateBackwardChainingGrounder'
+        else:
+            backward_depth = int(type[-1])
+            type = 'BackwardChainingGrounder'
+        prune_incomplete_proofs = False if 'noprune' in args.grounder else True
+
+        print('Grounder: ',args.grounder,'backward_depth:', backward_depth, 'Prune:', prune_incomplete_proofs, 'backward_width:', backward_width)
+
+    if type == 'ApproximateBackwardChainingGrounder':
+        # Requires Horn Clauses.
+        return ApproximateBackwardChainingGrounder(
+            rules, facts=facts, domains={d.name:d for d in fol.domains},
+            domain2adaptive_constants=domain2adaptive_constants,
+            pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
+            num_steps=backward_depth,
+            max_unknown_fact_count=backward_width,
+            max_groundings_per_rule=get_arg(
+                args, 'backward_chaining_max_groundings_per_rule', -1),
+            prune_incomplete_proofs=prune_incomplete_proofs)
+
+    elif type == 'BackwardChainingGrounder':
+        # Requires Horn Clauses.
+        return BackwardChainingGrounder(
+            rules, facts=facts,
+            domains={d.name:d for d in fol.domains},
+            domain2adaptive_constants=domain2adaptive_constants,
+            pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
+            num_steps=backward_depth)
+
+    elif type == 'relationentity':
+        # Requires Horn Clauses.
+        return RelationEntityGraphGrounder(
+            rules, facts=facts,
+            # TODO: Domain support is not added yet.
+            #domains={d.name:d for d in fol.domains},
+            #domain2adaptive_constants=domain2adaptive_constants,
+            build_cartesian_product=True,
+            max_elements=get_arg(
+                args, 'relation_entity_grounder_max_elements', -1))
+
+    elif type == 'KnownBodyGrounder':
+        # Requires Horn Clauses.
+        return KnownBodyGrounder(rules, facts=facts)
+
+    elif type == 'full':
+        return DomainFullGrounder(
+            rules, domains={d.name:d for d in fol.domains},
+            domain2adaptive_constants=domain2adaptive_constants)
+
+    elif type == 'domainbody':
+        # It currently requires Horn Clauses, but it could be extended.
+        return DomainBodyFullGrounder(
+            rules, domains={d.name:d for d in fol.domains},
+            domain2adaptive_constants=domain2adaptive_constants,
+            pure_adaptive=get_arg(args, 'engine_pure_adaptive', False))
+
+    elif type == 'NonHornDomainFullGrounder':
+        # It works with any clause (even non Horn), but it has to be tested.
+        return NonHornDomainFullGrounder(
+            rules, domains={d.name:d for d in fol.domains},
+            domain2adaptive_constants=domain2adaptive_constants,
+            pure_adaptive=get_arg(args, 'engine_pure_adaptive', False))
+
+    elif type == 'FlatGrounder':
+        # This grounder is very fast but it works only for rules with
+        # no free variables after the query is selected. It is typically
+        # used for rule like A(x,y) ^ B(x,y) ^ ... ^ Z(x,y).
+        # If the rule is not in this form the code will exit with an error.
+        return FlatGrounder(rules)
+
+    else:
+        assert False, 'Unknown grounder %s' % type
+
+    return None

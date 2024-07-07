@@ -1,4 +1,0 @@
-locatedInCR
-locatedInCS
-locatedInSR
-neighborOf
