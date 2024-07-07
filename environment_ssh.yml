@@ -1,4 +1,4 @@
-name: env_grounders
+name: grounders
 channels:
   - pytorch
   - conda-forge
