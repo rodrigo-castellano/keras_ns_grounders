@@ -9,8 +9,8 @@ sys.path.append(os.path.join(current_dir, '..', 'ULTRA'))
 sys.path.append(os.path.join(current_dir, '..', 'ns_lib'))
 import os
 import tensorflow as tf
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import copy
 from itertools import product
 from train import main
