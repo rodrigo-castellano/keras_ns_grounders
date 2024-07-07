@@ -28,36 +28,36 @@ wandb.login()
 if __name__ == '__main__':
 
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
-    tf.config.run_functions_eagerly(True)
+    # tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
-    use_logger = False
-    use_WB = False
-    log_folder :str = "./experiments/tests/"
+    use_logger = True
+    use_WB = True
+    log_folder :str = "./experiments/runs/"
     ckpt_folder :str = None # os.path.join(log_folder,'checkpoints')
     load_checkpoint = None # 'countries_s1-backward_1-complex-no_reasoner-None-2-100__epoch0.ckpt'
     base_path :str = "experiments/data"
-    epochs: int = 1500
+    epochs: int = 80
     EARLY_STOPPING = True
-    GLOBAL_SERIALIZATION = True
+    GLOBAL_SERIALIZATION = False
     LLM = False
-    ULTRA = True
+    ULTRA = False
     ULTRA_WITH_KGE = False
-    DATASET_NAME = ['countries_s1']#,'nations','kinship_family','pharmkg_small','wn18rr']#,'countries_s2','countries_s3','kinship_family''pharmkg_small','nations','pharmkg_full','FB15k237','wn18rr']
-    GROUNDER = ['backward_1']#,'backward_2','backward_unknown0_1','backward_unknown0_2'] #['backward_unknown2_1', 'backward_unknown2_2','backward_unknown2_3','backward_unknown0_1', 'backward_unknown0_2','backward_unknown0_3']#,'backward_unknown1_1', 'backward_unknown1_2','backward_unknown1_3'] #['backward_1','backward_2','backward_3','domainbody','relationentity']  
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
+    GROUNDER = ['backward_1', 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3']#,'domainbody','relationentity','full]  
     KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner'] # ['dcr','sbr','r2n','no_reasoner']  
+    MODEL_NAME = ['no_reasoner','dcr','sbr','r2n']  
     RULE_MINER = ['amie','None'] 
     E = [100]#,300] 
-    DEPTH = [1]#,3]
-    SEED = [0],#[[0,1,2]]
-    NEG_PER_SIDE = [2]#[1]
+    DEPTH = [1]
+    SEED = [[0,1,2,3,4]]
+    NEG_PER_SIDE = [2]
     WEIGHT_LOSS = [.5]  
-    DROPOUT = [0.0,0.1,0,2]
+    DROPOUT = [0.0]
     R = [0.0]
     RR = [0.0]
-    LR = [0.01]
-    LR_SCHEDULER = ['plateau'] # None
-    OPTIMIZER = ['adam'] #['None','adam']
+    LR = [0.01] #[0.01]
+    LR_SCHEDULER = ['plateau'] #['plateau'] # None
+    OPTIMIZER = ['adam'] #['adam'] #['None','adam']
     NUM_RULES = [1] 
     VALID_SIZE = [None]
 
@@ -96,36 +96,21 @@ if __name__ == '__main__':
             LR,LR_SCHEDULER,OPTIMIZER, NUM_RULES, RR ):  
 
         run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
+        
         if not os.path.exists(os.path.join(base_path, dataset_name)):
             print('skipping, dataset not existing', run_vars)
             continue
-        
-        # This conditions is for a special case of datasets, skip
-        if 'reason' in dataset_name:
-            if 'backward' not in grounder:
-                continue
-            else:
-                backward_level = grounder[-1]
-                dataset_level = dataset_name[-1]
-                if int(backward_level) > int(dataset_level):
-                    # print('skipping, backward level higher than dataset level', run_vars)
-                    continue
-        
-        # Discern the datasets for which the grounders full, domainbody and relationentity are too heavy to run
-        if grounder == 'full' and (dataset_name != 'countries_s1'):
-            continue
-        if (grounder == 'domainbody' or grounder == 'relationentity') and (dataset_name == 'countries_s3' or dataset_name == 'wn18rr' or dataset_name == 'pharmkg_full' or dataset_name == 'FB15K' or dataset_name == 'kinship_family'):
+
+        # Define sets for quick membership testing
+        light_datasets_full = {'countries_s1', 'countries_s2', 'pharmkg_small'}
+        heavy_datasets_domainbody_relationentity = {'countries_s3', 'wn18rr', 'pharmkg_full', 'FB15K', 'kinship_family'}
+
+        # Discern the datasets for which the grounders full, domainbody, and relationentity are too heavy to run
+        if (grounder == 'full' and dataset_name not in light_datasets_full) or \
+        ((grounder in {'domainbody', 'relationentity'}) and dataset_name in heavy_datasets_domainbody_relationentity) or \
+        (model_name == 'no_reasoner' and grounder not in {'backward_1'}):
             continue
 
-        # With model=no_reasoner the grounders are not used. Therefore, training is enough with backward_1 for example
-        if model_name == 'no_reasoner' and (grounder == 'backward2' or grounder == 'backward3' or grounder == 'relationentity') and (dataset_name == 'pharmkg_full' or 'FB15K' in dataset_name or 'wn18rr' in dataset_name):
-            continue
-
-        args.device = 'cpu' # if not tf.config.experimental.list_physical_devices('GPU') else 'gpu'
-        args.global_serialization = GLOBAL_SERIALIZATION
-        args.use_ultra = ULTRA
-        args.use_ultra_with_kge = ULTRA_WITH_KGE
-        args.use_llm = LLM
         args.dataset_name = dataset_name
         args.grounder = grounder
         args.kge = kge
@@ -135,9 +120,9 @@ if __name__ == '__main__':
         if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'): # For heavy datasets, run only one seed
             args.seed = [0]
         args.kge_atom_embedding_size = e
-        args.batch_size = 128 # Full batch only for explain.
-        args.val_batch_size = 128
-        args.test_batch_size = 128 
+        args.batch_size = 256 # Full batch only for explain.
+        args.val_batch_size = 256
+        args.test_batch_size = 256 
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
@@ -146,20 +131,14 @@ if __name__ == '__main__':
         args.rules_file = 'rules.txt' 
 
         # Select the rules file
-        if rule_miner == 'amie':
-            args.rules_file = 'rules_amie.txt'
-        elif rule_miner == 'ncrl':
-            args.rules_file = 'rules_ncrl.txt'
-        elif rule_miner == 'None':
-            args.rules_file = 'rules.txt'
-        else:  
-            raise ValueError('Rule miner not recognized for ', dataset_name)
+        rules_files = {'amie': 'rules_amie.txt', 'ncrl': 'rules_ncrl.txt', 'None': 'rules.txt'}
+        args.rules_file = rules_files.get(rule_miner) or ValueError(f'Rule miner not recognized for {dataset_name}')
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
-            # print('skipping, rules not existing', run_vars) 
             continue
 
         # Data params
-        args.corrupt_mode = 'HEAD_AND_TAIL' # for ultra only TAIL. 'HEAD_AND_TAIL' #'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
+        args.corrupt_mode = 'TAIL' if ('countries' in dataset_name ) else 'HEAD_AND_TAIL'
+        # args.corrupt_mode = 'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 100  
         args.test_negatives = None  # all possible negatives
@@ -212,6 +191,12 @@ if __name__ == '__main__':
         run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg, e)
         args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e',]
         args.run_signature = '-'.join(f'{v}' for v in run_vars)    
+
+        args.device = 'cpu' # if not tf.config.experimental.list_physical_devices('GPU') else 'gpu'
+        args.global_serialization = GLOBAL_SERIALIZATION
+        args.use_ultra = ULTRA
+        args.use_ultra_with_kge = ULTRA_WITH_KGE
+        args.use_llm = LLM
         if args.use_ultra:
             args.run_signature = 'ultra-'+args.run_signature 
         elif args.use_ultra_with_kge:
@@ -287,16 +272,11 @@ if __name__ == '__main__':
         if use_logger:
             # write the average results if we need to average over experiments
             # if len(args.seed) > 1:
-            print('get_avg_resultsssssssssssssssssssssssssssssssssssssssssssssss\n\n')
             info_results,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
             if info_results is not None:
-                print('Average resultsssssssssssssssssssssssssssssssssssssssssssssss')
                 logger.write_avg_results(args.__dict__,info_results,metrics_name)
 
                 
-
-    # for l,args in enumerate(all_args):
-        # print('Experiment',l,':',args.run_signature)
     for args in all_args:
         print('Experiment number ', all_args.index(args), ' out of ', len(all_args), ' experiments.')
         main_wrapper(args,log_folder)
