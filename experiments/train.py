@@ -71,7 +71,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     if enable_rules:
         rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
         facts = list(data_handler.train_known_facts_set)
-        engine = BuildGrounder(args, fol, rules, facts, domain2adaptive_constants)
+        engine = BuildGrounder(args, rules, facts, fol, domain2adaptive_constants)
     serializer = ns.serializer.LogicSerializerFast(
         predicates=fol.predicates, domains=fol.domains,
         constant2domain_name=fol.constant2domain_name,
@@ -117,10 +117,10 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     args.time_ground_test = np.round(end- start,2)
     print("Time to create data generator test: ",  np.round(end - start,2),'\n************************************')
 
-    print('\nRUNNING TRAIN SET')
-    print('*********************')
-    data_gen_train.__getitem__(0)
-    print('*********************')
+    # print('\nRUNNING TRAIN SET')
+    # print('*********************')
+    # data_gen_train.__getitem__(0)
+    # print('*********************')
 
 
 
@@ -172,7 +172,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
                ns.utils.HitsMetric(10)]
                 # ns.utils.AUCPRMetric()]
 
-    optimizer,lr_scheduler = optimizer_scheduler(args.optimizer,args.lr_sched,args.learning_rate)
+    optimizer,lr_scheduler = choose_optimizer_scheduler(args.optimizer,args.lr_sched,args.learning_rate)
     model.compile(optimizer=optimizer,
                     loss=loss,
                     loss_weights = {
@@ -204,7 +204,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         callbacks.append(csv_logger)
 
     if args.lr_sched=='plateau':
-      callbacks += [lr_scheduler]
+      callbacks.append(lr_scheduler)
     
     if args.early_stopping:
         early_stopping = keras.callbacks.EarlyStopping(
@@ -235,7 +235,11 @@ def main(base_path, output_filename, log_filename, use_WB, args):
 
     # Initialize a W&B run
     if use_WB:
-        run = wandb.init(project = "LLM-as-Embedder", name=args.run_signature, config = dict(
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        dir = os.path.join(current_dir, '../..')
+        # run = wandb.init(project = "LLM-as-Embedder", name=args.run_signature, config = dict(
+        run = wandb.init(project = "Grounders-exp", name=args.run_signature,
+                dir=dir,  config = dict(
                 shuffle_buffer = 1024,
                 batch_size = args.batch_size,
                 learning_rate = args.learning_rate,

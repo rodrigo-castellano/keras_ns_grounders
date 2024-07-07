@@ -26,12 +26,12 @@ def lr_exp(epoch, lr):
     else:
         return lr * tf.math.exp(-0.1)
 
-def optimizer_scheduler(optimizer,lr_sched,learning_rate):
+def choose_optimizer_scheduler(optimizer,lr_sched,learning_rate):
     lr_scheduler = choose_lr_scheduler(lr_sched)
-    if lr_sched != 'plateau':
+    if lr_sched == 'None' or lr_sched == 'plateau':
+        optimizer = choose_optimizer(name_optimizer=optimizer,lr=learning_rate)
+    else: 
         optimizer = choose_optimizer_with_scheduler(optimizer, lr_scheduler)
-    else:
-        optimizer = choose_optimizer(name_optimizer=optimizer,lr=learning_rate)   
     return optimizer,lr_scheduler
 
 
@@ -60,15 +60,15 @@ def choose_lr_scheduler(name_lr_scheduler=None):
             step_size=2 * steps_per_epoch
         )
     else: 
-        print('Name of lr_scheduler not valid!')
+        print('No lr_scheduler chosen!')
         lr_scheduler=None
-    step = np.arange(0, 200)
-    if (name_lr_scheduler!='plateau') and (name_lr_scheduler != 'custom'):
-        lr = lr_scheduler(step)
-        plt.plot(step, lr)
-        plt.xlabel("Steps")
-        plt.ylabel("Learning Rate")
-        plt.show()
+    # step = np.arange(0, 200)
+    # if (name_lr_scheduler!='plateau') and (name_lr_scheduler != 'custom'):
+    #     lr = lr_scheduler(step)
+    #     plt.plot(step, lr)
+    #     plt.xlabel("Steps")
+    #     plt.ylabel("Learning Rate")
+    #     plt.show()
     return lr_scheduler
 
 

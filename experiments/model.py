@@ -255,7 +255,7 @@ class KGEModel(Model):
                 constant_embeddings = self.constant_embedder(X_domains) # For the constant embedds, I always need global idx to get consistent embedds every batch
 
         if not self.use_ultra:
-            print('USING KGE')
+            # print('USING KGE')
             predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor) # Embedds for every pred in fol (global idx)
         else: 
             print('USING ULTRA/LLM WITH KGE')
