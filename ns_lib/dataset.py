@@ -245,7 +245,6 @@ class DataGenerator(tf.keras.utils.Sequence):
             deterministic=self.deterministic,
             global_serialization=self.global_serialization) 
 
-
         embeddings = None
 
         if self.use_ultra_with_kge:  

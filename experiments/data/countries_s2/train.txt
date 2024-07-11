@@ -237,7 +237,6 @@ locatedInCS(mauritius,eastern_africa).
 locatedInCR(mayotte,africa).
 locatedInCS(mayotte,eastern_africa).
 locatedInSR(melanesia,oceania).
-locatedInCS(micronesia,micronesia).
 locatedInSR(micronesia,oceania).
 locatedInSR(middle_africa,africa).
 locatedInCS(moldova,eastern_europe).

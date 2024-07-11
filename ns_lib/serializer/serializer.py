@@ -121,8 +121,8 @@ class LogicSerializerFast(IndexerBase):
                     domain = (self.constant2domain_name[c]    # get the domain of the constant
                               if c in self.constant2domain_name else
                               self.adaptive_constant2domain[c])
-                    # Check that the domain of the constant i is the corresponding domain of the predicate
-                    assert domain == domains[atom[1:].index(c)], 'Domain of constant does not match the domain of the predicate'
+                    # Check that the domain of the constant i is the corresponding domain of the predicate, otherwise print the constant and the domain
+                    assert domain == domains[atom[1:].index(c)], 'Domain of constant does not match the domain of the predicate, constant: %s, domain: %s, domain atom: %s, atom: %s' % (c,domain,domains[atom[1:].index(c)], atom)
 
                     # get the local indices of the ctes built so far for this batch
                     constant_index = domain_to_local_constant_index[domain] # It is a domain_to_global_index but for the local indices, created for every batch
