@@ -43,7 +43,7 @@ if __name__ == '__main__':
     ULTRA = False
     ULTRA_WITH_KGE = False
     DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
-    GROUNDER = ['backward_1', 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3']#,'domainbody','relationentity','full]  
+    GROUNDER = ['backward_1', 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3']#,'domainbody','relationentity','full]
     KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['no_reasoner','dcr','sbr','r2n']  
     RULE_MINER = ['amie','None'] 

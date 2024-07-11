@@ -82,6 +82,7 @@ def approximate_backward_chaining_grounding_one_rule(
 
     new_ground_atoms = set()
     
+    # lim = 1
     # cont = 0
     for q in queries:
     #   groundings_per_query = 0
@@ -120,7 +121,7 @@ def approximate_backward_chaining_grounding_one_rule(
             continue
 
         for ground_atom in groundings:
-            # print('     -GROUND ATOM', ground_atom)
+            # print('     -GROUND ATOM', ground_atom) if cont< lim else None
             # This loop is only needed to ground at least one atom in the body
             # of the formula. Otherwise it would be enough to start with the
             # loop for ground_vars in product(...) but it would often expand
@@ -161,7 +162,7 @@ def approximate_backward_chaining_grounding_one_rule(
                 unknown_fact_count: int = 0
                 for j in range(len(rule.body)):
                     if i == j:
-                        # print('         -j=i')
+                        # print('         -j=i') if cont< lim else None
                         new_ground_atom = ground_atom
                         # by definition as it is coming from the groundings.
                         is_known_fact = True
@@ -171,7 +172,7 @@ def approximate_backward_chaining_grounding_one_rule(
                             [full_ground_vars.get(body_atom2[k+1], None)
                              for k in range(len(body_atom2)-1)])
                         if new_ground_atom == q:
-                            # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, ' Same atom as query, discard')
+                            # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, ' Same atom as query, discard') if cont< lim else None
                             accepted = False
                             break
                         is_known_fact = (fact_index._index.get(
@@ -180,7 +181,6 @@ def approximate_backward_chaining_grounding_one_rule(
                     assert all(new_ground_atom), (
                         'Unexpected free variables in %s' %
                         str(new_ground_atom))
-
                     if not is_known_fact and (
                             max_unknown_fact_count < 0 or
                             unknown_fact_count < max_unknown_fact_count):
@@ -188,12 +188,12 @@ def approximate_backward_chaining_grounding_one_rule(
                         if build_proofs:
                             body_grounding_to_prove.append(new_ground_atom)
                         unknown_fact_count += 1
-                        # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Accepted. We have to prove it')
+                        # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Accepted. We have to prove it') if cont< lim else None
                     elif is_known_fact:
                         body_grounding.append(new_ground_atom)
-                        # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Accepted')
+                        # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Accepted') if cont< lim else None
                     else:
-                        # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Discard',unknown_fact_count,'/', max_unknown_fact_count)
+                        # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Discard',unknown_fact_count,'/', max_unknown_fact_count) if cont< lim else None
                         accepted = False
                         break
 
