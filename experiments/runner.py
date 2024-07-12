@@ -41,7 +41,7 @@ if __name__ == '__main__':
     ckpt_folder :str = None #os.path.join(log_folder,'checkpoints')
     checkpoint_load = False
     base_path :str = "experiments/data"
-    epochs: int = 80
+    epochs: int = 150
     EARLY_STOPPING = True
     GLOBAL_SERIALIZATION = False
     LLM = False
@@ -167,7 +167,7 @@ if __name__ == '__main__':
         args.lr_sched = lr_sched
         args.optimizer = 'adam'
         args.early_stopping = EARLY_STOPPING
-        args.epochs = epochs if not args.early_stopping else 1500
+        args.epochs = epochs #if not args.early_stopping else 1500
         args.num_rules = 0 if model_name == "no_reasoner"  else nr
         args.loss = "binary_crossentropy"
         args.weight_loss = w_loss
