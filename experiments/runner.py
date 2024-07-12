@@ -27,10 +27,10 @@ wandb.login()
 
 if __name__ == '__main__':
 
-    import sys 
-    # Define the file to redirect output to
-    log_file = open('./experiments/training_logs.txt', 'a')
-    sys.stdout = sys.stderr = log_file
+    # import sys 
+    # # Define the file to redirect output to
+    # log_file = open('./experiments/training_logs.txt', 'a')
+    # sys.stdout = sys.stderr = log_file
 
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
     # tf.config.run_functions_eagerly(True)
