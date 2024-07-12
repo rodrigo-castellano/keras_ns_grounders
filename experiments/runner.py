@@ -27,6 +27,11 @@ wandb.login()
 
 if __name__ == '__main__':
 
+    import sys 
+    # Define the file to redirect output to
+    log_file = open('./experiments/training_logs.txt', 'a')
+    sys.stdout = sys.stderr = log_file
+
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
     # tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
@@ -137,7 +142,7 @@ if __name__ == '__main__':
             continue
 
         # Data params
-        args.corrupt_mode = 'TAIL' if ('countries' in dataset_name ) else 'HEAD_AND_TAIL'
+        args.corrupt_mode = 'TAIL' if ('countries' in dataset_name or 'wn18rr' in dataset_name) else 'HEAD_AND_TAIL'
         # args.corrupt_mode = 'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 100  
