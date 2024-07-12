@@ -209,15 +209,15 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     if args.early_stopping:
         early_stopping = keras.callbacks.EarlyStopping(
             monitor="val_loss",
-            min_delta=0.0001,
-            patience=40,
+            min_delta=0.001,
+            patience=30,
             verbose=1)
         callbacks.append(early_stopping)
 
     best_model_callback = MMapModelCheckpoint(
         model, 'val_task_mrr',
         frequency=args.valid_frequency,
-        # if path is not None, checkpoint to file.
+        # if path is not None, chepoint to file.
         filepath=get_arg(args, 'ckpt_filepath', None))
     callbacks.append(best_model_callback)
 
