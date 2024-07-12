@@ -33,8 +33,8 @@ if __name__ == '__main__':
     use_logger = True
     use_WB = True
     log_folder :str = "./experiments/runs/"
-    ckpt_folder :str = None # os.path.join(log_folder,'checkpoints')
-    load_checkpoint = None # 'countries_s1-backward_1-complex-no_reasoner-None-2-100__epoch0.ckpt'
+    ckpt_folder :str = None #os.path.join(log_folder,'checkpoints')
+    checkpoint_load = False
     base_path :str = "experiments/data"
     epochs: int = 80
     EARLY_STOPPING = True
@@ -122,7 +122,7 @@ if __name__ == '__main__':
         args.kge_atom_embedding_size = e
         args.batch_size = 256 # Full batch only for explain.
         args.val_batch_size = 256
-        args.test_batch_size = 256 
+        args.test_batch_size = 128 if dataset_name in heavy_datasets_domainbody_relationentity else 256
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
@@ -168,7 +168,7 @@ if __name__ == '__main__':
         args.weight_loss = w_loss
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
-        args.valid_frequency = 10
+        args.valid_frequency = 1
         args.resnet = True
         args.reasoner_depth = dp if nr > 0 else 0
         args.reasoner_regularization_factor = rr
@@ -204,9 +204,9 @@ if __name__ == '__main__':
         elif args.use_llm:
             args.run_signature = 'llm-'+args.run_signature
         
-        args.ckpt_filepath = (os.path.join(ckpt_folder, args.run_signature) if ckpt_folder else None) 
-        args.checkpoint_load = os.path.join(ckpt_folder,load_checkpoint) if load_checkpoint is not None else None  #os.path.join(ckpt_folder, args.run_signature)
-        args.kge_checkpoint_load = None
+        args.ckpt_filepath = (os.path.join(ckpt_folder, args.run_signature,args.run_signature) if ckpt_folder else None) 
+        args.checkpoint_load = os.path.join(ckpt_folder, args.run_signature,args.run_signature) if checkpoint_load else None
+        args.kge_checkpoint_load = None #os.path.join(ckpt_folder, args.run_signature,,args.run_signature) if checkpoint_load else None 
         # append a hard copy of the args to the list of all_args
         all_args.append(copy.deepcopy(args)) 
 
