@@ -1,12 +1,16 @@
 import sys
-sys.path.append('C:\\Users\\rodri\\Downloads\\PhD\\Review_grounders\\keras_ns_grounders')
-sys.path.append('/home/castellanoontiv/keras_ns_grounders')
-sys.path.append('/media/users/castellanoontiv/keras_ns_grounders/')
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+sys.path.append(os.path.join(current_dir, '..'))
+sys.path.append(os.path.join(current_dir, '..', 'ULTRA'))
+sys.path.append(os.path.join(current_dir, '..', 'ns_lib'))
 import os
 import copy
 import os
 from itertools import product
-from create_dataset_train import main
+# from create_dataset_train import main
+from create_reason_dataset import main
 import shutil as sh
 import ns_lib as ns
 from ns_lib.utils import NSParser
@@ -20,18 +24,18 @@ import tensorflow as tf
 
 if __name__ == '__main__':
 
-    base_path :str = "data"
+    base_path :str = "experiments/data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['countries_s2'] 
-    MODIFIED_DATASET = [True]
+    DATASET_NAME =  ['countries_s3'] 
+    MODIFIED_DATASET = [False]
     GROUNDER = ['backward_2']
     KGE = ['complex']   
     MODEL_NAME =  ['sbr',]  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
-    SEED = [[0,1,2,3,4]]
+    SEED = [[0]]
     NEG_PER_SIDE = [1]
     WEIGHT_LOSS = [.5]  
     DROPOUT = [0.0]
@@ -48,7 +52,6 @@ if __name__ == '__main__':
             DATASET_NAME,MODIFIED_DATASET, GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
             LR, NUM_RULES, RR ):  
     
-
         # Base parameters
         parser = NSParser()
         args = parser.parse_args()
@@ -151,7 +154,7 @@ if __name__ == '__main__':
 
         run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, modified_dataset, seed, neg,e)
         args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner', 'modified_dataset', 'seed', 'neg','e']
-        args.run_signature = '-'.join(f'{v}' for v in run_vars)     
+        args.run_signature = '-'.join(f'{v}' for v in run_vars)   
         all_args.append(args)
 
 
@@ -165,7 +168,6 @@ if __name__ == '__main__':
         log_filename_tmp = os.path.join(log_folder, '_tmp_log_{}_{}.csv'.format(date,args.run_signature))
 
         main(base_path,None,None,log_filename_tmp,args)
-
 
     for args in all_args:
         print('Experiment number ', all_args.index(args), ' out of ', len(all_args), ' experiments.')
