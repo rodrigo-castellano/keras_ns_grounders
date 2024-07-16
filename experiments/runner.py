@@ -41,7 +41,7 @@ if __name__ == '__main__':
     ckpt_folder :str = None #os.path.join(log_folder,'checkpoints')
     checkpoint_load = False
     base_path :str = "experiments/data"
-    epochs: int = 250
+    epochs: int = 200
     EARLY_STOPPING = True
     GLOBAL_SERIALIZATION = False
     LLM = False
