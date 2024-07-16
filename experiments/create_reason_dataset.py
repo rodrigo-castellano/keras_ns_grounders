@@ -253,8 +253,9 @@ def approximate_backward_chaining_grounding_one_rule(
                     if build_proofs:
                         proofs.append((q, body_grounding_to_prove))
                         if step == n_steps-1:
+                            print('ATOMS TO PROVE', body_grounding_to_prove) 
                             atoms_proof_last_level.update(body_grounding_to_prove) if len(body_grounding_to_prove) > 0 else None
-    
+                            print('atoms_proof_last_level',atoms_proof_last_level)
 
     #   print('NUM_GROUNDINGS for the query',q, groundings_per_query) #, 'TIME', end - start)
     #   groundings_numbers.append(groundings_per_query)
