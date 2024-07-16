@@ -210,7 +210,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         early_stopping = keras.callbacks.EarlyStopping(
             monitor="val_loss",
             min_delta=0.001,
-            patience=30,
+            patience=40,
             verbose=1)
         callbacks.append(early_stopping)
 
