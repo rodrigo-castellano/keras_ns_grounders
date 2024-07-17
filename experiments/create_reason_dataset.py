@@ -39,10 +39,12 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
     atom2proved: Dist[Tuple[str, str, str], bool] = {}
 
     # This loop iteratively finds the atoms that are already proved.
+    print('\n\nrule2proofs',rule2proofs[:5])
     for i in range(num_steps):
         for rule_name,proofs in rule2proofs.items():
             for query_and_proof in proofs:
                 query, proof = query_and_proof[0], query_and_proof[1]
+                # print('query.proof', query,proof)
                 if query not in atom2proved or not atom2proved[query]:
                     atom2proved[query] = all(
                         [atom2proved.get(a, False)
@@ -251,11 +253,13 @@ def approximate_backward_chaining_grounding_one_rule(
                     new_ground_atoms.add(((q,), tuple(body_grounding)))
                     # groundings_per_query +=1
                     if build_proofs:
+                        print('\nproofs',proofs) if len(proofs)<10 else None
+                        # print('(q, body_grounding_to_prove)',(q, body_grounding_to_prove))
                         proofs.append((q, body_grounding_to_prove))
                         if step == n_steps-1:
-                            print('ATOMS TO PROVE', body_grounding_to_prove) 
+                            print('ATOMS TO PROVE', body_grounding_to_prove) if len(proofs)<10 else None
                             atoms_proof_last_level.update(body_grounding_to_prove) if len(body_grounding_to_prove) > 0 else None
-                            print('atoms_proof_last_level',atoms_proof_last_level)
+                            # print('atoms_proof_last_level',atoms_proof_last_level)
 
     #   print('NUM_GROUNDINGS for the query',q, groundings_per_query) #, 'TIME', end - start)
     #   groundings_numbers.append(groundings_per_query)
@@ -408,7 +412,7 @@ class ApproximateBackwardChainingGrounder(Engine):
             # Here we update the queries to process in the next iteration, we only keep the new ones.
             self._init_internals(list(new_queries), clean=False)
 
-        # print('Num groundings',sum([len(v) for k, v in self.rule2groundings.items()]))
+        print('Num groundings before prunning',sum([len(v) for k, v in self.rule2groundings.items()]))
         if self.prune_incomplete_proofs:
             # check all the groundings with at least 1 atom missing, to see if they are proved (all atoms present in the facts)
             # print('\nstarting PruneIncompleteProofs')
@@ -416,7 +420,7 @@ class ApproximateBackwardChainingGrounder(Engine):
                                                          self.rule2proofs,
                                                          self._fact_index,
                                                          self.num_steps)
-            print('\nNum groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
+            # print('\nNum groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
         # print('\nFinal groundings\n')
         # This should be done after sorting the groundings to ensure the output
         # to be deterministic.
@@ -430,13 +434,13 @@ class ApproximateBackwardChainingGrounder(Engine):
             # if the level is in the keys of groundings_per_level, prune the groundings
             if level in self.groundings_per_level:
                 # print the keys of the self.groundings_per_level
-                print('\nNum groundings in level',level,',',len(self.groundings_per_level[level]))
+                # print('\nNum groundings in level',level,',',len(self.groundings_per_level[level]))
                 if self.prune_incomplete_proofs:
                     self.groundings_per_level[level] = Prune_groundings_per_level(self.groundings_per_level[level],
                                                                 self.rule2proofs,
                                                                 self._fact_index,
                                                                 self.num_steps)
-                    print('Num groundings in level',level,', after pruning,',len(self.groundings_per_level[level]))
+                    # print('Num groundings in level',level,', after pruning,',len(self.groundings_per_level[level]))
 
 
 
@@ -601,7 +605,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     groundings,groundings_per_level, all_groundings,atoms_proof_last_level = engine.ground(tuple(facts), tuple(ns.utils.to_flat(queries)), deterministic=True)
     rules = engine.rules
     print('Total groundings: ', sum( [len(v) for k,v in all_groundings.items()]))
-    print('Total groundings as sum by level', sum([len(v) for k,v in groundings_per_level.items()]))
+    print('Total groundings summed by level', sum([len(v) for k,v in groundings_per_level.items()]))
 
     print('Groundings per level')
     print( [(k,len(v)) for k,v in groundings_per_level.items()])
@@ -669,5 +673,6 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     # Facts is a list, final_atoms_remove is a set. Convert the substraction to a tuple
     _,groundings_per_level, all_groundings,_ = engine.ground(tuple(set(facts)-final_atoms_remove), tuple(ns.utils.to_flat(queries)), deterministic=True)
 
-    print('\nTotal groundings with new set of facts', sum( [len(v) for k,v in all_groundings.items()]))
+    print('\nNew set of facts')
+    print('Total groundings: ', sum( [len(v) for k,v in all_groundings.items()]))
     print('Groundings per level:', [(k,len(v)) for k,v in groundings_per_level.items()])

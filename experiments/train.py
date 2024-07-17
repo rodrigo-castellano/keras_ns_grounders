@@ -210,16 +210,9 @@ def main(base_path, output_filename, log_filename, use_WB, args):
         early_stopping = keras.callbacks.EarlyStopping(
             monitor="val_loss",
             min_delta=0.001,
-            patience=100,
+            patience=50,
             verbose=1)
         callbacks.append(early_stopping)
-
-    best_model_callback = MMapModelCheckpoint(
-        model, 'val_task_mrr',
-        frequency=args.valid_frequency,
-        # if path is not None, chepoint to file.
-        filepath=get_arg(args, 'ckpt_filepath', None))
-    callbacks.append(best_model_callback)
 
     if not args.use_ultra and not args.use_llm:
         kge_filepath = get_arg(args, 'ckpt_filepath', None)
@@ -232,6 +225,12 @@ def main(base_path, output_filename, log_filename, use_WB, args):
             filepath=kge_filepath)
         callbacks.append(kge_best_model_callback)
 
+    best_model_callback = MMapModelCheckpoint(
+        model, 'val_task_mrr',
+        frequency=args.valid_frequency,
+        # if path is not None, chepoint to file.
+        filepath=get_arg(args, 'ckpt_filepath', None))
+    callbacks.append(best_model_callback)
 
     # Initialize a W&B run
     if use_WB:
