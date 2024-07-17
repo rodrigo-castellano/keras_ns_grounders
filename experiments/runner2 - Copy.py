@@ -7,15 +7,18 @@ sys.path.append(current_dir)
 sys.path.append(os.path.join(current_dir, '..'))
 sys.path.append(os.path.join(current_dir, '..', 'ULTRA'))
 sys.path.append(os.path.join(current_dir, '..', 'ns_lib'))
+
 import os
 import tensorflow as tf
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 import copy
 from itertools import product
-from train import main
 import shutil as sh
 import ns_lib as ns
+
+from train import main
 from ns_lib.utils import NSParser
 import numpy as np
 import ast
@@ -35,22 +38,22 @@ if __name__ == '__main__':
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
     # tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
-    use_logger = True
-    use_WB = True
+    use_logger = False
+    use_WB = False
     log_folder :str = "./experiments/runs/"
     ckpt_folder :str = None #os.path.join(log_folder,'checkpoints')
     checkpoint_load = False
-    base_path :str = "experiments/data"
+    base_path :str = "./experiments/data/"
     epochs: int = 100
     EARLY_STOPPING = False
     GLOBAL_SERIALIZATION = False
     LLM = False
     ULTRA = False
     ULTRA_WITH_KGE = False
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
-    GROUNDER = ['backward_1', 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3']#,'domainbody','relationentity','full]
+    DATASET_NAME = ['pharmkg_small']# ['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
+    GROUNDER = ['backward_1_1']#['backward_1', 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3']#,'domainbody','relationentity','full]
     KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','dcr','sbr','r2n']  
+    MODEL_NAME = ['dcr']#['no_reasoner','dcr','sbr','r2n']  
     RULE_MINER = ['amie','None'] 
     E = [100]#,300] 
     DEPTH = [1]
@@ -63,7 +66,7 @@ if __name__ == '__main__':
     LR = [0.01] #[0.01]
     LR_SCHEDULER = ['None'] #['plateau'] # None
     OPTIMIZER = ['adam'] #['adam'] #['None','adam']
-    NUM_RULES = [1] 
+    NUM_RULES = [10] 
     VALID_SIZE = [None]
 
     
@@ -125,9 +128,9 @@ if __name__ == '__main__':
         if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'): # For heavy datasets, run only one seed
             args.seed = [0]
         args.kge_atom_embedding_size = e
-        args.batch_size = 256 # Full batch only for explain.
-        args.val_batch_size = 256
-        args.test_batch_size = 128 if dataset_name in heavy_datasets_domainbody_relationentity else 256
+        args.batch_size = 5000 # Full batch only for explain.
+        args.val_batch_size = -1
+        args.test_batch_size = -1 if dataset_name in heavy_datasets_domainbody_relationentity else 256
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
@@ -173,7 +176,7 @@ if __name__ == '__main__':
         args.weight_loss = w_loss
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
-        args.valid_frequency = 1
+        args.valid_frequency = 5
         args.resnet = True
         args.reasoner_depth = dp if nr > 0 else 0
         args.reasoner_regularization_factor = rr
