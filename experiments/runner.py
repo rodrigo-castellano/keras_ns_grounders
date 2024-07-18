@@ -41,8 +41,8 @@ if __name__ == '__main__':
     ckpt_folder :str = None #os.path.join(log_folder,'checkpoints')
     checkpoint_load = False
     base_path :str = "experiments/data"
-    epochs: int = 150
-    EARLY_STOPPING = True
+    epochs: int = 100
+    EARLY_STOPPING = False
     GLOBAL_SERIALIZATION = False
     LLM = False
     ULTRA = False
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     R = [0.0]
     RR = [0.0]
     LR = [0.01] #[0.01]
-    LR_SCHEDULER = ['plateau'] #['plateau'] # None
+    LR_SCHEDULER = ['None'] #['plateau'] # None
     OPTIMIZER = ['adam'] #['adam'] #['None','adam']
     NUM_RULES = [1] 
     VALID_SIZE = [None]
