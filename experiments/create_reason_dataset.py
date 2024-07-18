@@ -39,7 +39,7 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
     atom2proved: Dist[Tuple[str, str, str], bool] = {}
 
     # This loop iteratively finds the atoms that are already proved.
-    print('\n\nrule2proofs',rule2proofs[:5])
+    print('\n\nrule2proofs',rule2proofs[0][:5])
     for i in range(num_steps):
         for rule_name,proofs in rule2proofs.items():
             for query_and_proof in proofs:
