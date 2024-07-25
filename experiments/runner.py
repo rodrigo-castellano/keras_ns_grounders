@@ -101,11 +101,9 @@ if __name__ == '__main__':
             LR,LR_SCHEDULER,OPTIMIZER, NUM_RULES, RR ):  
 
         run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
-        
         if not os.path.exists(os.path.join(base_path, dataset_name)):
             print('skipping, dataset not existing', run_vars)
             continue
-
         # Define sets for quick membership testing
         light_datasets_full = {'countries_s1', 'countries_s2', 'pharmkg_small'}
         heavy_datasets_domainbody_relationentity = {'countries_s3', 'wn18rr', 'pharmkg_full', 'FB15K', 'kinship_family'}
@@ -113,9 +111,8 @@ if __name__ == '__main__':
         # Discern the datasets for which the grounders full, domainbody, and relationentity are too heavy to run
         if (grounder == 'full' and dataset_name not in light_datasets_full) or \
         ((grounder in {'domainbody', 'relationentity'}) and dataset_name in heavy_datasets_domainbody_relationentity) or \
-        (model_name == 'no_reasoner' and grounder not in {'backward_1'}):
+        (model_name == 'no_reasoner' and grounder not in {'backward_1_1',}):
             continue
-
         args.dataset_name = dataset_name
         args.grounder = grounder
         args.kge = kge
