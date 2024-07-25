@@ -39,12 +39,15 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
     atom2proved: Dist[Tuple[str, str, str], bool] = {}
 
     # This loop iteratively finds the atoms that are already proved.
-    print('\n\nrule2proofs',rule2proofs[0][:5])
+    cont=0
+    print('number of atoms to prove',sum([len(k) for k,v in rule2proofs.items()]))
     for i in range(num_steps):
         for rule_name,proofs in rule2proofs.items():
             for query_and_proof in proofs:
+                cont+=1
                 query, proof = query_and_proof[0], query_and_proof[1]
-                # print('query.proof', query,proof)
+                # print('atom2proved',atom2proved) if cont<100 else None
+                # print('query, proof', query,proof) if cont<100 else None
                 if query not in atom2proved or not atom2proved[query]:
                     atom2proved[query] = all(
                         [atom2proved.get(a, False)
@@ -52,14 +55,21 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
                          # are by definition not proved already in the data.
                          # or fact_index._index.get(a, None) is not None)
                          for a in proof])
-
+                    # print('not proved yet',proof,[atom2proved.get(a, False) for a in proof] ,all([atom2proved.get(a, False) for a in proof])) if cont<100 else None
+    # print('atom2proved',atom2proved)
     # Now atom2proved has all proved atoms. Scan the groundings and keep only
     # the ones that have been proved within num_steps:
+    cont=0
     pruned_rule2groundings = {}
     for rule_name,groundings in rule2groundings.items():
         pruned_groundings = []
         for g in groundings:
+            cont+=1
             head_atoms = g[0]
+            print('head atom',g[0]) if cont<100 else None
+            print('body atom',g[1]) if cont<100 else None
+            print('proved head by atom2proved',[(atom2proved.get(a, False) is not None) for a in head_atoms], '. By fact ',[( fact_index._index.get(a, None) is not None) for a in head_atoms]) if cont<100 else None
+            print('proof',atom2proved[head_atoms[0]])
             # WE CHECK IF ALL THE ATOMS IN THE HEAD ARE PROVED
             # all elements in the grounding are either in the training data
             # or they are provable using the rules,
@@ -253,11 +263,11 @@ def approximate_backward_chaining_grounding_one_rule(
                     new_ground_atoms.add(((q,), tuple(body_grounding)))
                     # groundings_per_query +=1
                     if build_proofs:
-                        print('\nproofs',proofs) if len(proofs)<10 else None
+                        # print('\nproofs',proofs) if len(proofs)<10 else None
                         # print('(q, body_grounding_to_prove)',(q, body_grounding_to_prove))
                         proofs.append((q, body_grounding_to_prove))
                         if step == n_steps-1:
-                            print('ATOMS TO PROVE', body_grounding_to_prove) if len(proofs)<10 else None
+                            # print('ATOMS TO PROVE', body_grounding_to_prove) if len(proofs)<10 else None
                             atoms_proof_last_level.update(body_grounding_to_prove) if len(body_grounding_to_prove) > 0 else None
                             # print('atoms_proof_last_level',atoms_proof_last_level)
 
@@ -343,7 +353,8 @@ class ApproximateBackwardChainingGrounder(Engine):
                facts: List[Tuple],
                queries: List[Tuple],
                **kwargs) -> Dict[str, RuleGroundings]:
-        print('\n------------------------------------------------------------------------------------------------\n')
+        print('\n------------------------------------------------------------------------------------------------')
+        print('--------------------')
         if self.rules is None or len(self.rules) == 0:
             return []
         self.groundings_per_level = {}
@@ -434,13 +445,13 @@ class ApproximateBackwardChainingGrounder(Engine):
             # if the level is in the keys of groundings_per_level, prune the groundings
             if level in self.groundings_per_level:
                 # print the keys of the self.groundings_per_level
-                # print('\nNum groundings in level',level,',',len(self.groundings_per_level[level]))
+                print('\nNum groundings in level',level,',',len(self.groundings_per_level[level]))
                 if self.prune_incomplete_proofs:
                     self.groundings_per_level[level] = Prune_groundings_per_level(self.groundings_per_level[level],
                                                                 self.rule2proofs,
                                                                 self._fact_index,
                                                                 self.num_steps)
-                    # print('Num groundings in level',level,', after pruning,',len(self.groundings_per_level[level]))
+                    print('Num groundings in level',level,', after pruning,',len(self.groundings_per_level[level]))
 
 
 
@@ -452,7 +463,8 @@ class ApproximateBackwardChainingGrounder(Engine):
         else:
             ret = {rule_name: RuleGroundings(rule_name, list(groundings))
                    for rule_name,groundings in self.rule2groundings.items()}
-        print('\n------------------------------------------------------------------------------------------------\n')
+        print('--------------------')
+        print('------------------------------------------------------------------------------------------------\n')
         return ret, self.groundings_per_level, self.rule2groundings, self.atoms_proof_last_level
  
 
