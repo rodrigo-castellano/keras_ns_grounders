@@ -12,7 +12,7 @@ from ns_lib.logic.commons import Domain
 # from transformers import AutoModel, AutoTokenizer
 from ns_lib.logic import FOL
 import wikipediaapi as wk
-from transformers import AutoTokenizer, AutoModel
+# from transformers import AutoTokenizer, AutoModel
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np 
@@ -206,8 +206,8 @@ class ExplicitDomainEmbedders(Layer):
     
 class LMEmbeddings():
     # Load model from HuggingFace Hub
-    tokenizer = AutoTokenizer.from_pretrained('cross-encoder/ms-marco-MiniLM-L-12-v2')
-    model = AutoModel.from_pretrained('cross-encoder/ms-marco-MiniLM-L-12-v2')
+    # tokenizer = AutoTokenizer.from_pretrained('cross-encoder/ms-marco-MiniLM-L-12-v2')
+    # model = AutoModel.from_pretrained('cross-encoder/ms-marco-MiniLM-L-12-v2')
     embedded_constants = {}
     @staticmethod
     def encode(sentences) -> tf.Tensor:
