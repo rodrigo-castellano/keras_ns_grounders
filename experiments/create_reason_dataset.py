@@ -38,16 +38,24 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
     #    print('RIN', rn, len(g))
     atom2proved: Dist[Tuple[str, str, str], bool] = {}
 
-    # This loop iteratively finds the atoms that are already proved.
-    cont=0
-    print('number of atoms to prove',sum([len(k) for k,v in rule2proofs.items()]))
+    # This loop iteratively finds the atoms that are already proved
+    print('number of steps', num_steps)
+    print('Number of items in rule2proofs',sum([len(v) for k,v in rule2proofs.items()]))
+    print('rules with proofs',list(rule2proofs.keys()))
+    print('queries with body atoms to prove in each rule', [len(rule2proofs[k]) for k in list(rule2proofs.keys())])
+    for i in range(5):
+        print('First rule, examples',rule2proofs[ list(rule2proofs.keys())[0] ][i])
+    
+
     for i in range(num_steps):
+        cont=0
+        cont_lim = 100
+        # print('step',i)
         for rule_name,proofs in rule2proofs.items():
             for query_and_proof in proofs:
                 cont+=1
                 query, proof = query_and_proof[0], query_and_proof[1]
-                # print('atom2proved',atom2proved) if cont<100 else None
-                # print('query, proof', query,proof) if cont<100 else None
+                # print('i,query, proof',i, query,proof) if cont<cont_lim else None
                 if query not in atom2proved or not atom2proved[query]:
                     atom2proved[query] = all(
                         [atom2proved.get(a, False)
@@ -55,21 +63,29 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
                          # are by definition not proved already in the data.
                          # or fact_index._index.get(a, None) is not None)
                          for a in proof])
-                    # print('not proved yet',proof,[atom2proved.get(a, False) for a in proof] ,all([atom2proved.get(a, False) for a in proof])) if cont<100 else None
-    # print('atom2proved',atom2proved)
+                    # if all([atom2proved.get(a, False) for a in proof]):
+                    #     print('         !!!!!!!!!!proved',query, proof) if cont<cont_lim else None
+                    # else:
+                    #     print('         not proved yet',query, proof,[atom2proved.get(a, False) for a in proof] ,all([atom2proved.get(a, False) for a in proof])) if cont<cont_lim else None
+
+    print('atom2proved that are True',len([k for k,v in atom2proved.items() if v]), 'out of', len(atom2proved))
+    for k,v in atom2proved.items():
+        if v:
+            print(k)
     # Now atom2proved has all proved atoms. Scan the groundings and keep only
     # the ones that have been proved within num_steps:
     cont=0
+    cont_lim = 100
     pruned_rule2groundings = {}
     for rule_name,groundings in rule2groundings.items():
         pruned_groundings = []
         for g in groundings:
             cont+=1
             head_atoms = g[0]
-            print('head atom',g[0]) if cont<100 else None
-            print('body atom',g[1]) if cont<100 else None
-            print('proved head by atom2proved',[(atom2proved.get(a, False) is not None) for a in head_atoms], '. By fact ',[( fact_index._index.get(a, None) is not None) for a in head_atoms]) if cont<100 else None
-            print('proof',atom2proved[head_atoms[0]])
+            # print('head atom:',g[0][0]) if cont<cont_lim else None
+            # print('body atoms:',g[1]) if cont<cont_lim else None
+            # print('Proved head by atom2proved:',[atom2proved.get(a, False) for a in head_atoms], '|||  By fact: ',[( fact_index._index.get(a, None) is not None) for a in head_atoms]) if cont<cont_lim else None
+            # print('proof',atom2proved[head_atoms[0]]) if cont<cont_lim else None
             # WE CHECK IF ALL THE ATOMS IN THE HEAD ARE PROVED
             # all elements in the grounding are either in the training data
             # or they are provable using the rules,
@@ -77,6 +93,7 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
                      fact_index._index.get(a, None) is not None)
                     for a in head_atoms]):
                 pruned_groundings.append(g)
+                # print('     !!!ADDED') if cont<cont_lim else None
         pruned_rule2groundings[rule_name] = set(pruned_groundings)
     #for rn,g in pruned_rule2groundings.items():
     #    print('ROUT', rn, len(g))
@@ -589,7 +606,7 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
                 pure_adaptive=False,
                 num_steps=num_steps,
                 max_unknown_fact_count=1,
-                max_unknown_fact_count_last_step=0,
+                max_unknown_fact_count_last_step=1,
                 max_groundings_per_rule=-1,
                 prune_incomplete_proofs=True)
 
@@ -672,6 +689,9 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     print('\nFinal total atoms to remove: ', len(final_atoms_remove))
 
     print('Initial number of facts:', len(facts), '. New number of facts:', len(set(facts)-final_atoms_remove))
+
+
+
     # Do the grounding again to compare the original version with the new version: 
     engine = ApproximateBackwardChainingGrounder(
         rules, facts=list(set(facts)-final_atoms_remove), domains={d.name:d for d in fol.domains},
@@ -688,3 +708,4 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     print('\nNew set of facts')
     print('Total groundings: ', sum( [len(v) for k,v in all_groundings.items()]))
     print('Groundings per level:', [(k,len(v)) for k,v in groundings_per_level.items()])
+

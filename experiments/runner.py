@@ -139,7 +139,7 @@ if __name__ == '__main__':
             continue
 
         # Data params
-        args.corrupt_mode = 'TAIL' if ('wn18rr' in dataset_name or 'pharmkg_full' in dataset_name) else 'HEAD_AND_TAIL'
+        args.corrupt_mode = 'TAIL' if ('wn18rr' in dataset_name or 'pharmkg_full' in dataset_name or 'countries' in dataset_name) else 'HEAD_AND_TAIL'
         # args.corrupt_mode = 'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 200  
