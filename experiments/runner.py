@@ -1,16 +1,14 @@
 import sys
 import os
-
 # Get the directory of the current script
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 sys.path.append(os.path.join(current_dir, '..'))
 sys.path.append(os.path.join(current_dir, '..', 'ULTRA'))
 sys.path.append(os.path.join(current_dir, '..', 'ns_lib'))
-import os
 import tensorflow as tf
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import copy
 from itertools import product
 from train import main
@@ -21,7 +19,6 @@ import numpy as np
 import ast
 import argparse
 from model_utils import * 
-
 import wandb 
 wandb.login()
 
@@ -31,7 +28,9 @@ if __name__ == '__main__':
     # # Define the file to redirect output to
     # log_file = open('./experiments/training_logs.txt', 'a')
     # sys.stdout = sys.stderr = log_file
-
+    
+    # RSENEEEEEEEEEET!!!!!!!!
+    
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
     # tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
@@ -40,8 +39,8 @@ if __name__ == '__main__':
     log_folder :str = "./experiments/runs/"
     ckpt_folder :str = None #os.path.join(log_folder,'checkpoints')
     checkpoint_load = False
-    base_path :str = "experiments/data"
-    epochs: int = 150
+    data_path :str = "experiments/data"
+    epochs: int = 100
     EARLY_STOPPING = True
     GLOBAL_SERIALIZATION = False
     LLM = False
@@ -50,7 +49,7 @@ if __name__ == '__main__':
     DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
     GROUNDER = ['backward_1', 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3']#,'domainbody','relationentity','full]
     KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','dcr','sbr','r2n']  
+    MODEL_NAME = ['no_reasoner','dcr','sbr','r2n'] 
     RULE_MINER = ['amie','None'] 
     E = [100]#,300] 
     DEPTH = [1]
@@ -101,7 +100,7 @@ if __name__ == '__main__':
             LR,LR_SCHEDULER,OPTIMIZER, NUM_RULES, RR ):  
 
         run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
-        if not os.path.exists(os.path.join(base_path, dataset_name)):
+        if not os.path.exists(os.path.join(data_path, dataset_name)):
             print('skipping, dataset not existing', run_vars)
             continue
         # Define sets for quick membership testing
@@ -111,7 +110,7 @@ if __name__ == '__main__':
         # Discern the datasets for which the grounders full, domainbody, and relationentity are too heavy to run
         if (grounder == 'full' and dataset_name not in light_datasets_full) or \
         ((grounder in {'domainbody', 'relationentity'}) and dataset_name in heavy_datasets_domainbody_relationentity) or \
-        (model_name == 'no_reasoner' and grounder not in {'backward_1_1',}):
+        (model_name == 'no_reasoner' and grounder not in {'backward_1_1'}):
             continue
         args.dataset_name = dataset_name
         args.grounder = grounder
@@ -135,7 +134,7 @@ if __name__ == '__main__':
         # Select the rules file
         rules_files = {'amie': 'rules_amie.txt', 'ncrl': 'rules_ncrl.txt', 'None': 'rules.txt'}
         args.rules_file = rules_files.get(rule_miner) or ValueError(f'Rule miner not recognized for {dataset_name}')
-        if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
+        if not os.path.exists(os.path.join(data_path, dataset_name, args.rules_file)):
             continue
 
         # Data params
@@ -215,70 +214,48 @@ if __name__ == '__main__':
 
 
 
-    def main_wrapper(args,log_folder): 
+    def main_wrapper(args): 
 
         print("\nRun vars:", args.run_signature+'\n')
 
-        # LOGGER (can skip if not used)
-
-        # Check if the logger exists, if so, skip the experiment, otherwise run it 
-        # Logger exists if, all the arguments inside each file in the folder runs, are the same as the current args
         if use_logger:
-            logger = ns.utils.FileLogger(folder=log_folder,folder_experiments=os.path.join(log_folder,'experiments'),folder_run=os.path.join(log_folder,'indiv_runs'))
+            logger = ns.utils.FileLogger(base_folder=log_folder)
             if logger.exists_experiment(args.__dict__):
-                print("Skipping training, it has been already done for", args.run_signature, "\n")
-                #return
+                return
 
         for seed in args.seed:
             args.seed_run_i = seed
-
+            print("Seed", seed, " in ", args.seed)
             if use_logger:
-                date = logger.get_date()
+                date = logger.date
                 log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
-                if logger.exists_run(args.__dict__,log_filename_tmp,seed):   
-                    print("Seed number ", seed, " in ", args.seed,'already done')
+                if logger.exists_run(args.run_signature,seed):   
                     continue
                 # else:
                 #     print("Seed number ", seed, " not done. Exit")
                 #     continue
-                with open(log_filename_tmp, 'w') as f:
-                    f.write('sep=;\n')
             else:   
                 log_filename_tmp = None
 
-            print("Seed number ", seed, " in ", args.seed)
-            train_acc,valid_acc, test_acc,training_info = main(base_path,None,log_filename_tmp,use_WB,args)
+            train_eval_metrics,valid_eval_metrics, test_eval_metrics, training_info = main(data_path,None,log_filename_tmp,use_WB,args)
 
 
             if use_logger:
-                # Rename the temporal file to the final file, and include the results in the logger
+                # Include the results in the logger
                 logged_data = copy.deepcopy(args)
-                logged_data.train_acc = train_acc
-                logged_data.valid_acc = valid_acc
-                logged_data.test_acc = test_acc
-                logged_data.metrics = list(training_info.keys())
-                logged_data.time_train = args.time_train
-                logged_data.time_inference = args.time_inference
-                logged_data.time_ground_train = args.time_ground_train
-                logged_data.time_ground_valid = args.time_ground_valid
-                logged_data.time_ground_test = args.time_ground_test
+                dicts_to_log = {'train': train_eval_metrics, 'valid': valid_eval_metrics, 'test': test_eval_metrics, 'training_info': training_info}
                 # write the info about the results in the tmp file 
-                logger.log(logged_data.__dict__, log_filename_tmp)
+                logger.log(log_filename_tmp,logged_data.__dict__,dicts_to_log)
                 # Rename to not be temporal anymore
-                log_filename_run = os.path.join(log_folder,'indiv_runs', '_ind_log-{}-{}-{}-seed_{}.csv'.format(
-                                                            args.run_signature,date,np.round(test_acc[-4],3),seed))
-                if os.path.exists(log_filename_run):
-                    os.remove(log_filename_run)
-                os.rename(log_filename_tmp, log_filename_run)
-                
-        if use_logger:
-            # write the average results if we need to average over experiments
-            # if len(args.seed) > 1:
-            info_results,metrics_name = logger.get_avg_results(args.run_signature,args.seed)
-            if info_results is not None:
-                logger.write_avg_results(args.__dict__,info_results,metrics_name)
+                task_mrr = np.round(test_eval_metrics['task_mrr'],3)
+                log_filename_run_name = os.path.join(log_folder,'indiv_runs', '_ind_log-{}-{}-{}-seed_{}.csv'.format(
+                                                            args.run_signature,date,task_mrr,seed))
+                logger.finalize_log_file(log_filename_tmp,log_filename_run_name)
+            
+        # If we have done all the seeds in args.seed, we can get the average results
+        info_results = logger.get_avg_results(args.__dict__, args.run_signature,args.seed) if use_logger else None
 
                 
     for args in all_args:
         print('Experiment number ', all_args.index(args), ' out of ', len(all_args), ' experiments.')
-        main_wrapper(args,log_folder)
+        main_wrapper(args)

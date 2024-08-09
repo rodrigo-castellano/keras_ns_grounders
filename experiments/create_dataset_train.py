@@ -727,62 +727,62 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
 
 
     
-    # something interesting to do is to check, with the new dataset, how many new groudnings we have in the last level
+    # # something interesting to do is to check, with the new dataset, how many new groudnings we have in the last level
 
-    # Data Loading
-    data_handler = KGCDataHandler(
-        dataset_name=args.dataset_name+'_reason_'+str(num_steps),
-        base_path=base_path,
-        format=get_arg(args, 'format', None, True),
-        domain_file= args.domain_file,
-        train_file= args.train_file,
-        valid_file=args.valid_file,
-        test_file= args.test_file,
-        fact_file= args.facts_file)
+    # # Data Loading
+    # data_handler = KGCDataHandler(
+    #     dataset_name=args.dataset_name+'_reason_'+str(num_steps),
+    #     base_path=base_path,
+    #     format=get_arg(args, 'format', None, True),
+    #     domain_file= args.domain_file,
+    #     train_file= args.train_file,
+    #     valid_file=args.valid_file,
+    #     test_file= args.test_file,
+    #     fact_file= args.facts_file)
     
-    dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL',number_negatives=args.test_negatives)
-    fol = data_handler.fol 
+    # dataset_test = data_handler.get_dataset(split="test", corrupt_mode='TAIL',number_negatives=args.test_negatives)
+    # fol = data_handler.fol 
 
-    rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
+    # rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
 
-    num_steps = int(args.grounder.split('_')[-1])
-    prune_backward = True  
-    engine = BackwardChainingGrounder(rules, facts=list(data_handler.train_known_facts_set),
-                                                    domains={d.name:d for d in fol.domains},
-                                                    num_steps=num_steps,prune_incomplete_proofs=prune_backward)
+    # num_steps = int(args.grounder.split('_')[-1])
+    # prune_backward = True  
+    # engine = BackwardChainingGrounder(rules, facts=list(data_handler.train_known_facts_set),
+    #                                                 domains={d.name:d for d in fol.domains},
+    #                                                 num_steps=num_steps,prune_incomplete_proofs=prune_backward)
  
  
-    queries, labels = dataset_test[0:len(dataset_test)]
-    facts = fol.facts
-    rules = engine.rules
+    # queries, labels = dataset_test[0:len(dataset_test)]
+    # facts = fol.facts
+    # rules = engine.rules
 
-    # For every rule, get the predicate in the head. Count the number of times each predicate appears
-    pred_head_facts_counts = {}
-    for rule in rules:
-        pred = rule.head[0][0]
-        if pred not in pred_head_facts_counts:
-            pred_head_facts_counts[pred] = 0
-        pred_head_facts_counts[pred] += 1
+    # # For every rule, get the predicate in the head. Count the number of times each predicate appears
+    # pred_head_facts_counts = {}
+    # for rule in rules:
+    #     pred = rule.head[0][0]
+    #     if pred not in pred_head_facts_counts:
+    #         pred_head_facts_counts[pred] = 0
+    #     pred_head_facts_counts[pred] += 1
 
-    groundings,atoms_remove_per_level,groundings_per_level_new= engine.ground(pred_head_facts_counts,tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
-
-
-    # in the output file, print the number of groundings in every level
-    with open(output_file, 'a') as f:
-
-        total_groundings = set()
-        for level,groundings_level_i in groundings_per_level_new.items():
-            for grounding in groundings_level_i:
-                total_groundings.add(grounding)
-        f.write('Total number of unique groundings with new dataset:'+ str(len(total_groundings)))
-
-        f.write('\nNumber of groundings per level with new dataset:\n')
-        for level in range(num_steps):
-            f.write('Level {}. Number of groundings: {}\n'.format(level,len(groundings_per_level_new[level])) if level in groundings_per_level_new else 'level {}. No groundings in this level\n'.format(level))
+    # groundings,atoms_remove_per_level,groundings_per_level_new= engine.ground(pred_head_facts_counts,tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
 
 
-    print('Total number of unique groundings with new dataset:'+ str(len(total_groundings)))
+    # # in the output file, print the number of groundings in every level
+    # with open(output_file, 'a') as f:
 
-    print('\nNumber of groundings per level with new dataset:\n')
-    for level in range(num_steps):
-        print('Level {}. Number of groundings: {}\n'.format(level,len(groundings_per_level_new[level])) if level in groundings_per_level_new else 'level {}. No groundings in this level\n'.format(level))
+    #     total_groundings = set()
+    #     for level,groundings_level_i in groundings_per_level_new.items():
+    #         for grounding in groundings_level_i:
+    #             total_groundings.add(grounding)
+    #     f.write('Total number of unique groundings with new dataset:'+ str(len(total_groundings)))
+
+    #     f.write('\nNumber of groundings per level with new dataset:\n')
+    #     for level in range(num_steps):
+    #         f.write('Level {}. Number of groundings: {}\n'.format(level,len(groundings_per_level_new[level])) if level in groundings_per_level_new else 'level {}. No groundings in this level\n'.format(level))
+
+
+    # print('Total number of unique groundings with new dataset:'+ str(len(total_groundings)))
+
+    # print('\nNumber of groundings per level with new dataset:\n')
+    # for level in range(num_steps):
+    #     print('Level {}. Number of groundings: {}\n'.format(level,len(groundings_per_level_new[level])) if level in groundings_per_level_new else 'level {}. No groundings in this level\n'.format(level))

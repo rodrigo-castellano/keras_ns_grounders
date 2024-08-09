@@ -25,7 +25,7 @@ explain_enabled: bool = False
 
 
 
-def main(base_path, output_filename, log_filename, use_WB, args):
+def main(data_path, output_filename, log_filename, use_WB, args):
 
     print('\nARGS', args,'\n')
     seed = get_arg(args, 'seed_run_i', 0)
@@ -41,7 +41,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     # DATASET PREPARATION
     data_handler = KGCDataHandler(
         dataset_name=args.dataset_name,
-        base_path=base_path,
+        base_path=data_path,
         format=get_arg(args, 'format', None, True),
         domain_file= args.domain_file,
         train_file= args.train_file,
@@ -69,7 +69,7 @@ def main(base_path, output_filename, log_filename, use_WB, args):
 
     enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
     if enable_rules:
-        rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
+        rules = ns.utils.read_rules(join(data_path, args.dataset_name, args.rules_file),args)
         facts = list(data_handler.train_known_facts_set)
         engine = BuildGrounder(args, rules, facts, fol, domain2adaptive_constants)
     serializer = ns.serializer.LogicSerializerFast(
@@ -96,7 +96,6 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     end = time.time()
     args.time_ground_train = np.round(end - start,2)
     print("Time to create data generator train: ", np.round(end - start,2),'\n************************************')
-
     start = time.time()
     data_gen_valid = ns.dataset.DataGenerator(
        dataset_valid, fol, serializer, engine,
@@ -116,7 +115,6 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     end = time.time()
     args.time_ground_test = np.round(end- start,2)
     print("Time to create data generator test: ",  np.round(end - start,2),'\n************************************')
-
     # print('\nRUNNING TRAIN SET')
     # print('*********************')
     # data_gen_train.__getitem__(0)
@@ -280,23 +278,29 @@ def main(base_path, output_filename, log_filename, use_WB, args):
     # EVALUATION
     print("\nEvaluation train", flush=True)
     model.test_mode('train',mode=True)
-    train_accuracy = model.evaluate(data_gen_train)#,train_data=True,testing=True) 
+    train_metrics = model.evaluate(data_gen_train)#,train_data=True,testing=True) 
     print("\nEvaluation val", flush=True)
     model.test_mode('valid',mode=True)
-    valid_accuracy =  model.evaluate(data_gen_valid)#,val_data=True,testing=True) 
+    valid_metrics =  model.evaluate(data_gen_valid)#,val_data=True,testing=True) 
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
     model.test_mode('test',mode=True)
-    test_accuracy  =  model.evaluate(data_gen_test)#,test_data=True,testing=True)
+    test_metrics  =  model.evaluate(data_gen_test)#,test_data=True,testing=True)
     end_inf = time.time()
     args.time_inference = np.round(end_inf - start_inf,2)
     print('Inference time:', np.round(end_inf - start_inf,2), 'seconds')
 
-    print('Metrics,loss:',history.history.keys()) 
+    print('\nMetrics names:',model.metrics_names)
+    train_eval_metrics = dict(zip(model.metrics_names,train_metrics))
+    valid_eval_metrics = dict(zip(model.metrics_names,valid_metrics))
+    test_eval_metrics = dict(zip(model.metrics_names,test_metrics))
+    training_info = history.history if args.epochs > 0 else None
+
+    print('\nMetrics:',train_eval_metrics.keys()) 
     print('\nResults',
-          '\nTrain', np.round(train_accuracy,3),
-          '\nVal', np.round(valid_accuracy,3),
-          '\nTest', np.round(test_accuracy,3),
+          '\nTrain', np.round(train_metrics,3),
+          '\nVal', np.round(valid_metrics,3),
+          '\nTest', np.round(test_metrics,3),
           flush=True)
 
 
@@ -317,4 +321,4 @@ def main(base_path, output_filename, log_filename, use_WB, args):
             r._verbose=True
         print(model.predict(data_gen_test_positive_only)[-1])
 
-    return train_accuracy,valid_accuracy, test_accuracy, history.history
+    return train_eval_metrics,valid_eval_metrics, test_eval_metrics, training_info
