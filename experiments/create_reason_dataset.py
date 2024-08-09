@@ -643,9 +643,10 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     atoms_remove = set()
     for level in range(num_steps-1): # except for the last step
         # get all the atoms from the body
-        for grounding in groundings_per_level[level]:
-            for body_atom in grounding[1]:
-                atoms_remove.add(body_atom)
+        if level in groundings_per_level:
+            for grounding in groundings_per_level[level]:
+                for body_atom in grounding[1]:
+                    atoms_remove.add(body_atom)
     
     # Dont remove atoms if they are in the proof of the last level
     # with approximate, I need to adapt this so that if in the last level max 1 atom is missing, still append it
