@@ -10,7 +10,8 @@ import copy
 import os
 from itertools import product
 # from create_dataset_train import main
-from create_reason_dataset import main
+# from create_reason_dataset import 
+from count_groundings import main
 import shutil as sh
 import ns_lib as ns
 from ns_lib.utils import NSParser
@@ -27,9 +28,9 @@ if __name__ == '__main__':
     base_path :str = "experiments/data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['countries_s3'] 
+    DATASET_NAME =  ['countries_s3']#,'countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr',]
     MODIFIED_DATASET = [False]
-    GROUNDER = ['backward_2']
+    GROUNDER = ['backward_1_1']#, 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3'] #,'full']
     KGE = ['complex']   
     MODEL_NAME =  ['sbr',]  
     RULE_MINER = ['amie','None'] 
@@ -106,6 +107,7 @@ if __name__ == '__main__':
             continue
 
         # Data params
+        args.corrupt_mode = 'TAIL' if ('wn18rr' in dataset_name or 'pharmkg_full' in dataset_name or 'countries' in dataset_name) else 'HEAD_AND_TAIL'
         args.num_negatives = neg # 1
         args.valid_negatives = 100 #200
         args.test_negatives = None  # all possible negatives
