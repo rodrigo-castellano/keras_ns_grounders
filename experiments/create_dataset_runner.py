@@ -30,7 +30,7 @@ if __name__ == '__main__':
     assert epochs > 0
     DATASET_NAME =  ['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr',]
     MODIFIED_DATASET = [False]
-    GROUNDER = ['full']#['backward_1_1', 'backward_noprune_1_1', 'backward_1_2', 'backward_noprune_1_2', 'backward_1_3', 'backward_noprune_1_3', 'full']
+    GROUNDER = ['backward_1_1', 'backward_noprune_1_1', 'backward_1_2', 'backward_noprune_1_2', 'backward_1_3', 'backward_noprune_1_3', 'full']
     KGE = ['complex']   
     MODEL_NAME =  ['sbr']  
     RULE_MINER = ['amie','None'] 
