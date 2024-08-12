@@ -24,10 +24,6 @@ from ultra_utils import nested_dict
 explain_enabled: bool = False
 from collections import Counter
 
-
-
-
-
 import copy
 from itertools import product
 import time
@@ -36,6 +32,97 @@ from typing import List, Set, Tuple, Dict, Union
 from ns_lib.logic.commons import Atom, Domain, Rule, RuleGroundings
 from ns_lib.grounding.engine import Engine
 
+class DomainFullGrounder(Engine):
+
+    def __init__(self,
+                 rules: List[Rule],
+                 domains:Dict[str, Domain],
+                 domain2adaptive_constants: Dict[str, List[str]]=None,
+                 pure_adaptive: bool=False,
+                 exclude_symmetric: bool=False,
+                 exclude_query: bool=False,
+                 limit: int=None):
+
+        self.rules = rules
+        # The flat grounder is not query oriented.
+        self.domains = domains
+        self.domain2adaptive_constants = domain2adaptive_constants
+        self.pure_adaptive = pure_adaptive
+        if self.pure_adaptive:
+            assert self.domain2adaptive_constants, (
+                'Need adaptive variable if in pure adaptive mode.')
+        self.limit = limit
+        self.exclude_symmetric = exclude_symmetric
+        self.exclude_query = exclude_query
+
+    #@lru_cache
+    def ground(self,
+               facts: List[Tuple],
+               queries: List[Tuple],
+               **kwargs) -> Dict[str, RuleGroundings]:
+
+        res = {}
+        for rule in self.rules:
+            print('RULE', rule, 'out of', len(self.rules))
+            added = 0
+            groundings = []
+
+            if self.pure_adaptive:
+                ground_var_groups = [self.domain2adaptive_constants.get(d, [])
+                                     for d in rule.vars2domain.values()]
+            elif self.domain2adaptive_constants is not None:
+                ground_var_groups = [self.domains[d].constants +
+                                     self.domain2adaptive_constants.get(d, [])
+                                     for d in rule.vars2domain.values()]
+            else:
+                ground_var_groups = [self.domains[d].constants
+                                     for d in rule.vars2domain.values()]
+
+            for ground_vars in product(*ground_var_groups):
+                var_assignments = {k:v for k,v in zip(
+                    rule.vars2domain.keys(), ground_vars)}
+
+                is_good = True
+                body_atoms = []
+                for atom in rule.body:
+                    ground_atom = (atom[0], ) + tuple(
+                        [var_assignments.get(atom[j+1], None)
+                         for j in range(len(atom)-1)])
+                    assert all(ground_atom), 'Unresolved %s' % str(ground_atom)
+                    if (self.exclude_symmetric and
+                        ground_atom[1] == ground_atom[2]):
+                        is_good = False
+                        break
+                    if self.exclude_query and ground_atom in queries:
+                        is_good = False
+                        break
+                    body_atoms.append(ground_atom)
+
+                head_atoms = []
+                for atom in rule.head:
+                    ground_atom = (atom[0], ) + tuple(
+                        [var_assignments.get(atom[j+1], atom[j+1])
+                         for j in range(len(atom)-1)])
+                    assert all(ground_atom), 'Unresolved %s' % str(ground_atom)
+                    if self.exclude_symmetric and ground_atom[1] == ground_atom[2]:
+                        is_good = False
+                        break
+                    if self.exclude_query and ground_atom in queries:
+                        is_good = False
+                        break
+                    head_atoms.append(ground_atom)
+
+                # Check that nothing has been discarded.
+                if is_good:
+                    groundings.append((tuple(head_atoms), tuple(body_atoms)))
+                    added += 1
+                    if self.limit is not None and self.limit >= added:
+                        break
+
+            res[rule.name] = groundings
+            # res[rule.name] = RuleGroundings(rule.name, groundings=groundings)
+        groundings_per_level = {0: res}
+        return res, groundings_per_level
 
 
 class AtomIndex():
@@ -709,10 +796,10 @@ def BuildGrounder(args, rules: List[Rule], facts: List[Tuple], fol: FOL,
             pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
             num_steps=backward_depth)
 
-    # elif type == 'full':
-    #     return DomainFullGrounder(
-    #         rules, domains={d.name:d for d in fol.domains},
-    #         domain2adaptive_constants=domain2adaptive_constants)
+    elif type == 'full':
+        return DomainFullGrounder(
+            rules, domains={d.name:d for d in fol.domains},
+            domain2adaptive_constants=domain2adaptive_constants)
 
     # elif type == 'relationentity':
     #     # Requires Horn Clauses.
@@ -757,11 +844,6 @@ def main(data_path, output_filename, log_filename, use_WB, args):
         test_file= args.test_file,
         fact_file= args.facts_file)
     
-    dataset_train = data_handler.get_dataset(split="train",number_negatives=args.num_negatives)
-    dataset_valid = data_handler.get_dataset(split="valid",number_negatives=args.valid_negatives, corrupt_mode=args.corrupt_mode)
-    dataset_test = data_handler.get_dataset(split="test",  number_negatives=args.test_negatives,  corrupt_mode=args.corrupt_mode)
-    if explain_enabled and enable_rules and (args.model_name == 'dcr' or args.model_name == 'cdcr'):
-        dataset_test_positive_only = data_handler.get_dataset(split="test", number_negatives=0, corrupt_mode=args.corrupt_mode)
 
     fol = data_handler.fol
     domain2adaptive_constants: Dict[str, List[str]] = None
@@ -776,64 +858,65 @@ def main(data_path, output_filename, log_filename, use_WB, args):
         facts = list(data_handler.train_known_facts_set)
         engine = BuildGrounder(args, rules, facts, fol, domain2adaptive_constants)
 
-    queries_test, labels_test = dataset_test[0:len(dataset_test)]
-    queries_valid, labels_valid = dataset_valid[0:len(dataset_valid)]
-    queries_train, labels_train = dataset_train[0:len(dataset_train)]
 
-    # groundings = nested_dict(2, dict)
-    groundings = {}
-    groundings_level = {}
-    # DATA GENERATORS
+    # dataset_train = data_handler.get_dataset(split="train",number_negatives=args.num_negatives)
+    # dataset_valid = data_handler.get_dataset(split="valid",number_negatives=args.valid_negatives, corrupt_mode=args.corrupt_mode)
+    # dataset_test = data_handler.get_dataset(split="test",  number_negatives=args.test_negatives,  corrupt_mode=args.corrupt_mode)
+
+    # queries_test, labels_test = dataset_test[0:len(dataset_test)]
+    # queries_valid, labels_valid = dataset_valid[0:len(dataset_valid)]
+    # queries_train, labels_train = dataset_train[0:len(dataset_train)]
+
+    # # groundings = nested_dict(2, dict)
+    # groundings = {}
+    # groundings_level = {}
+    # # DATA GENERATORS
     # print('***********Generating train data**************')
     # start = time.time()
-    # groundings['train'],groundings['train'] = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries_train)),deterministic=True)
+    # groundings['train'],groundings_level['train'] = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries_train)),deterministic=True)
     # end = time.time()
     # args.time_ground_train = np.round(end - start,2)
     # print("Time to create data generator train: ", np.round(end - start,2),'\n************************************')
 
     # start = time.time()
-    # groundings['valid'],groundings['valid'] = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries_valid)),deterministic=True)
+    # groundings['valid'],groundings_level['valid'] = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries_valid)),deterministic=True)
     # end = time.time()
     # args.time_ground_valid = np.round(end - start,2)
     # print("Time to create data generator valid: ",  np.round(end - start,2),'\n************************************') 
     
-    start = time.time()
-    groundings['test'],groundings_level['test'] = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries_test)),deterministic=True)
-    end = time.time()
-    print("Time to create data generator test: ",  np.round(end - start,2),'\n************************************')
+    # start = time.time()
+    # groundings['test'],groundings_level['test'] = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries_test)),deterministic=True)
+    # end = time.time()
+    # print("Time to create data generator test: ",  np.round(end - start,2),'\n************************************')
 
 
 
 
 
-    # NUMBER OF GROUNDINGS
-    print('Sum of groundings', sum([len(v) for k, v in groundings['test'].items()]))
+    # # NUMBER OF GROUNDINGS PER HEAD: SEE THE GROUNDINGS FOR EACH HEAD
+    # print('Sum of groundings', sum([len(v) for k, v in groundings['test'].items()]))
 
+    # # for rule_name,groundings in groundings['test'].items():
+    #     # print('RULE', rule_name, len(groundings))
+    #     # for g in groundings:
+    #         # print('     HEAD', g[0], 'BODY', g[1])
+
+    # # Create a new dictionary ordered alphabetically with the heads as keys and all the groundings of that head as values.
+    # groundings['test'] = dict(sorted(groundings['test'].items(), key=lambda item: item[0]))
+
+    # heads2groundings = {}
     # for rule_name,groundings in groundings['test'].items():
-        # print('RULE', rule_name, len(groundings))
-        # for g in groundings:
-            # print('     HEAD', g[0], 'BODY', g[1])
-
-    # Create a new dictionary ordered alphabetically with the heads as keys and all the groundings of that head as values.
-    groundings['test'] = dict(sorted(groundings['test'].items(), key=lambda item: item[0]))
-
-    heads2groundings = {}
-    for rule_name,groundings in groundings['test'].items():
-        for g in groundings:
-            head = g[0][0]
-            if head not in heads2groundings:
-                heads2groundings[head] = []
-            heads2groundings[head].append(g)
+    #     for g in groundings:
+    #         head = g[0][0]
+    #         if head not in heads2groundings:
+    #             heads2groundings[head] = []
+    #         heads2groundings[head].append(g)
       
-    # For every head, show the number of groundings and the groundings.
-    for head,groundings in heads2groundings.items():
-        print('HEAD', head, 'Number of groundings', len(groundings))
-        for g in groundings:
-            print('     BODY', g[1])
-
-    
-
-
+    # # For every head, show the number of groundings and the groundings.
+    # for head,groundings in heads2groundings.items():
+    #     print('HEAD', head, 'Number of groundings', len(groundings))
+    #     for g in groundings:
+    #         print('     BODY', g[1])
 
 
 
@@ -847,6 +930,7 @@ def main(data_path, output_filename, log_filename, use_WB, args):
     #         num_groundings_per_head[head] += 1
 
     # # Show the total number of heads
+    # title  = str(args.dataset_name) + ' - ' + str(args.grounder)
     # print('Number of heads', len(num_groundings_per_head))
     # # Count of unique values (histogram). The head of the counter is the number of groundings, the value is the number of heads with that number of groundings.
     # num_groundings_per_head = Counter(num_groundings_per_head.values())
@@ -859,50 +943,105 @@ def main(data_path, output_filename, log_filename, use_WB, args):
     # plt.bar(num_groundings_per_head.keys(), num_groundings_per_head.values())
     # plt.xlabel('Number of groundings')
     # plt.ylabel('Number of heads')
-    # plt.title('Number of groundings per head')
+    # plt.title('Number of groundings per head. '+title)
     # plt.show()
     # # plot the cumulative distribution
     # plt.bar(num_groundings_per_head.keys(), np.cumsum(list(num_groundings_per_head.values())))
     # plt.xlabel('Number of groundings')
     # plt.ylabel('Cumulative number of heads')
-    # plt.title('Cumulative number of heads per number of groundings')
+    # plt.title('Cumulative number of heads per number of groundings. '+title)
     # plt.show()
 
-    # # # For every head with more than zero groundings, show the groundings
-    # # for head in num_groundings_per_head:
-    # #     if num_groundings_per_head[head] > 0:
-    # #         print('Head', head, 'Number of groundings', num_groundings_per_head[head])
-    # #         # Find all the groundings in groundings['test'] that have the head
-    # #         for rule_name,groundings in groundings['test'].items():
-    # #             for g in groundings:
-    # #                 if g[0][0] == head:
-    # #                     print('     BODY', g[1])
+
+
+    ''' 
+    INFO TO WRITE IN TXT:
+        For train, eval and test:  
+        - Number of facts/queries
+        - Time to create the data generator
+        - Number of groundings
+        - Number of groundings per level
+        - Number of groundings per rule
+        - Number of heads grounded
+        - plots of the empirical distribution of the number of groundings per head (also cumulative)
+
+    '''
+    file = 'grounding_info.txt'
+    folder = '../ground_info/'
+    os.makedirs(folder, exist_ok=True)
+
+    with open(folder+file, 'a') as f:
+        f.write('\n\n\nDataset : '+str(args.dataset_name))
+        f.write('\nGrounder : '+str(args.grounder)+'\n\n\n')
+        
+    for set_data in ['train', 'valid', 'test']:
+
+        # DATA GENERATORS
+        if set_data == 'train': 
+            dataset = data_handler.get_dataset(split="train",number_negatives=args.num_negatives)
+        elif set_data == 'valid':
+            dataset = data_handler.get_dataset(split="valid",number_negatives=args.valid_negatives, corrupt_mode=args.corrupt_mode)
+        elif set_data == 'test':
+            dataset = data_handler.get_dataset(split="test",  number_negatives=args.test_negatives,  corrupt_mode=args.corrupt_mode)
+
+        queries, _ = dataset[0:len(dataset)]
+
+        groundings = {}
+        groundings_level = {}
+        print('***********Generating ',set_data,' data**************')
+        start = time.time()
+        all_groundings,groundings_level = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
+        end = time.time()
+        time_ground = np.round(end - start,2)
+        print("Time to create data generator train: ", np.round(end - start,2),'\n************************************')
+        
+
+        num_groundings_per_head = {}
+        for rule_name,groundings in all_groundings.items():
+            for g in groundings:
+                head = g[0][0]
+                if head not in num_groundings_per_head:
+                    num_groundings_per_head[head] = 0
+                num_groundings_per_head[head] += 1
+
+        n_heads = len(num_groundings_per_head)
+        # Count of unique values (histogram). The head of the counter is the number of groundings, the value is the number of heads with that number of groundings.
+        num_groundings_per_head = Counter(num_groundings_per_head.values())
+        # sort the counter
+        num_groundings_per_head = dict(sorted(num_groundings_per_head.items(), key=lambda item: item[0]))
+
+        n_groundings = sum([len(v) for k, v in all_groundings.items()])
+        n_groundings_per_rule = {k: len(v) for k, v in all_groundings.items()}
+        n_groundings_level = {k: len(v) for k, v in groundings_level.items()}
+
+        # Write the results in a txt file
+        with open(folder+file, 'a') as f:
+            f.write('set : '+set_data+'\n')
+            f.write('number_of_queries : '+str(len(queries))+'\n')
+            f.write('time_to_ground : '+str(time_ground)+'\n')
+            f.write('n_groundings : '+str(n_groundings)+'\n')
+            f.write('n_groundings_per_level : '+str(n_groundings_level)+'\n')
+            f.write('n_groundings_per_rule : '+str(n_groundings_per_rule)+'\n')
+            f.write('n_heads_grounded : '+str(n_heads)+'\n')
+            f.write('\n\n')
+        
+        # save the plot of the distribution to the file:   str(args.dataset_name) + ' - ' + str(args.grounder) + ' - ' + set_data + '.png'
+        title = str(args.dataset_name) + ' - ' + str(args.grounder) + ' - ' + set_data
+        plt.bar(num_groundings_per_head.keys(), num_groundings_per_head.values())
+        plt.xlabel('Number of groundings')
+        plt.ylabel('Number of heads')
+        plt.title('Number of groundings per head. '+title, wrap=True)
+        plt.savefig(folder+title + '.png')
+        plt.close()
+
+        # plot the cumulative distribution
+        plt.bar(num_groundings_per_head.keys(), np.cumsum(list(num_groundings_per_head.values())))
+        plt.xlabel('Number of groundings')
+        plt.ylabel('Cumulative number of heads')
+        plt.title('Cumulative number of heads per number of groundings. '+title, wrap=True)
+        plt.savefig(folder + title + ' - cumulative.png')
+        plt.close()
 
 
 
-
-
-
-
-    # # GROUNDINGS PER LEVEL
-    # for key in groundings_level['test']:
-    #     groundings_level['test'][key] = tuple( groundings_level['test'][key])
-
-    for l in groundings_level['test']:
-        print('Groundings in level', l , len(groundings_level['test'][l]))
-
-    # # HEADS
-    # heads = set()
-    # for l,groundings in groundings_level['test'].items():
-    #     for grounding in groundings:
-    #         h = grounding[0][0]
-    #         b = grounding[1]
-    #         # print('HEAD', h, 'BODY', b)
-    #         heads.add(h)
-
-    # print('HEADS', heads)
-
-    # # Find the number of different groundings for each head and do an empirical distribution of the number of groundings.
-    # num_groundings_per_head = {}
-
-
+ 
