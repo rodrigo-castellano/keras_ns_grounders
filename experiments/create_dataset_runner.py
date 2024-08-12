@@ -28,11 +28,11 @@ if __name__ == '__main__':
     base_path :str = "experiments/data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['countries_s3']#,'countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr',]
+    DATASET_NAME =  ['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr',]
     MODIFIED_DATASET = [False]
-    GROUNDER = ['backward_1_1']#, 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3'] #,'full']
+    GROUNDER = ['full']#['backward_1_1', 'backward_noprune_1_1', 'backward_1_2', 'backward_noprune_1_2', 'backward_1_3', 'backward_noprune_1_3', 'full']
     KGE = ['complex']   
-    MODEL_NAME =  ['sbr',]  
+    MODEL_NAME =  ['sbr']  
     RULE_MINER = ['amie','None'] 
     E = [100] 
     DEPTH = [1]
@@ -57,27 +57,11 @@ if __name__ == '__main__':
         parser = NSParser()
         args = parser.parse_args()
 
-
-        if modified_dataset:
-            if 'backward' not in grounder:
-                continue
-            else:
-                level = grounder[-1]
-                dataset_name = dataset_name+'_reason_'+level
         if not os.path.exists(os.path.join(base_path, dataset_name)):
             continue
 
-
-
-        if 'countries' in dataset_name:
-            # task is the last two letters of the dataset name
-            task = dataset_name[-2:]
-            if task == 's2' and (grounder == 'full'): # or grounder == 'domainbody'): domainbody sometimes gives problems
-                print('skipping, grounder too heavy', run_vars)
-                continue
-            elif task == 's3' and (grounder == 'full' or grounder == 'domainbody'):
-                print('skipping, grounder too heavy', run_vars)
-                continue
+        if (grounder == 'full' and dataset_name in ['kinship_family','pharmkg_full','wn18rr']):
+            continue
 
         args.dataset_name = dataset_name
         args.grounder = grounder
