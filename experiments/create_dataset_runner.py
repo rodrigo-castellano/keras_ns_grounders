@@ -28,7 +28,7 @@ if __name__ == '__main__':
     base_path :str = "experiments/data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME =  ['nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr'] # 'countries_s1','countries_s2','countries_s3',
+    DATASET_NAME =  ['kinship_family','pharmkg_small','pharmkg_full','wn18rr'] # 'countries_s1','countries_s2','countries_s3',
     MODIFIED_DATASET = [False]
     GROUNDER = ['backward_1_1', 'backward_noprune_1_1', 'backward_1_2', 'backward_noprune_1_2', 'backward_1_3', 'backward_noprune_1_3', 'full']
     KGE = ['complex']   
@@ -61,6 +61,9 @@ if __name__ == '__main__':
             continue
 
         if ((grounder == 'full' or 'noprune' in grounder) and (dataset_name in ['kinship_family','pharmkg_full','wn18rr', 'countries_s3'])):
+            continue
+
+        if (grounder in ['backward_1_3', 'backward_noprune_1_3'] and dataset_name == 'kinship_family'):
             continue
 
         args.dataset_name = dataset_name
