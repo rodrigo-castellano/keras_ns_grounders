@@ -829,7 +829,6 @@ def main(data_path, output_filename, log_filename, use_WB, args):
     ragged = get_arg(args, 'ragged', None, True)
     start_train = time.time()
 
-
     # DATASET PREPARATION
     data_handler = KGCDataHandler(
         dataset_name=args.dataset_name,
@@ -963,6 +962,7 @@ def main(data_path, output_filename, log_filename, use_WB, args):
         - plots of the empirical distribution of the number of groundings per head (also cumulative)
 
     '''
+
     file = 'grounding_info.txt'
     folder = '../ground_info/'
     os.makedirs(folder, exist_ok=True)
@@ -1038,6 +1038,8 @@ def main(data_path, output_filename, log_filename, use_WB, args):
         plt.title('Cumulative number of heads per number of groundings. '+title, wrap=True)
         plt.savefig(folder + title + ' - cumulative.png')
         plt.close()
+
+    return None
 
 
 

@@ -25,7 +25,7 @@ import argparse
 
 if __name__ == '__main__':
 
-    base_path :str = "experiments/data"
+    base_path :str = "./experiments/data"
     epochs: int = 100
     assert epochs > 0
     DATASET_NAME =  ['kinship_family','pharmkg_small','pharmkg_full','wn18rr'] # 'countries_s1','countries_s2','countries_s3',
@@ -79,9 +79,9 @@ if __name__ == '__main__':
             DATASET_NAME,MODIFIED_DATASET, GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
             LR, NUM_RULES, RR ):  
     
-        # Base parameters
-        parser = NSParser()
-        args = parser.parse_args()
+        # # Base parameters
+        # parser = NSParser()
+        # args = parser.parse_args()
 
         if not os.path.exists(os.path.join(base_path, dataset_name)):
             continue
@@ -116,7 +116,7 @@ if __name__ == '__main__':
         else: # raise an error if the rule miner is not recognized
             raise ValueError('Rule miner not recognized for ', dataset_name)
         if not os.path.exists(os.path.join(base_path, dataset_name, args.rules_file)):
-            # print('skipping, rules not existing', run_vars)
+            # print('skipping, rules not existing',os.path.join(base_path, dataset_name, args.rules_file) )
             continue
 
         # Data params
@@ -170,10 +170,8 @@ if __name__ == '__main__':
         run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, modified_dataset, seed, neg,e)
         args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner', 'modified_dataset', 'seed', 'neg','e']
         args.run_signature = '-'.join(f'{v}' for v in run_vars)   
-        all_args.append(args)
+        all_args.append(copy.deepcopy(args))
 
-
-     
 
     def main_wrapper(args): 
         date = str(datetime.datetime.now()).replace(":","-")
@@ -185,5 +183,4 @@ if __name__ == '__main__':
         main(base_path,None,None,log_filename_tmp,args)
 
     for args in all_args:
-        print('Experiment number ', all_args.index(args), ' out of ', len(all_args), ' experiments.')
         main_wrapper(args)
