@@ -47,6 +47,32 @@ if __name__ == '__main__':
     VALID_SIZE = [None]
 
 
+    # This is in case I want to take inputs from the command line
+
+    parser = argparse.ArgumentParser(description='Description of your script')  
+    parser.add_argument("--d", default = None, help="dataset",nargs='+')
+    parser.add_argument("--m", default = None, help="model",nargs='+')
+    parser.add_argument("--g", default = None, help="grounder",nargs='+')
+    parser.add_argument("--s", default = None, help="seed")
+
+    args = parser.parse_args()
+    if args.s is not None:
+        SEED = [ast.literal_eval(args.s) ]
+        assert isinstance(SEED, list) 
+    if args.m is not None:
+        MODEL_NAME = args.m
+    if args.d is not None:
+        DATASET_NAME = args.d
+    if args.g is not None:
+        GROUNDER = args.g
+
+    del args.s
+    del args.m
+    del args.d  
+    del args.g
+    print('Running experiments for the following parameters:','DATASET_NAME:',DATASET_NAME,'GROUNDER:',GROUNDER,'MODEL_NAME:',MODEL_NAME,'SEED:',SEED)
+    
+
     all_args = []
 
     for dataset_name,modified_dataset, grounder, kge, model_name, rule_miner, e, dp, seed, neg, w_loss,  dropout, r, lr, nr, rr in product(
