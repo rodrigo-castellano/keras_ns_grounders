@@ -17,9 +17,6 @@ from ns_lib.utils import MMapModelCheckpoint, KgeLossFactory, get_arg
 from ns_lib.dataset import get_ultra_datasets
 import time
 from model_utils import * 
-import wandb
-from wandb.integration.keras import WandbCallback
-from wandb.integration.keras import WandbMetricsLogger
 from ultra_utils import nested_dict
 explain_enabled: bool = False
 from collections import Counter
