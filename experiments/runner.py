@@ -123,7 +123,7 @@ if __name__ == '__main__':
         args.kge_atom_embedding_size = e
         args.batch_size = 256 # Full batch only for explain.
         args.val_batch_size = 256
-        args.test_batch_size = 128 if dataset_name in heavy_datasets_domainbody_relationentity else 256
+        args.test_batch_size = 16 if dataset_name in heavy_datasets_domainbody_relationentity else 256
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
