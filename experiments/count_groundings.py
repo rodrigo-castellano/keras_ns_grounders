@@ -990,7 +990,7 @@ def main(data_path, output_filename, log_filename, use_WB, args):
         all_groundings,groundings_level = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
         end = time.time()
         time_ground = np.round(end - start,2)
-        print("Time to create data generator train: ", np.round(end - start,2),'\n************************************')
+        print("Time to create data generator ",set_data,": ", np.round(end - start,2),'\n************************************')
         
 
         num_groundings_per_head = {}
