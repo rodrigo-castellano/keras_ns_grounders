@@ -128,6 +128,8 @@ if __name__ == '__main__':
             args.test_batch_size = 128
         elif dataset_name == 'pharmkg_full' or dataset_name == 'FB15k237' or  dataset_name == 'wn18rr':
             args.test_batch_size = 16
+        else:
+            args.test_batch_size = 256
         args.facts_file = 'facts.txt'
         args.train_file = 'train.txt'  
         args.valid_file = 'valid.txt'
