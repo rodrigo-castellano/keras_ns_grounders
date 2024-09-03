@@ -44,10 +44,10 @@ if __name__ == '__main__':
     EARLY_STOPPING = True
     GLOBAL_SERIALIZATION = False
     LLM = False
-    ULTRA = False
+    ULTRA = True
     ULTRA_WITH_KGE = False
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
-    GROUNDER = ['backward_1', 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3']#,'domainbody','relationentity','full]
+    DATASET_NAME = ['countries_s1'] #['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
+    GROUNDER = ['backward_1'] #['backward_1', 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3']#,'domainbody','relationentity','full]
     KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['no_reasoner','dcr','sbr','r2n'] 
     RULE_MINER = ['amie','None'] 
@@ -126,7 +126,7 @@ if __name__ == '__main__':
         # args.test_batch_size = 128 if dataset_name in heavy_datasets_domainbody_relationentity else 256
         if dataset_name in heavy_datasets_domainbody_relationentity:
             args.test_batch_size = 128
-        elif dataset_name == 'pharmkg_full' or dataset_name == 'FB15k237' or  dataset_name == 'wn18rr':
+        elif dataset_name == 'pharmkg_full' or dataset_name == 'FB15k237' or  dataset_name == 'wn18rr' or dataset_name == 'kinship_family':
             args.test_batch_size = 16
         else:
             args.test_batch_size = 256
