@@ -44,7 +44,7 @@ if __name__ == '__main__':
     EARLY_STOPPING = True
     GLOBAL_SERIALIZATION = False
     LLM = False
-    ULTRA = True
+    ULTRA = False
     ULTRA_WITH_KGE = False
     DATASET_NAME = ['countries_s1'] #['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
     GROUNDER = ['backward_1'] #['backward_1', 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3']#,'domainbody','relationentity','full]
