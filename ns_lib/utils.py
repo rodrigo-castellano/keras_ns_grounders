@@ -327,6 +327,7 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
           filename = '%s.ckpt' % (self._filepath)
         #   filename = '%s__epoch%d.ckpt' % (self._filepath, epoch)
           self._model.save_weights(filename)
+          self.write_info(dir=os.path.dirname(filename), best_epoch = self.best_epoch)
           if self.verbose:
               print('Weights stored to %s' % filename, flush=True)
           self._last_checkpoint_filename = filename
@@ -351,6 +352,17 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
         # In memory restoring.
         assert self._best_weights is not None
         self._model.set_weights(self._best_weights)
+
+  def write_info(self,dir=None,best_epoch=None,training_time=None):
+    if dir is not None:
+        with open(os.path.join(dir, 'info.txt'), 'w') as f:
+            f.write('Best epoch: %d\n' % self.best_epoch)
+            if training_time is not None:
+                f.write('Training time: %.3f\n' % training_time)
+            else:
+                f.write('Training time: Not finished\n')
+            # write the date
+            f.write('Date: %s\n' % datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
 
 #############################################
 # Runtime utils.
@@ -526,7 +538,7 @@ class FileLogger:
                 # f.write(f'\nSignature;{args["run_signature"]}\n')
                 for name, dictionary in dicts.items():
                     f.write(f'{name};')
-                    f.write(";".join(f'{k}:{v}' for k, v in dictionary.items()))
+                    f.write(";".join(f'{k}:{v}' for k, v in dictionary.items())) if dictionary else f.write("None")
                     f.write("\n")
 
                 # f.write("\nAll data;")
