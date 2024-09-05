@@ -37,8 +37,8 @@ if __name__ == '__main__':
     use_logger = True
     use_WB = True
     log_folder :str = "./experiments/runs/"
-    ckpt_folder :str = None #os.path.join(log_folder,'checkpoints')
-    checkpoint_load = False
+    checkpoint_folder :str = "./../checkpoints/" # os.path.join(log_folder,'checkpoints')
+    checkpoint_load = True
     data_path :str = "experiments/data"
     epochs: int = 100
     EARLY_STOPPING = True
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     DATASET_NAME = ['countries_s1'] #['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
     GROUNDER = ['backward_1'] #['backward_1', 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3']#,'domainbody','relationentity','full]
     KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','dcr','sbr','r2n'] 
+    MODEL_NAME = ['r2n'] #['no_reasoner','dcr','sbr','r2n'] 
     RULE_MINER = ['amie','None'] 
     E = [100]#,300] 
     DEPTH = [1]
@@ -210,12 +210,10 @@ if __name__ == '__main__':
             args.run_signature = 'ultra_kge-'+args.run_signature
         elif args.use_llm:
             args.run_signature = 'llm-'+args.run_signature
-        
-        args.ckpt_filepath = (os.path.join(ckpt_folder, args.run_signature,args.run_signature) if ckpt_folder else None) 
-        args.checkpoint_load = os.path.join(ckpt_folder, args.run_signature,args.run_signature) if checkpoint_load else None
-        args.kge_checkpoint_load = None #os.path.join(ckpt_folder, args.run_signature,,args.run_signature) if checkpoint_load else None 
-        # append a hard copy of the args to the list of all_args
-        all_args.append(copy.deepcopy(args)) 
+        args.checkpoint_folder = checkpoint_folder
+        args.checkpoint_load = checkpoint_load
+        args.kge_checkpoint_load = None  
+        all_args.append(copy.deepcopy(args)) # append a hard copy of the args to the list of all_args
 
 
 
