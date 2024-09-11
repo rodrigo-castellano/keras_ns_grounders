@@ -124,10 +124,12 @@ if __name__ == '__main__':
         args.batch_size = 256 # Full batch only for explain.
         args.val_batch_size = 256
         # args.test_batch_size = 128 if dataset_name in heavy_datasets_domainbody_relationentity else 256
-        if dataset_name in heavy_datasets_domainbody_relationentity:
-            args.test_batch_size = 128
-        elif dataset_name == 'pharmkg_full' or dataset_name == 'FB15k237' or  dataset_name == 'wn18rr' or dataset_name == 'kinship_family':
+        if dataset_name in 'wn18rr' or dataset_name == 'FB15k237':
+            args.test_batch_size = 4
+        elif dataset_name == 'pharmkg_full' or dataset_name == 'kinship_family':
             args.test_batch_size = 16
+        elif dataset_name in 'countries_s3':
+            args.test_batch_size = 128
         else:
             args.test_batch_size = 256
         args.facts_file = 'facts.txt'
