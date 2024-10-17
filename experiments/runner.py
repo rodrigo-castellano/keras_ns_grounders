@@ -46,12 +46,12 @@ if __name__ == '__main__':
     LLM = False
     ULTRA = False
     ULTRA_WITH_KGE = False
-    DATASET_NAME = ['countries_s1'] #['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
-    GROUNDER = ['backward_1'] #['backward_1', 'backward_1_1','backward_2','backward_1_2','backward_3','backward_1_3']#,'domainbody','relationentity','full]
-    KGE = ['complex']#,'rotate']  # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['r2n'] #['no_reasoner','dcr','sbr','r2n'] 
+    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
+    GROUNDER = ['backward_1_1','backward_1_2','backward_1_3','backward_2_1','backward_2_2','backward_2_3'] # 'domainbody','relationentity','full']
+    KGE = ['complex'] # ["distmult", "transe","complex", "rotate"]
+    MODEL_NAME = ['no_reasoner','dcr','sbr','r2n'] 
     RULE_MINER = ['amie','None'] 
-    E = [100]#,300] 
+    E = [100]
     DEPTH = [1]
     SEED = [[0,1,2,3,4]]
     NEG_PER_SIDE = [1]
@@ -59,9 +59,9 @@ if __name__ == '__main__':
     DROPOUT = [0.0]
     R = [0.0]
     RR = [0.0]
-    LR = [0.01] #[0.01]
-    LR_SCHEDULER = ['plateau'] #['plateau'] # None
-    OPTIMIZER = ['adam'] #['adam'] #['None','adam']
+    LR = [0.01]
+    LR_SCHEDULER = ['plateau'] # None
+    OPTIMIZER = ['adam'] #['None','adam']
     NUM_RULES = [1] 
     VALID_SIZE = [None]
 
@@ -108,10 +108,15 @@ if __name__ == '__main__':
         heavy_datasets_domainbody_relationentity = {'countries_s3', 'wn18rr', 'pharmkg_full', 'FB15K', 'kinship_family'}
 
         # Discern the datasets for which the grounders full, domainbody, and relationentity are too heavy to run
-        if (grounder == 'full' and dataset_name not in light_datasets_full) or \
-        ((grounder in {'domainbody', 'relationentity'}) and dataset_name in heavy_datasets_domainbody_relationentity) or \
-        (model_name == 'no_reasoner' and grounder not in {'backward_1_1'}):
+        if model_name == 'no_reasoner' and grounder not in {'backward_1_1'}:
             continue
+
+        if dataset_name == 'countries_s3' and (grounder == 'full'):
+            continue
+        elif (dataset_name == 'kinship_family' or dataset_name == 'wn18rr') and (grounder == 'full' or grounder == 'backward_1_3' or grounder == 'backward_2_1' or grounder == 'backward_2_2' or grounder == 'backward_2_3'):
+            continue
+
+
         args.dataset_name = dataset_name
         args.grounder = grounder
         args.kge = kge
@@ -237,9 +242,9 @@ if __name__ == '__main__':
                 log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
                 if logger.exists_run(args.run_signature,seed):   
                     continue
-                # else:
-                #     print("Seed number ", seed, " not done. Exit")
-                #     continue
+                else:
+                    print("Seed number ", seed, " not done. Exit")
+                    continue
             else:   
                 log_filename_tmp = None
 
