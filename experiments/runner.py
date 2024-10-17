@@ -242,9 +242,9 @@ if __name__ == '__main__':
                 log_filename_tmp = os.path.join(log_folder,'_tmp_log-{}-{}-seed_{}.csv'.format(args.run_signature,date,seed))
                 if logger.exists_run(args.run_signature,seed):   
                     continue
-                else:
-                    print("Seed number ", seed, " not done. Exit")
-                    continue
+                # else:
+                #     print("Seed number ", seed, " not done. Exit")
+                #     continue
             else:   
                 log_filename_tmp = None
 
