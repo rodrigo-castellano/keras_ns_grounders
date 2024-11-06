@@ -29,7 +29,6 @@ neighborOf(zambia,botswana).
 neighborOf(zambia,zimbabwe).
 neighborOf(zambia,namibia).
 neighborOf(zambia,malawi).
-neighborOf(cyprus,united_kingdom).
 neighborOf(ireland,united_kingdom).
 neighborOf(burundi,dr_congo).
 neighborOf(burundi,rwanda).
