@@ -1,0 +1,2 @@
+locatedInCS(micronesia,micronesia) in train is an error
+neighborOf(cyprus,united_kingdom).

@@ -36,7 +36,7 @@ with open(ctes_path, 'w') as f:
 #     for pred in predicates:
 #         f.write(pred + '\n')
 
-# for valid and test, cerate new files with the lines that have the predicates and constants in the train set
+# for valid and test, cerate new files with only queries whose predicates and constants are present in the train set
 path = './'+dataset+'/valid.txt'
 lines_valid = []
 with open(path, 'r') as f:  

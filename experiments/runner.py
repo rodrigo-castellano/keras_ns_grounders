@@ -35,7 +35,7 @@ if __name__ == '__main__':
     # tf.config.run_functions_eagerly(True)
     # Choose whether to save the results or not, and the folders where to save them
     use_logger = True
-    use_WB = True
+    use_WB = False
     log_folder :str = "./experiments/runs/"
     checkpoint_folder :str = "./../checkpoints/" # os.path.join(log_folder,'checkpoints')
     checkpoint_load = True
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     LLM = False
     ULTRA = False
     ULTRA_WITH_KGE = False
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr']#,'FB15k237']
+    DATASET_NAME = ['FB15k237'] # ['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations']#,'FB15k237']
     GROUNDER = ['backward_1_1','backward_1_2','backward_1_3','backward_2_1','backward_2_2','backward_2_3'] # 'domainbody','relationentity','full']
     KGE = ['complex'] # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['no_reasoner','dcr','sbr','r2n'] 
@@ -105,7 +105,7 @@ if __name__ == '__main__':
             continue
         # Define sets for quick membership testing
         light_datasets_full = {'countries_s1', 'countries_s2', 'pharmkg_small'}
-        heavy_datasets_domainbody_relationentity = {'countries_s3', 'wn18rr', 'pharmkg_full', 'FB15K', 'kinship_family'}
+        heavy_datasets_domainbody_relationentity = {'countries_s3', 'wn18rr', 'pharmkg_full', 'FB15k237', 'kinship_family'}
 
         # Discern the datasets for which the grounders full, domainbody, and relationentity are too heavy to run
         if model_name == 'no_reasoner' and grounder not in {'backward_1_1'}:
@@ -113,7 +113,8 @@ if __name__ == '__main__':
 
         if dataset_name == 'countries_s3' and (grounder == 'full'):
             continue
-        elif (dataset_name == 'kinship_family' or dataset_name == 'wn18rr') and (grounder == 'full' or grounder == 'backward_1_3' or grounder == 'backward_2_1' or grounder == 'backward_2_2' or grounder == 'backward_2_3'):
+        elif (dataset_name == 'kinship_family' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237') and (grounder == 'full'
+                     or grounder == 'backward_1_3' or grounder == 'backward_2_1' or grounder == 'backward_2_2' or grounder == 'backward_2_3'):
             continue
 
 
@@ -151,11 +152,10 @@ if __name__ == '__main__':
             continue
 
         # Data params
-        args.corrupt_mode = 'TAIL' if ('pharmkg_full' in dataset_name or 'countries' in dataset_name) else 'HEAD_AND_TAIL'
-        # args.corrupt_mode = 'TAIL' if ('countries' in dataset_name or dataset_name=='wn18rr' or dataset_name=='FB15k237' or dataset_name== 'pharmkg_full') else 'HEAD_AND_TAIL'
+        args.corrupt_mode = 'TAIL' if (dataset_name=='pharmkg_full' or dataset_name=='FB15k237' or dataset_name=='wn18rr' or 'countries' in dataset_name) else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
-        args.valid_negatives = 200  
-        args.test_negatives = None  # all possible negatives
+        args.valid_negatives = 200
+        args.test_negatives = 500 if dataset_name=='FB15k237' else None # all possible negatives
         args.ragged = True
         args.format = "functional"
         args.engine_num_negatives = 0
