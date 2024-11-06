@@ -46,7 +46,7 @@ if __name__ == '__main__':
     LLM = False
     ULTRA = False
     ULTRA_WITH_KGE = False
-    DATASET_NAME = ['FB15k237'] # ['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations']#,'FB15k237']
+    DATASET_NAME = ['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
     GROUNDER = ['backward_1_1','backward_1_2','backward_1_3','backward_2_1','backward_2_2','backward_2_3'] # 'domainbody','relationentity','full']
     KGE = ['complex'] # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['no_reasoner','dcr','sbr','r2n'] 
