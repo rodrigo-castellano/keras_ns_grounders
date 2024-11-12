@@ -41,11 +41,11 @@ if __name__ == '__main__':
     LLM = False
     ULTRA = False
     ULTRA_WITH_KGE = False
-    DATASET_NAME = ['ablation_d3','ablation_d2'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
-    GROUNDER = ['backward_0_1','backward_0_2','backward_0_3','backward_1_1','backward_1_2','backward_1_3',
-                'backward_2_1','backward_2_2','backward_2_3','backward_3_1','backward_3_2','backward_3_3','backward_0_4','backward_1_4','backward_2_4','backward_3_4'] # 'domainbody','relationentity','full']
+    DATASET_NAME = ['countries_s1'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
+    GROUNDER = ['backward_1_1'] # ['backward_0_1','backward_0_2','backward_0_3','backward_1_1','backward_1_2','backward_1_3',
+               # 'backward_2_1','backward_2_2','backward_2_3',] # 'domainbody','relationentity','full']
     KGE = ['complex'] # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','dcr','sbr','r2n'] # 
+    MODEL_NAME = ['dcr'] # ['no_reasoner','dcr','sbr','r2n'] 
     RULE_MINER = ['amie','None'] 
     E = [100]
     DEPTH = [1]
@@ -216,6 +216,7 @@ if __name__ == '__main__':
         args.ckpt_folder = ckpt_folder
         args.ckpt_load = ckpt_load
         args.ckpt_save = ckpt_save
+        args.ckpt_save_kge = ckpt_save_kge
         args.kge_ckpt_load = None  
         all_args.append(copy.deepcopy(args)) # append a hard copy of the args to the list of all_args
 
