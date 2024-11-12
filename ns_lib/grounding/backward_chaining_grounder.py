@@ -394,7 +394,7 @@ class ApproximateBackwardChainingGrounder(Engine):
         # groundings_numbers = []
         for step in range(self.num_steps):
             # print('STEP NUMBER ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^', step,'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^','step ',step,'/', self.num_steps, 'known body',step == self.num_steps - 1, )
-            for rule in self.rules:
+            for j,rule in enumerate(self.rules):
                 # print('\nrule ', rule, ' """"""""""""""""""""""""""""""""""""""""" """""""""""""""""""""""""" ')
                 # Here we assume to have a Horn clause, fix it.
                 queries_per_rule = list(
@@ -418,6 +418,7 @@ class ApproximateBackwardChainingGrounder(Engine):
                     # groundings_numbers=groundings_numbers
                     )
                 # Update the list of processed rules.
+                # print('Total  groundings in res after rule',j,'/',len(self.rules),', step',step,sum([len(v) for k, v in self.rule2groundings.items()])) # IS IS MORE THAN THE GROUNDINGS_per_level BECAUSE THERE ARE DUPLICATES
                 self._rule2processed_queries[rule.name].update(queries_per_rule)
                 # print('\nqueries processed:, _rule2processed_queries\n', len(self._rule2processed_queries[rule.name]),self._rule2processed_queries[rule.name])
                 # print()
@@ -426,7 +427,6 @@ class ApproximateBackwardChainingGrounder(Engine):
  
             if step == self.num_steps - 1:
                 break
-
             # Get the queries for the next iteration.
             new_queries = set()
             for rule in self.rules:
@@ -442,6 +442,17 @@ class ApproximateBackwardChainingGrounder(Engine):
             self._init_internals(list(new_queries), clean=False)
 
         # print('Num groundings',sum([len(v) for k, v in self.rule2groundings.items()]))
+
+        # from collections import defaultdict
+        # num_groundings_per_head = defaultdict(int)
+        # for rule_name,groundings in self.rule2groundings.items():
+        #     for g in groundings:
+        #         head = g[0][0]
+        #         if head in queries: # WE ARE FILTERING ONLY GROUNDINGS OF POSITIVE QUERIES, BUT THERE ARE MANY OTHER GROUNDINGS
+        #             num_groundings_per_head[head] += 1
+        # n_heads = len(num_groundings_per_head)
+        # print('Num heads with groundings', n_heads,'/',len(queries), '(',n_heads/len(queries),')')
+
         if self.prune_incomplete_proofs:
             # check all the groundings with at least 1 atom missing, to see if they are proved (all atoms present in the facts)
             # print('\nstarting PruneIncompleteProofs')
@@ -456,7 +467,6 @@ class ApproximateBackwardChainingGrounder(Engine):
         if self.max_groundings_per_rule > 0:
             self.rule2groundings = {rule_name:set(list(groundings)[:self.max_groundings_per_rule])
                                     for rule_name,groundings in self.rule2groundings.items()}
-
         #print('R', self.rule2groundings)
         if 'deterministic' in kwargs and kwargs['deterministic']:
             ret = {rule_name: RuleGroundings(
@@ -465,7 +475,7 @@ class ApproximateBackwardChainingGrounder(Engine):
         else:
             ret = {rule_name: RuleGroundings(rule_name, list(groundings))
                    for rule_name,groundings in self.rule2groundings.items()}
-
+ 
         return ret
 
 
