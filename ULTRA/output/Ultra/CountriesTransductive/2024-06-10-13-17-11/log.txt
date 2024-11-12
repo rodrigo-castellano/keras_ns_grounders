@@ -1,0 +1,36 @@
+13:17:11   Random seed: 1024
+13:17:11   Config file: ./config/transductive/inference.yaml
+13:17:11   {'checkpoint': 'C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\ULTRA\\ckpts\\ultra_4g.pth',
+ 'dataset': {'class': 'CountriesTransductive',
+             'root': '~/git/ULTRA/kg-datasets/'},
+ 'model': {'class': 'Ultra',
+           'entity_model': {'aggregate_func': 'sum',
+                            'class': 'EntityNBFNet',
+                            'hidden_dims': [64, 64, 64, 64, 64, 64],
+                            'input_dim': 64,
+                            'layer_norm': True,
+                            'message_func': 'distmult',
+                            'short_cut': True},
+           'relation_model': {'aggregate_func': 'sum',
+                              'class': 'RelNBFNet',
+                              'hidden_dims': [64, 64, 64, 64, 64, 64],
+                              'input_dim': 64,
+                              'layer_norm': True,
+                              'message_func': 'distmult',
+                              'short_cut': True}},
+ 'optimizer': {'class': 'AdamW', 'lr': 0.0005},
+ 'output_dir': './output',
+ 'task': {'adversarial_temperature': 1,
+          'metric': ['mr', 'mrr', 'hits@1', 'hits@3', 'hits@10'],
+          'name': 'TransductiveInference',
+          'num_negative': 256,
+          'strict_negative': True},
+ 'train': {'batch_per_epoch': None,
+           'batch_size': 8,
+           'gpus': None,
+           'log_interval': 100,
+           'num_epoch': 0}}
+13:17:11   CountriesTransductive dataset
+13:17:11   #train: 1109, #valid: 50, #test: 25
+13:17:11   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+13:17:11   Evaluate on valid

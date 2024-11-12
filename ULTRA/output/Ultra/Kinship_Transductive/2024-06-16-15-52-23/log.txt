@@ -1,0 +1,48 @@
+15:52:23   Random seed: 1024
+15:52:23   Config file: ./config/transductive/inference.yaml
+15:52:23   {'checkpoint': 'C:\\Users\\rodri\\Downloads\\PhD_code\\Review_grounders\\keras_ns_grounders\\ULTRA\\ckpts\\ultra_4g.pth',
+ 'dataset': {'class': 'Kinship_Transductive',
+             'root': '~/git/ULTRA/kg-datasets/'},
+ 'model': {'class': 'Ultra',
+           'entity_model': {'aggregate_func': 'sum',
+                            'class': 'EntityNBFNet',
+                            'hidden_dims': [64, 64, 64, 64, 64, 64],
+                            'input_dim': 64,
+                            'layer_norm': True,
+                            'message_func': 'distmult',
+                            'short_cut': True},
+           'relation_model': {'aggregate_func': 'sum',
+                              'class': 'RelNBFNet',
+                              'hidden_dims': [64, 64, 64, 64, 64, 64],
+                              'input_dim': 64,
+                              'layer_norm': True,
+                              'message_func': 'distmult',
+                              'short_cut': True}},
+ 'optimizer': {'class': 'AdamW', 'lr': 0.0005},
+ 'output_dir': './output',
+ 'task': {'adversarial_temperature': 1,
+          'metric': ['mr', 'mrr', 'hits@1', 'hits@3', 'hits@10'],
+          'name': 'TransductiveInference',
+          'num_negative': 256,
+          'strict_negative': True},
+ 'train': {'batch_per_epoch': None,
+           'batch_size': 8,
+           'gpus': None,
+           'log_interval': 100,
+           'num_epoch': 0}}
+15:52:23   Kinship_Transductive dataset
+15:52:23   #train: 19845, #valid: 351, #test: 388
+15:52:23   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+15:52:23   Evaluate on valid
+15:53:15   mr: 49.7122
+15:53:15   mrr: 0.150011
+15:53:15   hits@1: 0.0541311
+15:53:15   hits@3: 0.156695
+15:53:15   hits@10: 0.347578
+15:53:15   >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+15:53:15   Evaluate on test
+15:54:08   mr: 49.1469
+15:54:08   mrr: 0.171567
+15:54:08   hits@1: 0.0773196
+15:54:08   hits@3: 0.173969
+15:54:08   hits@10: 0.365979
