@@ -28,9 +28,9 @@ if __name__ == '__main__':
     base_path :str = "./experiments/data"
     epochs: int = 100
     assert epochs > 0
-    DATASET_NAME = ['pharmkg_small']# ['kinship_family','pharmkg_small','pharmkg_full','wn18rr'] # 'countries_s1','countries_s2','countries_s3',
+    DATASET_NAME = ['wn18rr'] #['ablation_d1','ablation_d2','ablation_d3']# ['kinship_family','pharmkg_small','pharmkg_full','wn18rr'] # 'countries_s1','countries_s2','countries_s3',
     MODIFIED_DATASET = [False]
-    GROUNDER = ['backward_1_1', 'backward_noprune_1_1', 'backward_1_2', 'backward_noprune_1_2', 'backward_1_3', 'backward_noprune_1_3', 'full']
+    GROUNDER = ['backward_1_1','backward_1_2','backward_1_3'] # ['backward_0_1', 'backward_0_2','backward_0_3','backward_1_1','backward_1_2','backward_1_3','backward_2_1','backward_2_2','backward_2_3'] #, 'backward_noprune_1_1', 'backward_1_2', 'backward_noprune_1_2', 'backward_1_3', 'backward_noprune_1_3', 'full']
     KGE = ['complex']   
     MODEL_NAME =  ['sbr']  
     RULE_MINER = ['amie','None'] 

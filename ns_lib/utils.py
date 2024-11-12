@@ -186,7 +186,7 @@ def read_rules(path,args):
                 if 'nations' in args.dataset_name:
                     for var in variables:
                         var_names[var] = "countries"
-                elif ('countries' in args.dataset_name) or ('test_dataset' in args.dataset_name):
+                elif ('countries' in args.dataset_name) or ('ablation' in args.dataset_name):
                         var_names = {"X": "countries", "W": "subregions", "Z": "regions", "Y": "countries", "K": "countries"}
                         if 'nodomain' in args.dataset_name:
                             for var in variables:

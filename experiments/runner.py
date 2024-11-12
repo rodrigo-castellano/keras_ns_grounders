@@ -7,8 +7,8 @@ sys.path.append(os.path.join(current_dir, '..'))
 sys.path.append(os.path.join(current_dir, '..', 'ULTRA'))
 sys.path.append(os.path.join(current_dir, '..', 'ns_lib'))
 import tensorflow as tf
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import copy
 from itertools import product
 from train import main
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     use_WB = False
     log_folder :str = "./experiments/runs/"
     checkpoint_folder :str = "./../checkpoints/" # os.path.join(log_folder,'checkpoints')
-    checkpoint_load = True
+    checkpoint_load = None
     data_path :str = "experiments/data"
     epochs: int = 100
     EARLY_STOPPING = True
@@ -46,10 +46,11 @@ if __name__ == '__main__':
     LLM = False
     ULTRA = False
     ULTRA_WITH_KGE = False
-    DATASET_NAME = ['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
-    GROUNDER = ['backward_1_1','backward_1_2','backward_1_3','backward_2_1','backward_2_2','backward_2_3'] # 'domainbody','relationentity','full']
+    DATASET_NAME = ['ablation_d3','ablation_d2'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
+    GROUNDER = ['backward_0_1','backward_0_2','backward_0_3','backward_1_1','backward_1_2','backward_1_3',
+                'backward_2_1','backward_2_2','backward_2_3','backward_3_1','backward_3_2','backward_3_3','backward_0_4','backward_1_4','backward_2_4','backward_3_4'] # 'domainbody','relationentity','full']
     KGE = ['complex'] # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','dcr','sbr','r2n'] 
+    MODEL_NAME = ['no_reasoner','dcr','sbr','r2n'] # 
     RULE_MINER = ['amie','None'] 
     E = [100]
     DEPTH = [1]
@@ -183,7 +184,7 @@ if __name__ == '__main__':
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
         args.valid_frequency = 5 if not EARLY_STOPPING else 1
-        args.resnet = True
+        args.resnet = True if 'ablation' not in dataset_name else False
         args.reasoner_depth = dp if nr > 0 else 0
         args.reasoner_regularization_factor = rr
         args.reasoner_formula_hidden_embedding_size = args.kge_atom_embedding_size
@@ -202,8 +203,8 @@ if __name__ == '__main__':
         # args.relation_entity_grounder_max_elements = 20
         # args.semiring = "product"
 
-        run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg, e)
-        args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e',]
+        run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg, e, args.batch_size, args.val_batch_size, args.test_batch_size)
+        args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e','train_batch_size','val_batch_size','test_batch_size']
         args.run_signature = '-'.join(f'{v}' for v in run_vars)    
 
         args.device = 'cpu' # if not tf.config.experimental.list_physical_devices('GPU') else 'gpu'
