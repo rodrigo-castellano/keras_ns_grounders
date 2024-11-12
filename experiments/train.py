@@ -25,7 +25,7 @@ explain_enabled: bool = False
 
 
 
-def main(data_path, output_filename, log_filename, use_WB, args):
+def main(data_path, log_filename, use_WB, args):
 
     print('\nARGS', args,'\n')
     seed = get_arg(args, 'seed_run_i', 0)
@@ -241,7 +241,7 @@ def main(data_path, output_filename, log_filename, use_WB, args):
     best_model_callback = MMapModelCheckpoint(
         model, 'val_task_mrr',
         frequency=args.valid_frequency,
-        # if path is not None, chepoint to file.
+        # if path is not None, save checkpoint to file.
         filepath=get_arg(args, 'checkpoint_filepath', None))
     callbacks.append(best_model_callback)
 
@@ -280,9 +280,6 @@ def main(data_path, output_filename, log_filename, use_WB, args):
         best_model_callback.restore_weights()
         best_model_callback.write_info(dir=os.path.dirname(checkpoint_name),best_epoch=best_model_callback.best_epoch,training_time=args.time_train)
 
-        # if output_filename is not None:
-        #     print('Saving model weights to', output_filename)
-        #     model.save_weights(output_filename, overwrite=True)
     else:
         if use_WB:
             run.finish
@@ -290,6 +287,85 @@ def main(data_path, output_filename, log_filename, use_WB, args):
         best_model_callback._weights_saved = True
         best_model_callback._last_checkpoint_filename = checkpoint_name
         best_model_callback.restore_weights()
+
+
+
+    def save_embeddings_from_model(model, serializer, save_dir="embeddings"):
+        """
+        Extract and save embeddings from a trained KGEModel.
+        
+        Args:
+            model: Trained KGEModel instance 
+            save_dir: Directory to save embedding dictionaries
+            
+        Returns:
+            constant_embeddings_dict: Dict mapping constant names to embeddings for each domain
+            predicate_embeddings_dict: Dict mapping predicate names to embeddings
+        """
+
+        
+        # Get constant embeddings using global indices
+        # QUESTION. what are the names they correspond to? Are they the global indices?
+        X_domains = {domain.name: tf.range(len(domain.constants)) 
+                    for domain in fol.domains}
+        # print('X_domains', X_domains)
+
+        constant_to_global_index = serializer.constant_to_global_index  # Dict[domain][constant] = index
+        global_index_to_constant = { # WONRGLY DONE, DO THE PRINTS
+            domain: {index: const for const, index in const_dict.items()}
+            for domain, const_dict in constant_to_global_index.items()
+        }
+        print('constant_to_global_index', [(k,v) for k,v in constant_to_global_index.items()])
+        print('global_index_to_constant', [(k,v) for k,v in global_index_to_constant.items()])
+        # QUESTION. are the given embeddings the embeddings of the constants after training? or are they random?
+        constant_embeddings = model.kge_model.constant_embedder(X_domains)
+        # print('constant_embeddings', [(k,v.shape) for k,v in constant_embeddings.items()])
+
+        # Map constant names to embeddings for each domain
+        constant_embeddings_dict = {}
+        for domain in fol.domains:
+            domain_dict = {}
+            if model.global_serialization:
+                # For global serialization, embeddings are tuples of (indices, embeddings)
+                indices = constant_embeddings[domain.name][0].numpy()
+                embeddings = constant_embeddings[domain.name][1].numpy()
+                for idx, const in enumerate(domain.constants):
+                    domain_dict[const] = embeddings[idx]
+            else:
+                embeddings = constant_embeddings[domain.name].numpy()
+                # print('domain.constants', domain.constants)
+                for idx, const in enumerate(domain.constants): # It is assigning idx to constants in alphabetical order. I need to make sure that they are created like that also
+                    domain_dict[const] = embeddings[idx]
+            constant_embeddings_dict[domain.name] = domain_dict
+
+        # print('constant_embeddings_dict', [(name, len(embeddings)) for name, embeddings in constant_embeddings_dict.items()])
+        # for domain in fol.domains:
+            # print('domain.name', domain.name,[(k,v.shape) for k,v in constant_embeddings_dict[domain.name].items()])
+        print(aaaa)
+
+        # Get predicate embeddings using global indices
+        predicate_embeddings = model.predicate_embedder(model.predicate_index_tensor)
+        
+        # Map predicate names to embeddings
+        predicate_embeddings_dict = {
+            pred.name: predicate_embeddings[fol.name2predicate_idx[pred.name]].numpy()
+            for pred in fol.predicates
+        }
+
+        # # Save embeddings
+        # os.makedirs(save_dir, exist_ok=True)
+
+        # with open(os.path.join(save_dir, "constant_embeddings.pkl"), "wb") as f:
+        #     pickle.dump(constant_embeddings_dict, f)
+            
+        # with open(os.path.join(save_dir, "predicate_embeddings.pkl"), "wb") as f:
+        #     pickle.dump(predicate_embeddings_dict, f)
+            
+        # print(f"Saved embeddings to {save_dir}/")
+    
+        return constant_embeddings_dict,  predicate_embeddings_dict
+    
+    save_embeddings_from_model(model, serializer, save_dir="embeddings")
 
 
 
