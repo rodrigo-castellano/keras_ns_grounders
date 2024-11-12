@@ -29,9 +29,11 @@ if __name__ == '__main__':
     # tf.config.run_functions_eagerly(True)
     use_logger = False
     use_WB = False
-    checkpoint_load = None
+    ckpt_load = False
+    ckpt_save = False
+    ckpt_save_kge = False
     log_folder :str = "./experiments/runs/"
-    checkpoint_folder :str = "./../checkpoints/" # None
+    ckpt_folder = "./../checkpoints/"
     data_path :str = "experiments/data"
     epochs: int = 100
     EARLY_STOPPING = True
@@ -211,9 +213,10 @@ if __name__ == '__main__':
             args.run_signature = 'ultra_kge-'+args.run_signature
         elif args.use_llm:
             args.run_signature = 'llm-'+args.run_signature
-        args.checkpoint_folder = checkpoint_folder
-        args.checkpoint_load = checkpoint_load
-        args.kge_checkpoint_load = None  
+        args.ckpt_folder = ckpt_folder
+        args.ckpt_load = ckpt_load
+        args.ckpt_save = ckpt_save
+        args.kge_ckpt_load = None  
         all_args.append(copy.deepcopy(args)) # append a hard copy of the args to the list of all_args
 
 
