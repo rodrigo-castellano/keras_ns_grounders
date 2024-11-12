@@ -11,7 +11,7 @@ import torch
 from ns_lib.logic.commons import Domain
 # from transformers import AutoModel, AutoTokenizer
 from ns_lib.logic import FOL
-import wikipediaapi as wk
+# import wikipediaapi as wk
 # from transformers import AutoTokenizer, AutoModel
 import torch.nn.functional as F
 from tqdm import tqdm
