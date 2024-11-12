@@ -181,28 +181,29 @@ def main(data_path, log_filename, use_WB, args):
                     run_eagerly=False)
 
     # Check that either checkpoint_load or kge_checkpoint_load is None, but not both.
-    assert get_arg(args, 'checkpoint_load', None) is None or (
-        get_arg(args, 'kge_checkpoint_load', None) is None)
+    assert get_arg(args, 'ckpt_load', None) is None or (
+        get_arg(args, 'kge_ckpt_load', None) is None)
     
-    args.checkpoint_filepath = os.path.join(args.checkpoint_folder, args.run_signature+'_seed_'+str(seed), args.run_signature+'_seed_'+str(seed))
-    checkpoint_name = args.checkpoint_filepath + '.ckpt' 
+    ckpt_dir = os.path.join(args.ckpt_folder, args.run_signature+'_seed_'+str(seed))
+    ckpt_filepath = os.path.join(ckpt_dir, args.run_signature+'_seed_'+str(seed))
+    ckpt_name = ckpt_filepath + '.ckpt' 
     
     # If checkpoint_load is not None, load the weights from the checkpoint.
     if get_arg(args, 'checkpoint_load', None) is not None:
         _ = model(next(iter(data_gen_train))[0])  # force building the model.
 
         exists_ckpt_seed = False
-        if os.path.exists(os.path.dirname(checkpoint_name)):
-            for file in os.listdir(os.path.dirname(checkpoint_name)):
+        if os.path.exists(ckpt_dir):
+            for file in os.listdir(ckpt_dir):
                 if args.run_signature+'_seed_'+str(seed)+'.ckpt' in file:
                     exists_ckpt_seed = True
                     break
 
         if exists_ckpt_seed:
-            model.load_weights(checkpoint_name)
-            print('Weights loaded from', checkpoint_name, flush=True)
+            model.load_weights(ckpt_name)
+            print('Weights loaded from', ckpt_name, flush=True)
         else:
-            print('Weights not found in', checkpoint_name, flush=True)   
+            print('Weights not found in', ckpt_name, flush=True)   
             args.checkpoint_load = None
         model.summary()
 
@@ -227,23 +228,19 @@ def main(data_path, log_filename, use_WB, args):
             verbose=1)
         callbacks.append(early_stopping)
 
-    if not args.use_ultra and not args.use_llm:
-        kge_filepath = get_arg(args, 'checkpoint_filepath', None)
-        if kge_filepath is not None:
-            kge_filepath =  '%s_kge_model' % kge_filepath
-        kge_best_model_callback = MMapModelCheckpoint(
-            model.kge_model, 'val_concept_mrr',
-            frequency=args.valid_frequency,
-            # if path is not None, checkpoint to file.
-            filepath=kge_filepath)
-        callbacks.append(kge_best_model_callback)
-
-    best_model_callback = MMapModelCheckpoint(
-        model, 'val_task_mrr',
-        frequency=args.valid_frequency,
-        # if path is not None, save checkpoint to file.
-        filepath=get_arg(args, 'checkpoint_filepath', None))
-    callbacks.append(best_model_callback)
+    if not args.use_ultra and not args.use_llm and (args.ckpt_save_kge or args.ckpt_save):
+        if args.ckpt_save_kge:
+            kge_best_model_callback = MMapModelCheckpoint(
+                model.kge_model, 'val_concept_mrr',
+                frequency=args.valid_frequency,
+                filepath='%s_kge_model' % ckpt_filepath)
+            callbacks.append(kge_best_model_callback)
+        if args.ckpt_save:
+            best_model_callback = MMapModelCheckpoint(
+                model, 'val_task_mrr',
+                frequency=args.valid_frequency,
+                filepath=ckpt_filepath)
+            callbacks.append(best_model_callback)
 
     # Initialize a W&B run
     if use_WB:
@@ -278,14 +275,14 @@ def main(data_path, log_filename, use_WB, args):
         args.time_train = np.round(end_train - start_train,2)
         print('Training time:', np.round(end_train - start_train,2), 'seconds')
         best_model_callback.restore_weights()
-        best_model_callback.write_info(dir=os.path.dirname(checkpoint_name),best_epoch=best_model_callback.best_epoch,training_time=args.time_train)
+        best_model_callback.write_info(dir=ckpt_dir,best_epoch=best_model_callback.best_epoch,training_time=args.time_train)
 
     else:
         if use_WB:
             run.finish
         args.time_train = 0
         best_model_callback._weights_saved = True
-        best_model_callback._last_checkpoint_filename = checkpoint_name
+        best_model_callback._last_checkpoint_filename = ckpt_name
         best_model_callback.restore_weights()
 
 

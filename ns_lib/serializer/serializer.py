@@ -41,7 +41,7 @@ class LogicSerializerFast(IndexerBase):
         self.domains = domains
         self.constant2domain_name = constant2domain_name
 
-        self.constant_to_global_index = defaultdict(OrderedDict)
+        self.constant_to_global_index = defaultdict(OrderedDict) # X_domains
         self.adaptive_constant2domain = defaultdict(OrderedDict)
         for domain in domains:
             # Add fixed constants. Global index for each constant in each domain (starting from 0 in each domain)
