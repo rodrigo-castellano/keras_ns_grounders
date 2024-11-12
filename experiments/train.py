@@ -188,8 +188,8 @@ def main(data_path, log_filename, use_WB, args):
     ckpt_filepath = os.path.join(ckpt_dir, args.run_signature+'_seed_'+str(seed))
     ckpt_name = ckpt_filepath + '.ckpt' 
     
-    # If checkpoint_load is not None, load the weights from the checkpoint.
-    if get_arg(args, 'checkpoint_load', None) is not None:
+    # load ckpt
+    if not get_arg(args, 'ckpt_load', False):
         _ = model(next(iter(data_gen_train))[0])  # force building the model.
 
         exists_ckpt_seed = False
@@ -228,6 +228,7 @@ def main(data_path, log_filename, use_WB, args):
             verbose=1)
         callbacks.append(early_stopping)
 
+    # Save ckpt
     if not args.use_ultra and not args.use_llm and (args.ckpt_save_kge or args.ckpt_save):
         if args.ckpt_save_kge:
             kge_best_model_callback = MMapModelCheckpoint(
@@ -255,10 +256,8 @@ def main(data_path, log_filename, use_WB, args):
                 epochs = args.epochs)) 
         callbacks.append(WandbMetricsLogger(log_freq=10))
 
-
-
     # TRAIN
-    if args.epochs > 0 and get_arg(args, 'checkpoint_load', None) is None:
+    if args.epochs > 0 and get_arg(args, 'ckpt_load', None) is None:
 
         history = model.fit(data_gen_train,
                 epochs=args.epochs,
@@ -385,7 +384,7 @@ def main(data_path, log_filename, use_WB, args):
     train_eval_metrics = dict(zip(model.metrics_names,train_metrics))
     valid_eval_metrics = dict(zip(model.metrics_names,valid_metrics))
     test_eval_metrics = dict(zip(model.metrics_names,test_metrics))
-    training_info = history.history if (args.epochs > 0 and get_arg(args, 'checkpoint_load', None) is None)  else None
+    training_info = history.history if (args.epochs > 0 and not get_arg(args, 'ckpt_load',False))  else None
 
     print('\nMetrics:',train_eval_metrics.keys()) 
     print('\nResults',
