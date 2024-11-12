@@ -1,5 +1,7 @@
 import os
 import tensorflow as tf
+# print cwd
+print('Current working directory:', os.getcwd())
 import ns_lib as ns
 from itertools import product
 import numpy as np
@@ -180,16 +182,14 @@ def main(data_path, log_filename, use_WB, args):
                     metrics=metrics,
                     run_eagerly=False)
 
-    # Check that either checkpoint_load or kge_checkpoint_load is None, but not both.
-    assert get_arg(args, 'ckpt_load', None) is None or (
-        get_arg(args, 'kge_ckpt_load', None) is None)
-    
+    # CKPT DEFINITION
+    assert not args.ckpt_load or not args.kge_ckpt_load, "Cannot load both KGE and task model weights"
     ckpt_dir = os.path.join(args.ckpt_folder, args.run_signature+'_seed_'+str(seed))
     ckpt_filepath = os.path.join(ckpt_dir, args.run_signature+'_seed_'+str(seed))
     ckpt_name = ckpt_filepath + '.ckpt' 
     
-    # load ckpt
-    if not get_arg(args, 'ckpt_load', False):
+    # CKPT LOAD
+    if args.ckpt_load:
         _ = model(next(iter(data_gen_train))[0])  # force building the model.
 
         exists_ckpt_seed = False
@@ -203,13 +203,10 @@ def main(data_path, log_filename, use_WB, args):
             model.load_weights(ckpt_name)
             print('Weights loaded from', ckpt_name, flush=True)
         else:
+            args.ckpt_load = False
             print('Weights not found in', ckpt_name, flush=True)   
-            args.checkpoint_load = None
         model.summary()
 
-    # _ = model(next(iter(data_gen_train))[0])  # force building the model.
-    # print('Model built', flush=True)
-    # print('Model summary',model.summary(), flush=True)
 
     # CALLBACKS
     callbacks = []
@@ -228,22 +225,20 @@ def main(data_path, log_filename, use_WB, args):
             verbose=1)
         callbacks.append(early_stopping)
 
-    # Save ckpt
-    if not args.use_ultra and not args.use_llm and (args.ckpt_save_kge or args.ckpt_save):
-        if args.ckpt_save_kge:
-            kge_best_model_callback = MMapModelCheckpoint(
-                model.kge_model, 'val_concept_mrr',
-                frequency=args.valid_frequency,
-                filepath='%s_kge_model' % ckpt_filepath)
-            callbacks.append(kge_best_model_callback)
-        if args.ckpt_save:
-            best_model_callback = MMapModelCheckpoint(
-                model, 'val_task_mrr',
-                frequency=args.valid_frequency,
-                filepath=ckpt_filepath)
-            callbacks.append(best_model_callback)
+    # CKPT SAVE
+    kge_best_model_callback = MMapModelCheckpoint(
+        model.kge_model, 'val_concept_mrr',
+        frequency=args.valid_frequency,
+        filepath='%s_kge_model' % ckpt_filepath if args.ckpt_save_kge else None)
+    callbacks.append(kge_best_model_callback)
 
-    # Initialize a W&B run
+    best_model_callback = MMapModelCheckpoint(
+        model, 'val_task_mrr',
+        frequency=args.valid_frequency,
+        filepath=ckpt_filepath if args.ckpt_save else None)
+    callbacks.append(best_model_callback)
+
+    # W&B RUN
     if use_WB:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         dir = os.path.join(current_dir, '../..')
@@ -257,7 +252,7 @@ def main(data_path, log_filename, use_WB, args):
         callbacks.append(WandbMetricsLogger(log_freq=10))
 
     # TRAIN
-    if args.epochs > 0 and get_arg(args, 'ckpt_load', None) is None:
+    if args.epochs > 0 and not args.ckpt_load:
 
         history = model.fit(data_gen_train,
                 epochs=args.epochs,
