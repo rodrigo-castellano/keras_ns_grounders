@@ -24,21 +24,14 @@ wandb.login()
 
 if __name__ == '__main__':
 
-    # import sys 
-    # # Define the file to redirect output to
-    # log_file = open('./experiments/training_logs.txt', 'a')
-    # sys.stdout = sys.stderr = log_file
-    
-    # RSENEEEEEEEEEET!!!!!!!!
-    
+
     print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
     # tf.config.run_functions_eagerly(True)
-    # Choose whether to save the results or not, and the folders where to save them
-    use_logger = True
+    use_logger = False
     use_WB = False
-    log_folder :str = "./experiments/runs/"
-    checkpoint_folder :str = "./../checkpoints/" # os.path.join(log_folder,'checkpoints')
     checkpoint_load = None
+    log_folder :str = "./experiments/runs/"
+    checkpoint_folder :str = "./../checkpoints/" # None
     data_path :str = "experiments/data"
     epochs: int = 100
     EARLY_STOPPING = True
@@ -249,7 +242,7 @@ if __name__ == '__main__':
             else:   
                 log_filename_tmp = None
 
-            train_eval_metrics,valid_eval_metrics, test_eval_metrics, training_info = main(data_path,None,log_filename_tmp,use_WB,args)
+            train_eval_metrics,valid_eval_metrics, test_eval_metrics, training_info = main(data_path,log_filename_tmp,use_WB,args)
 
 
             if use_logger:
