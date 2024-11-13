@@ -3,7 +3,6 @@ import ns_lib as ns
 from ns_lib.logic.commons import Atom, FOL, RuleGroundings
 import tensorflow as tf
 import numpy as np
-import torch
 import sys
 import os
 import torch
@@ -13,14 +12,6 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 sys.path.append(os.path.join(current_dir, '..'))
 sys.path.append(os.path.join(current_dir, '..', 'experiments'))
-
-import ultra_utils
-from ultra_utils import Ultra as Ultra_modified
-from ULTRA.ultra.models import Ultra
-from ULTRA.ultra import tasks
-import itertools
-from ULTRA.ultra.tasks import build_relation_graph
-from ns_lib.nn.constant_embedding import LMEmbeddings
 
 DomainName = str
 ConstantName = str
