@@ -1,6 +1,21 @@
 # In case I want to use ultra, substitute the DataGenerator class by this one, same with the rest of the functions
 
 
+# RUN.PY
+sys.path.append(os.path.join(current_dir, '..', 'ULTRA'))
+LLM = False
+ULTRA = False
+ULTRA_WITH_KGE = False
+args.use_ultra = ULTRA
+args.use_ultra_with_kge = ULTRA_WITH_KGE
+args.use_llm = LLM
+if args.use_ultra:
+    args.run_signature = 'ultra-'+args.run_signature 
+elif args.use_ultra_with_kge:
+    args.run_signature = 'ultra_kge-'+args.run_signature
+elif args.use_llm:
+    args.run_signature = 'llm-'+args.run_signature
+
 # TRAINING.PY
 from ns_lib.dataset import get_ultra_datasets
 
