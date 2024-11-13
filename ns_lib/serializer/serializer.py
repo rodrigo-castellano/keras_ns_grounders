@@ -81,6 +81,7 @@ class LogicSerializerFast(IndexerBase):
         Takes all the atoms from groundings and queries and returns 
           
           - atoms (predicate_to_constant_tuples): batch atoms represented by constant (local) indices and pred as str, e.g. {'LocIn': [[1,34],[2,3],...],...}
+                the ith element of the list is the atom (local) index
           
           - grundings (index_groundings): all groundings represented by atom (local) indices and pred implicit, e.g. {'rule1': ([[1],[3],...], [[1,34],[2,3],...]), 'rule2'...}
           

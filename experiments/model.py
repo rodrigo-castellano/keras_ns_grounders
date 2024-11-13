@@ -35,8 +35,7 @@ class KGEModel(Model):
             predicate_embedding_size,
             regularization=kge_regularization,
             has_features=False)
-        cte_embedder = ConstantEmbeddings
-        self.constant_embedder = cte_embedder( 
+        self.constant_embedder = ConstantEmbeddings( 
             domains=fol.domains,
             constant_embedding_sizes_per_domain={
                 domain.name: constant_embedding_size
@@ -67,8 +66,8 @@ class KGEModel(Model):
     def create_triplets(self,
                         constant_embeddings: Dict[str, tf.Tensor],
                         predicate_embeddings: tf.Tensor,
-                        A_predicates: Dict[str, tf.Tensor],
-                        X_domains: Dict[str, tf.Tensor]):
+                        A_predicates: Dict[str, tf.Tensor]):
+        
         predicate_embeddings_per_triplets = []
         '''For A_predicates, take the emebdding representation of the predicates and the constants and create the triplets for the KGE model.
         For instance, if I have a predicate with 3 grounded atoms, I will repeat the embedding of that predicate 3 times, and put it with the 
@@ -76,19 +75,6 @@ class KGEModel(Model):
         - output: 
             predicate_embeddings_per_triplets: [n_predicates, n_atoms/grounding per predicate, embed_size_predicate]
             constant_embeddings_for_triplets: [n_atoms,2=n_domains,embed_size_constant]'''
-            
-        # tf.print('\nKGE X_domains')
-        # for domain,constant_idx in X_domains.items():
-        #     tf.print('KGE X_domains',domain,constant_idx,summarize=-1)
-        # tf.print('KGE A_predicates')
-        # for p,constant_idx in A_predicates.items():
-        #     tf.print('KGE A_predicates',p,constant_idx,summarize=-1)
-        # tf.print('KGE constant_embeddings')
-        # for domain,constant_idx in constant_embeddings.items():
-        #     tf.print('KGE constant_embeddings',domain,constant_idx.shape,summarize=-1)  
-        # tf.print('KGE predicate_embeddings')
-        # for predicate_embeddings in predicate_embeddings:
-        #     tf.print('KGE predicate_embeddings',predicate_embeddings.shape,summarize=-1)
 
         for p,indices in A_predicates.items():
             idx = self.fol.name2predicate_idx[p]
@@ -132,8 +118,6 @@ class KGEModel(Model):
         '''
         X_domains type is Dict[str, inputs]
         A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
-        For x_domains, I get each domain value (country,region...) represented by a index
-        For A_predicates, I get the predicate name and the constant indices for each grounding
         '''
         (X_domains, A_predicates) = inputs
         if self.adaptive_constant_embedder is not None:
@@ -165,7 +149,6 @@ class KGEModel(Model):
         # A_predicates indicates the indeces of the constants for each grounding of the predicate, i.e., the queries
         predicate_embeddings_per_triplets, constant_embeddings_for_triplets = \
             self.create_triplets(constant_embeddings, predicate_embeddings, A_predicates,X_domains) 
-        
         # Given the triplets with their embeddings obtained in create_triplets, I get the embeddings of the atoms with e.g. Transe
         atom_embeddings = self.kge_embedder((predicate_embeddings_per_triplets,
                                              constant_embeddings_for_triplets))
