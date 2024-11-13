@@ -31,12 +31,12 @@ if __name__ == '__main__':
     use_WB = False
     load_model_ckpt = True
     load_kge_ckpt = False
-    save_model_ckpt = False
-    save_kge_ckpt = False
+    save_model_ckpt = True
+    save_kge_ckpt = save_model_ckpt
     log_folder :str = "./experiments/runs/"
     ckpt_folder = "./../checkpoints/"
     data_path :str = "experiments/data"
-    epochs: int = 10
+    epochs: int = 0
     EARLY_STOPPING = True
     GLOBAL_SERIALIZATION = False
     LLM = False

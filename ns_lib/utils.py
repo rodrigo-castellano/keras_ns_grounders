@@ -285,7 +285,7 @@ class PrintEachEpochCallback(tf.keras.callbacks.Callback):
 
 
 
-def load_model_weights(model, ckpt_filepath, verbose=False):
+def load_model_weights(model, ckpt_filepath, verbose=True):
     """
     Load the weights of a model from a checkpoint file.
     
@@ -298,7 +298,8 @@ def load_model_weights(model, ckpt_filepath, verbose=False):
         success: Boolean indicating whether the weights were loaded successfully
     """
     success = False
-    if os.path.exists(ckpt_filepath+'.index'):
+    ckpt_filepath = ckpt_filepath + '.ckpt'
+    if os.path.exists(ckpt_filepath + '.index'):
         model.load_weights(ckpt_filepath)
         success = True
         if verbose:
@@ -313,6 +314,7 @@ def load_model_weights(model, ckpt_filepath, verbose=False):
 # This extends the functionalities of tf.keras.callbacks.ModelCheckpoint,
 # which can save only to file and it is much slower for small
 # non-persistent tests.
+
 class MMapModelCheckpoint(tf.keras.callbacks.Callback):
     """Callback to save model weights when a metric improves."""
     
@@ -377,7 +379,7 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
         if improved:
             if self.verbose:
                 print(f'\nBest {self.name} {self.monitor}: {current_value:.5f}. '
-                      f'Improvement of  {self.best_value-current_value:.5f}') if self.best_epoch is not None else None
+                      f'Delta = {self.best_value-current_value:.5f}') if self.best_epoch is not None else None
             self.best_value = current_value
             self.best_epoch = epoch
             self.best_weights = self.model.get_weights()
@@ -422,8 +424,9 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
         with open(info_path, 'w') as f:
             json.dump(info, f, indent=2)
             
-        # if self.verbose:
-        #     print(f'Checkpoint info saved to {info_path}')
+
+
+
 
 #############################################
 # Runtime utils.
