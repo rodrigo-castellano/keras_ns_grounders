@@ -689,7 +689,13 @@ class CollectiveModel(Model):
 
 # DATASET.PY
 
-
+import ultra_utils
+from ultra_utils import Ultra as Ultra_modified
+from ULTRA.ultra.models import Ultra
+from ULTRA.ultra import tasks
+import itertools
+from ULTRA.ultra.tasks import build_relation_graph
+from ns_lib.nn.constant_embedding import LMEmbeddings
 
 def _from_strings_to_tensors(fol, serializer,
                              queries, labels, engine, ragged,
