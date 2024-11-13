@@ -14,13 +14,11 @@ from keras.callbacks import CSVLogger
 from ns_lib.logic.commons import Atom, Domain, FOL, Rule, RuleLoader
 from ns_lib.grounding.grounder_factory import BuildGrounder
 from ns_lib.utils import MMapModelCheckpoint, KgeLossFactory, get_arg, load_model_weights
-from ns_lib.dataset import get_ultra_datasets
 import time
 from model_utils import * 
 import wandb
 from wandb.integration.keras import WandbCallback
 from wandb.integration.keras import WandbMetricsLogger
-# from ultra_utils import  Ultra,nested_dict
 explain_enabled: bool = False
 
 
@@ -77,12 +75,6 @@ def main(data_path, log_filename, use_WB, args):
         constant2domain_name=fol.constant2domain_name,
         domain2adaptive_constants=domain2adaptive_constants)
 
-    if args.use_ultra or args.use_ultra_with_kge:
-            train_ultra, valid_ultra, test_ultra, _ = get_ultra_datasets(dataset_train, dataset_valid, dataset_test,data_handler,
-                                                                         serializer,engine,global_serialization=args.global_serialization)
-    else:
-        train_ultra, valid_ultra, test_ultra, _ = None, None, None, None
-
 
 
     # DATA GENERATORS
@@ -90,18 +82,14 @@ def main(data_path, log_filename, use_WB, args):
     start = time.time()
     data_gen_train = ns.dataset.DataGenerator(
         dataset_train, fol, serializer, engine,
-        batch_size=args.batch_size, ragged=ragged,
-        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge,use_llm=args.use_llm,
-        global_serialization=args.global_serialization, dataset_ultra=train_ultra)
+        batch_size=args.batch_size, ragged=ragged)
     end = time.time()
     args.time_ground_train = np.round(end - start,2)
     print("Time to create data generator train: ", np.round(end - start,2),'\n************************************')
     start = time.time()
     data_gen_valid = ns.dataset.DataGenerator(
        dataset_valid, fol, serializer, engine,
-       batch_size=args.val_batch_size, ragged=ragged,
-        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge,use_llm=args.use_llm,
-        global_serialization=args.global_serialization, dataset_ultra=valid_ultra)
+       batch_size=args.val_batch_size, ragged=ragged)
     end = time.time()
     args.time_ground_valid = np.round(end - start,2)
     print("Time to create data generator valid: ",  np.round(end - start,2),'\n************************************') 
@@ -109,24 +97,15 @@ def main(data_path, log_filename, use_WB, args):
     start = time.time()
     data_gen_test = ns.dataset.DataGenerator(
         dataset_test, fol, serializer, engine,
-        batch_size=args.test_batch_size, ragged=ragged,
-        use_ultra=args.use_ultra, use_ultra_with_kge=args.use_ultra_with_kge,use_llm=args.use_llm,
-        global_serialization=args.global_serialization, dataset_ultra=test_ultra)
+        batch_size=args.test_batch_size, ragged=ragged)
     end = time.time()
     args.time_ground_test = np.round(end- start,2)
     print("Time to create data generator test: ",  np.round(end - start,2),'\n************************************')
-    # print('\nRUNNING TRAIN SET')
-    # print('*********************')
-    # data_gen_train.__getitem__(0)
-    # print('*********************')
 
 
     # COMPILING MODEL
     model = CollectiveModel(
         fol, rules,
-        use_ultra=args.use_ultra,
-        use_ultra_with_kge=args.use_ultra_with_kge,
-        use_llm=args.use_llm,
         kge=args.kge,
         kge_regularization=args.kge_regularization,
         model_name=get_arg(args, 'model_name', 'dcr'),
@@ -154,7 +133,6 @@ def main(data_path, log_filename, use_WB, args):
         cdcr_num_formulas=get_arg(args, 'cdcr_num_formulas', 3),
         r2n_prediction_type=get_arg(args, 'r2n_prediction_type', 'full'),
         device=args.device,
-        global_serialization=args.global_serialization,
     )
 
 
@@ -256,7 +234,8 @@ def main(data_path, log_filename, use_WB, args):
 
 
     # TRAIN
-    if args.epochs > 0: #and not (args.load_model_ckpt or args.load_kge_ckpt):
+    do_training = args.epochs > 0 #and not (args.load_model_ckpt or args.load_kge_ckpt):
+    if do_training: 
 
         history = model.fit(data_gen_train,
                 epochs=args.epochs,
@@ -381,7 +360,7 @@ def main(data_path, log_filename, use_WB, args):
     train_eval_metrics = dict(zip(model.metrics_names,train_metrics))
     valid_eval_metrics = dict(zip(model.metrics_names,valid_metrics))
     test_eval_metrics = dict(zip(model.metrics_names,test_metrics))
-    training_info = history.history if args.epochs > 0 else None
+    training_info = history.history if do_training else None
 
     print('\nMetrics:',train_eval_metrics.keys()) 
     print('\nResults',
