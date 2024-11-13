@@ -29,13 +29,14 @@ if __name__ == '__main__':
     # tf.config.run_functions_eagerly(True)
     use_logger = False
     use_WB = False
-    ckpt_load = False
-    ckpt_save = False
-    ckpt_save_kge = False
+    load_model_ckpt = True
+    load_kge_ckpt = False
+    save_model_ckpt = False
+    save_kge_ckpt = False
     log_folder :str = "./experiments/runs/"
     ckpt_folder = "./../checkpoints/"
     data_path :str = "experiments/data"
-    epochs: int = 100
+    epochs: int = 10
     EARLY_STOPPING = True
     GLOBAL_SERIALIZATION = False
     LLM = False
@@ -49,7 +50,7 @@ if __name__ == '__main__':
     RULE_MINER = ['amie','None'] 
     E = [100]
     DEPTH = [1]
-    SEED = [[0,1,2,3,4]]
+    SEED = [[0]]# [[0,1,2,3,4]]
     NEG_PER_SIDE = [1]
     WEIGHT_LOSS = [.5]  
     DROPOUT = [0.0]
@@ -214,10 +215,10 @@ if __name__ == '__main__':
         elif args.use_llm:
             args.run_signature = 'llm-'+args.run_signature
         args.ckpt_folder = ckpt_folder
-        args.ckpt_load = ckpt_load
-        args.ckpt_save = ckpt_save
-        args.ckpt_save_kge = ckpt_save_kge
-        args.kge_ckpt_load = None  
+        args.load_model_ckpt = load_model_ckpt
+        args.save_model_ckpt = save_model_ckpt
+        args.load_kge_ckpt = load_kge_ckpt  
+        args.save_kge_ckpt = save_kge_ckpt
         all_args.append(copy.deepcopy(args)) # append a hard copy of the args to the list of all_args
 
 
@@ -247,7 +248,7 @@ if __name__ == '__main__':
                 log_filename_tmp = None
 
             train_eval_metrics,valid_eval_metrics, test_eval_metrics, training_info = main(data_path,log_filename_tmp,use_WB,args)
-
+            
 
             if use_logger:
                 # Include the results in the logger
@@ -260,7 +261,6 @@ if __name__ == '__main__':
                 log_filename_run_name = os.path.join(log_folder,'indiv_runs', '_ind_log-{}-{}-{}-seed_{}.csv'.format(
                                                             args.run_signature,date,task_mrr,seed))
                 logger.finalize_log_file(log_filename_tmp,log_filename_run_name)
-            
         # If we have done all the seeds in args.seed, we can get the average results
         info_results = logger.get_avg_results(args.__dict__, args.run_signature,args.seed) if use_logger else None
 

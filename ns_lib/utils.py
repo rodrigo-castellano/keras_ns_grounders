@@ -1,3 +1,4 @@
+
 import os.path
 import sys
 import ast
@@ -7,7 +8,7 @@ import tensorflow as tf
 import argparse
 import numpy as np
 import sys
-from typing import Dict
+from typing import Dict, Any, Optional
 import datetime
 # from tensorflow_ranking.python.utils import sort_by_scores, ragged_to_dense
 from ns_lib.logic.commons import Atom, Domain, Rule, RuleLoader
@@ -283,86 +284,146 @@ class PrintEachEpochCallback(tf.keras.callbacks.Callback):
         print(self.fun(self.model))
 
 
+
+def load_model_weights(model, ckpt_filepath, verbose=False):
+    """
+    Load the weights of a model from a checkpoint file.
+    
+    Args:
+        model: Keras model instance
+        ckpt_filepath: Path to the checkpoint file
+        verbose: Print information about the loading process
+    
+    Returns:
+        success: Boolean indicating whether the weights were loaded successfully
+    """
+    success = False
+    if os.path.exists(ckpt_filepath+'.index'):
+        model.load_weights(ckpt_filepath)
+        success = True
+        if verbose:
+            print('Weights loaded from', ckpt_filepath)
+    else:
+        if verbose:
+            print('Weights not found in', ckpt_filepath)
+    return success
+
+
 # Checkpointer that allows both in-memory and filename checkpointing.
 # This extends the functionalities of tf.keras.callbacks.ModelCheckpoint,
 # which can save only to file and it is much slower for small
 # non-persistent tests.
 class MMapModelCheckpoint(tf.keras.callbacks.Callback):
-  """Save models to Memory or files as a Keras callback."""
+    """Callback to save model weights when a metric improves."""
+    
+    def __init__(
+        self,
+        model: tf.keras.Model,
+        monitor: str = 'val_loss',
+        filepath: Optional[str] = None,
+        save_weights_only: bool = True,
+        save_best_only: bool = True,
+        maximize: bool = False,
+        verbose: bool = True,
+        frequency: int = 1,
+        name: str = None
+    ):
+        """Initialize checkpoint callback.
+        
+        Args:
+            model: Model to monitor and save
+            monitor: Metric name to monitor
+            filepath: Path to save checkpoints. If None, weights are only kept in memory
+            save_weights_only: If True, save only weights not full model
+            save_best_only: If True, only save when metric improves
+            maximize: If True, maximize metric, otherwise minimize
+            verbose: Print messages when saving
+            frequency: Frequency of checking for improvement in epochs
+        """
+        super().__init__()
+        
+        self.model = model
+        self.monitor = monitor
+        self.filepath = filepath
+        self.save_weights_only = save_weights_only
+        self.save_best_only = save_best_only
+        self.maximize = maximize
+        self.verbose = verbose
+        self.frequency = frequency
+        self.name = name
 
-  def __init__(self, model: tf.keras.Model,
-               monitor: str='val_loss',
-               maximize: bool=True,
-               verbose: bool=True,
-               filepath: str=None,
-               frequency: int = 1):
+        # Initialize tracking variables
+        self.best_value = -sys.float_info.max if maximize else sys.float_info.max
+        self.best_weights = None
+        self.best_epoch = None
+        self.last_save_path = None
 
-    self._model = model
-    self.best_val = -sys.float_info.max if maximize else sys.float_info.max
-    self.monitor = monitor
-    self._weights_saved: bool = False
-    self._best_weights = None
-    self.best_epoch = None
-    self.maximize = maximize
-    self.verbose = verbose
-    self.frequency = frequency
-    # Basepath where checkpoints are saved.
-    self._filepath: str = filepath
-    self._last_checkpoint_filename: str = None
+    def on_epoch_end(self, epoch: int, logs: Dict[str, Any] = None):
+        """Check for improvement on epoch end."""
+        logs = logs or {}
 
-  def on_epoch_end(self, epoch, logs):
-    if (epoch+1) % self.frequency != 0:
-        return
+        # Skip if not checking this epoch
+        if (epoch + 1) % self.frequency != 0:
+            return
 
-    assert self.monitor  in logs, (
-        'Unknown metric %s at epoch %d. Use the MMapModelCheckpoint.frequency if you are not validating at each step' % (self.monitor, epoch))
-    val = logs[self.monitor]
-    if (self.maximize and val >= self.best_val) or (
-        not self.maximize and val <= self.best_val):
-      self.best_val = val
-      self.best_epoch = epoch
-      if self.verbose:
-        print('Checkpointing %s: new best val (%.3f)' % (self.monitor, val), flush=True)
-      if self._filepath is not None:
-          filename = '%s.ckpt' % (self._filepath)
-        #   filename = '%s__epoch%d.ckpt' % (self._filepath, epoch)
-          self._model.save_weights(filename)
-          self.write_info(dir=os.path.dirname(filename), best_epoch = self.best_epoch)
-          if self.verbose:
-              print('Weights stored to %s' % filename, flush=True)
-          self._last_checkpoint_filename = filename
-      else:
-          self._best_weights = self._model.get_weights()
-      self._weights_saved = True
+        # Validate monitor metric exists
+        if self.monitor not in logs:
+            raise KeyError(f'Monitor metric "{self.monitor}" not found in logs. '
+                         f'Available metrics: {",".join(logs.keys())}')
 
+        current_value = logs[self.monitor]
+        improved = (self.maximize and current_value > self.best_value) or \
+                  (not self.maximize and current_value < self.best_value)
+        if improved:
+            if self.verbose:
+                print(f'\nBest {self.name} {self.monitor}: {current_value:.5f}. '
+                      f'Improvement of  {self.best_value-current_value:.5f}') if self.best_epoch is not None else None
+            self.best_value = current_value
+            self.best_epoch = epoch
+            self.best_weights = self.model.get_weights()
 
-  def restore_weights(self):
-    if not self._weights_saved:
-        print('Can not restore the weights as they have not been saved yet')
-        return
+            # Save checkpoint and info
+            if self.filepath:
+                save_path = f'{self.filepath}.ckpt'
+                self.model.save_weights(save_path)
+                self.last_save_path = save_path
+                self.write_info(epoch, current_value)
+                
+                if self.verbose:
+                    print(f'{self.name} weights saved') # to {save_path}')
 
-    assert self._model is not None
-    if self.verbose:
-        print('Restoring weights from epoch', self.best_epoch)
+    def restore_weights(self):
+        """Restore the best weights."""
+        if self.best_weights is not None:
+            self.model.set_weights(self.best_weights)
+            if self.verbose:
+                print(f'Restored best weights from epoch {self.best_epoch + 1}')
+        else:
+            print(f'No best weights to restore from {self.name}')
 
-    if self._last_checkpoint_filename is not None:
-        print('Restoring from file %s' % self._last_checkpoint_filename)
-        self._model.load_weights(self._last_checkpoint_filename)
-    else:
-        # In memory restoring.
-        assert self._best_weights is not None
-        self._model.set_weights(self._best_weights)
-
-  def write_info(self,dir=None,best_epoch=None,training_time=None):
-    if dir is not None:
-        with open(os.path.join(dir, 'info.txt'), 'w') as f:
-            f.write('Best epoch: %d\n' % self.best_epoch)
-            if training_time is not None:
-                f.write('Training time: %.3f\n' % training_time)
-            else:
-                f.write('Training time: Not finished\n')
-            # write the date
-            f.write('Date: %s\n' % datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))
+    def write_info(self, best_epoch: int, current_value: float):
+        """Write checkpoint metadata to JSON file."""
+        import json
+        import datetime
+        
+        if self.filepath is None:
+            return
+            
+        info = {
+            'best_epoch': best_epoch,
+            'best_value': float(current_value),  # Convert numpy float to Python float
+            'metric': self.monitor,
+            'timestamp': datetime.datetime.now().isoformat(),
+            'maximize': self.maximize
+        }
+        
+        # Save info next to checkpoint file
+        info_path = f'{self.filepath}_info.json'
+        with open(info_path, 'w') as f:
+            json.dump(info, f, indent=2)
+            
+        # if self.verbose:
+        #     print(f'Checkpoint info saved to {info_path}')
 
 #############################################
 # Runtime utils.
@@ -762,7 +823,7 @@ class FileLogger:
                         for name in data.keys():
                             if name not in avg_results:
                                 avg_results[name] = []  
-                            avg_results[name].append(data[name])            
+                            avg_results[name].append(data[name])   
         # Check that all the kays in avg_results have the same length
         len_keys = [len(v) for v in avg_results.values()]
         assert all([l == len_keys[0] for l in len_keys]), 'Not all the keys in avg_results have the same length!'                  
