@@ -222,7 +222,6 @@ def main(data_path, log_filename, use_WB, args):
     if use_WB:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         dir = os.path.join(current_dir, '../..')
-        # run = wandb.init(project = "LLM-as-Embedder", name=args.run_signature, config = dict(
         run = wandb.init(project = "Grounders-exp", name=args.run_signature,
                 dir=dir,  config = dict(
                 shuffle_buffer = 1024,

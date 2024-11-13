@@ -4,7 +4,6 @@ import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 sys.path.append(os.path.join(current_dir, '..'))
-sys.path.append(os.path.join(current_dir, '..', 'ULTRA'))
 sys.path.append(os.path.join(current_dir, '..', 'ns_lib'))
 import tensorflow as tf
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -39,9 +38,6 @@ if __name__ == '__main__':
     epochs: int = 10
     EARLY_STOPPING = True
     GLOBAL_SERIALIZATION = False
-    LLM = False
-    ULTRA = False
-    ULTRA_WITH_KGE = False
     DATASET_NAME = ['countries_s1'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
     GROUNDER = ['backward_1_1'] # ['backward_0_1','backward_0_2','backward_0_3','backward_1_1','backward_1_2','backward_1_3',
                # 'backward_2_1','backward_2_2','backward_2_3',] # 'domainbody','relationentity','full']
@@ -205,15 +201,7 @@ if __name__ == '__main__':
 
         args.device = 'cpu' # if not tf.config.experimental.list_physical_devices('GPU') else 'gpu'
         args.global_serialization = GLOBAL_SERIALIZATION
-        args.use_ultra = ULTRA
-        args.use_ultra_with_kge = ULTRA_WITH_KGE
-        args.use_llm = LLM
-        if args.use_ultra:
-            args.run_signature = 'ultra-'+args.run_signature 
-        elif args.use_ultra_with_kge:
-            args.run_signature = 'ultra_kge-'+args.run_signature
-        elif args.use_llm:
-            args.run_signature = 'llm-'+args.run_signature
+
         args.ckpt_folder = ckpt_folder
         args.load_model_ckpt = load_model_ckpt
         args.save_model_ckpt = save_model_ckpt
