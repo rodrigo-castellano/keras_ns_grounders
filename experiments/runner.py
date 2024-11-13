@@ -36,7 +36,7 @@ if __name__ == '__main__':
     log_folder :str = "./experiments/runs/"
     ckpt_folder = "./../checkpoints/"
     data_path :str = "experiments/data"
-    epochs: int = 0
+    epochs: int = 10
     EARLY_STOPPING = True
     GLOBAL_SERIALIZATION = False
     LLM = False

@@ -87,33 +87,44 @@ class LogicSerializerFast(IndexerBase):
 
     def serialize(self, queries:List[List[Tuple]],
                   rule_groundings:Dict[str, RuleGroundings]):
+        '''
+        Takes all the atoms from groundings and queries and returns 
+          
+          - atoms (predicate_to_constant_tuples): batch atoms represented by constant (local) indices and pred as str, e.g. {'LocIn': [[1,34],[2,3],...],...}
+          
+          - grundings (index_groundings): all groundings represented by atom (local) indices and pred implicit, e.g. {'rule1': ([[1],[3],...], [[1,34],[2,3],...]), 'rule2'...}
+          
+          - queries (index_queries): represented by atom (local) indices, e.g. [[1,3,4],[2,3,8],...] (first is the positive, rest are negative atoms)
+          
+          - constants map (domain_to_global), where the i-th element of the list is the local index and its value is the global index, e.g. {'countries': [0,1,2,3,...], 'regions': [0,3,1,2,...]}
+          
+                - atoms map (atom_to_index), where the key is the atom and the value is the local index, e.g. {('LocIn', 'morocco', 'spain'): 0, ('LocIn', 'morocco', 'france'): 1,...}
+        '''
         domain_to_global = defaultdict(list)  # X_domains, it's a map, where the i-th element of the list is the local index and its value is the global index
         domain_to_local_constant_index = defaultdict(dict)  # helper, as X_domains but for local indices, created new every batch
         predicate_to_constant_tuples = defaultdict(list)  # A_predicates
 
-        # Set of all atoms in the groundings to index
+        # Set of all atoms in the groundings to index, e.g. [('locatedInCR', 'bhutan', 'africa'),...]
         all_atoms = ns.utils.to_flat(queries)
         for rg in rule_groundings.values():
             for g in rg.groundings:
                 all_atoms += g[0] # head
                 all_atoms += g[1] # body
-        all_atoms = sorted(list(set(all_atoms)))
+        all_atoms = sorted(list(set(all_atoms))) # Remove duplicates and order alphabetically
 
-        # Bucket them per predicate
+        # Bucket them per predicate, e.g.  {'LocIn': [('LocIn', 'morocco', 'spain'), ('LocIn', 'morocco', 'france'),...],...}
         all_atoms_per_predicate = {predicate.name: []
                                    for predicate in self.predicates}
         for atom in all_atoms:
-            all_atoms_per_predicate[atom[0]].append(atom)
+            all_atoms_per_predicate[atom[0]].append(atom) 
 
         atom_to_index = {}
         count = 0
-        for predicate in self.predicates: # A loop iterates over each predicate.
-            constant_tuples = [] # For each predicate, a list of constant indices is generated for each atom, e.g. LocIn:[[1,34],[2,3],...]
-            # get the domains of the predicate
+        for predicate in self.predicates: 
+            constant_tuples = [] # For each predicate, a list of constant indices (local) is generated for each atom, e.g. LocIn:[[1,34],[2,3],...]
             domains = self.predicate_to_domains[predicate.name]
-            for atom in all_atoms_per_predicate[predicate.name]: #For every atom in the bucketed atoms (ordered alphabetically by predicate)
-                # print('atom:',atom) #if count_print <100 else None
-                atom_to_index[atom] = count  # Assigns an index to the atom, e.g. {LocIn(morocco,spain):0,LocIn(morocco,france):1,...}
+            for atom in all_atoms_per_predicate[predicate.name]: # For every atom in the bucketed atoms
+                atom_to_index[atom] = count  # Assigns an index (local) to the atom, e.g. {LocIn(morocco,spain):0,LocIn(morocco,france):1,...}
                 count += 1
                 indices_cs = [] # This is for A_predicates, to get the constant indices in a list format, e.g.  (Morocco,Spain)->[1,34] (from the LocIn(morocco,spain) example)
 
@@ -129,7 +140,7 @@ class LogicSerializerFast(IndexerBase):
                     if c not in constant_index:  
                         constant_index[c] = len(constant_index) # Add it to domain_to_local_constant_index if not already there
                         domain_to_global[domain].append(
-                            self.constant_to_global_index[domain][c]) # Append it to X_domains
+                            self.constant_to_global_index[domain][c]) # get the global idx and append it to X_domains
                     indices_cs.append(constant_index[c]) # Append the local index of the constant to A_predicates
                 constant_tuples.append(indices_cs) 
             predicate_to_constant_tuples[predicate.name] = constant_tuples
@@ -143,15 +154,12 @@ class LogicSerializerFast(IndexerBase):
                     G_body.append([atom_to_index[atom] for atom in g[1]])
                     G_head.append([atom_to_index[atom] for atom in g[0]])
                 index_groundings[name] = G_body, G_head
-
         index_queries = [[atom_to_index[q] for q in Q] for Q in queries]
-
         return (
             # domain->[global_idx] where i-th element is the global index of the
-            # i-th local constant. e.g. this maps a local index into a global
-            # one.
+            # i-th local constant. e.g. this maps a local index into a global one.
             domain_to_global,
-            # These are theatoms expressd in form of local indices:
+            # These are the atoms expressed in form of local indices:
             # predicate->[(constant_local_idx)]
             predicate_to_constant_tuples,
             # rule -> [atom_local_idx_for_body, atom_local_idx_for_head]
@@ -159,6 +167,8 @@ class LogicSerializerFast(IndexerBase):
             # [atom_local_indices_for_query]
             index_queries)
     
+
+
 
     def serialize_global_A_predicates(self, fol, queries:List[List[Tuple]],
                   rule_groundings:Dict[str, RuleGroundings]):
