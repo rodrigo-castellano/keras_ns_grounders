@@ -178,33 +178,13 @@ def main(data_path, log_filename, use_WB, args):
                     metrics=metrics,
                     run_eagerly=False)
 
-    # # CHECKPOINT HANDLING
-    # # Check that either checkpoint_load or kge_checkpoint_load is None, but not both.
-    # assert not args.ckpt_load or not args.ckpt_load_kge, "Only one of ckpt_load and ckpt_load_kge can be set."
-    
-    # args.ckpt_filepath = os.path.join(args.ckpt_folder, args.run_signature+'_seed_'+str(seed), args.run_signature+'_seed_'+str(seed))
-    # ckpt_name = args.ckpt_filepath + '.ckpt' 
-    
-    # # If checkpoint_load is not None, load the weights from the checkpoint.
-    # if args.ckpt_load:
-    #     _ = model(next(iter(data_gen_train))[0])  # force building the model.
-
-    #     exists_ckpt_seed = False
-    #     if os.path.exists(os.path.dirname(ckpt_name)):
-    #         for file in os.listdir(os.path.dirname(ckpt_name)):
-    #             if args.run_signature+'_seed_'+str(seed)+'.ckpt' in file:
-    #                 exists_ckpt_seed = True
-    #                 break
-
-    #     if exists_ckpt_seed:
-    #         model.load_weights(ckpt_name)
-    #         print('Weights loaded from', ckpt_name, flush=True)
-    #     else:
-    #         print('Weights not found in', ckpt_name, flush=True)   
-    #         args.ckpt_load = None
-    #     model.summary()
 
 
+    # CHECKPOINT HANDLING
+
+    # create model's layers and weights to be able to load the weights 
+    if not model.built:
+        _ = model(next(iter(data_gen_train))[0])  # force building the model.
 
     # LOAD CKPT
     assert not args.load_model_ckpt or not args.load_kge_ckpt, "Only one of ckpt_load and load_kge_ckpt can be set."
@@ -212,17 +192,13 @@ def main(data_path, log_filename, use_WB, args):
 
     # If checkpoint_load is not None, try to load the weights
     if args.load_model_ckpt or args.load_kge_ckpt:
-
-        # create model's layers and weights to be able to load the weights 
-        if not model.built:
-            _ = model(next(iter(data_gen_train))[0])  # force building the model.
-
         path_ = ckpt_filepath if args.load_model_ckpt else ckpt_filepath+'_kge_model'
         success = load_model_weights(model, path_, verbose=True)
 
         # update the arg that was true
         args.load_model_ckpt = success if args.load_model_ckpt else args.load_model_ckpt
         args.load_kge_ckpt = success if args.load_kge_ckpt else args.load_kge_ckpt
+
 
 
     # CALLBACKS
@@ -241,10 +217,6 @@ def main(data_path, log_filename, use_WB, args):
             patience=50,
             verbose=1)
         callbacks.append(early_stopping)
-
-    # Create callbacks
-    assert not args.load_model_ckpt or not args.load_kge_ckpt, "Only one of ckpt_load and ckpt_load_kge can be set."
-    ckpt_filepath = os.path.join(args.ckpt_folder, args.run_signature+'_seed_'+str(seed), args.run_signature+'_seed_'+str(seed))
     
     model_checkpoint = MMapModelCheckpoint(
         model=model,
@@ -264,24 +236,9 @@ def main(data_path, log_filename, use_WB, args):
         name='kge_model'
     )
 
-    callbacks = [model_checkpoint, kge_model_checkpoint]
+    callbacks.append(model_checkpoint)
+    callbacks.append(kge_model_checkpoint)
 
-    # kge_filepath = get_arg(args, 'ckpt_filepath', None)
-    # if kge_filepath is not None:
-    #     kge_filepath =  '%s_kge_model' % kge_filepath
-    # kge_best_model_callback = MMapModelCheckpoint(
-    #     model.kge_model, 'val_concept_mrr',
-    #     frequency=args.valid_frequency,
-    #     # if path is not None, checkpoint to file.
-    #     filepath=kge_filepath)
-    # callbacks.append(kge_best_model_callback)
-
-    # best_model_callback = MMapModelCheckpoint(
-    #     model, 'val_task_mrr',
-    #     frequency=args.valid_frequency,
-    #     # if path is not None, chepoint to file.
-    #     filepath=get_arg(args, 'checkpoint_filepath', None))
-    # callbacks.append(best_model_callback)
 
     # Initialize a W&B run
     if use_WB:
@@ -299,14 +256,14 @@ def main(data_path, log_filename, use_WB, args):
 
 
     # TRAIN
-    if args.epochs > 0 and not (args.load_model_ckpt or args.load_kge_ckpt):
+    if args.epochs > 0: #and not (args.load_model_ckpt or args.load_kge_ckpt):
 
         history = model.fit(data_gen_train,
                 epochs=args.epochs,
                 callbacks=callbacks,
                 validation_data=data_gen_valid,
                 validation_freq=args.valid_frequency)
-        
+
         end_train = time.time()
 
         # Close the W&B run
@@ -316,15 +273,14 @@ def main(data_path, log_filename, use_WB, args):
         args.time_train = np.round(end_train - start_train,2)
         print('Training time:', np.round(end_train - start_train,2), 'seconds')
 
+        # Restore the best weights after training
+        model_checkpoint.restore_weights()
+        kge_model_checkpoint.restore_weights()
+
     else:
         if use_WB:
             run.finish
         args.time_train = 0
-
-    # Restore the best weights after training
-    model_checkpoint.restore_weights()
-    kge_model_checkpoint.restore_weights()
-
 
 
     def save_embeddings_from_model(model, serializer, save_dir="embeddings"):
@@ -425,8 +381,7 @@ def main(data_path, log_filename, use_WB, args):
     train_eval_metrics = dict(zip(model.metrics_names,train_metrics))
     valid_eval_metrics = dict(zip(model.metrics_names,valid_metrics))
     test_eval_metrics = dict(zip(model.metrics_names,test_metrics))
-    training_info = history.history if (args.epochs > 0 and not 
-                                        (args.load_model_ckpt or args.load_kge_ckpt)) else None
+    training_info = history.history if args.epochs > 0 else None
 
     print('\nMetrics:',train_eval_metrics.keys()) 
     print('\nResults',
@@ -452,5 +407,4 @@ def main(data_path, log_filename, use_WB, args):
         for r in model.reasoning[-1].rule_embedders.values():
             r._verbose=True
         print(model.predict(data_gen_test_positive_only)[-1])
-    print('finished train!')
     return train_eval_metrics,valid_eval_metrics, test_eval_metrics, training_info
