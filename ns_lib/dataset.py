@@ -5,7 +5,6 @@ import tensorflow as tf
 import numpy as np
 import sys
 import os
-import torch
 
 # Get the directory of the current script
 current_dir = os.path.dirname(os.path.abspath(__file__))
