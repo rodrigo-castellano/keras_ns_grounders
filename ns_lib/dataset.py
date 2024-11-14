@@ -100,7 +100,7 @@ def _from_strings_to_tensors(fol, serializer,
         labels = tf.constant(labels, dtype=tf.float32)
 
     # X_domains_data, A_predicates_data, A_rules_data, queries
-    return (input_domains_tf, input_atoms_tuples_tf, 
+    return (input_domains_tf, input_atoms_tuples_tf,
             input_formulas_tf, queries), labels
 
 
@@ -133,7 +133,6 @@ class Dataset():
         return self.queries[b*i:b*(i+1)], self.labels[b*i:b*(i+1)], 
 
 
-
 class DataGenerator(tf.keras.utils.Sequence):
 
     def __init__(self,
@@ -144,8 +143,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                  deterministic=True,
                  batch_size=None,
                  ragged: bool=False,
-                 name= "None",
-                 ):
+                 name= "None"):
         
         self.dataset = dataset
         self.deterministic = deterministic
@@ -182,6 +180,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
 
     def _get_batch(self, i, b):
+
         queries, labels = self.dataset[b*i:b*(i+1)]
         constants_features = self.dataset.constants_features
 
@@ -193,8 +192,7 @@ class DataGenerator(tf.keras.utils.Sequence):
             engine=self.engine,
             ragged=self.ragged,
             constants_features=constants_features,
-            deterministic=self.deterministic,
-            ) 
+            deterministic=self.deterministic) 
 
         return (X_domains_data, A_predicates_data, A_rules_data, Q), y
 
@@ -317,5 +315,3 @@ class DataGeneratorTensorFast(tf.keras.utils.Sequence):
         q,l =  self.dataset[b*i:b*(i+1)]
 
         return tf.ragged.constant(q), tf.ragged.constant(l)
-
- 

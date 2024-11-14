@@ -8,7 +8,6 @@ class SubstitutionGrounder(Engine):
 
     def __init__(self, rules: List[Rule]):
         self.rules = rules
-        self.depth = depth
 
     @abc.abstractmethod
     def queries_to_substitutions(self, queries, rule):

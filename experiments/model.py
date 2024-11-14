@@ -1,5 +1,5 @@
 from keras import Model, regularizers, models
-from keras.layers import Dense, Dropout, Lambda, Layer, BatchNormalization, Activation
+from keras.layers import Dense, Dropout, Lambda, Layer
 import ns_lib as ns
 import tensorflow as tf
 from ns_lib.nn.constant_embedding import *
@@ -9,7 +9,6 @@ from ns_lib.logic import FOL, Rule
 from ns_lib.logic.semantics import GodelTNorm
 from typing import Dict, List, Union
 import tensorflow_probability as tfp
-import torch
 
 
 class KGEModel(Model):
@@ -22,8 +21,7 @@ class KGEModel(Model):
                  kge_atom_embedding_size: int,
                  kge_dropout_rate: float,
                  num_adaptive_constants: int=0,
-                 dot_product: bool=False,
-                 device: str = 'cpu',):
+                 dot_product: bool=False):
         super().__init__()
         self.fol = fol
         self.predicate_index_tensor = tf.constant(
@@ -35,7 +33,7 @@ class KGEModel(Model):
             predicate_embedding_size,
             regularization=kge_regularization,
             has_features=False)
-        self.constant_embedder = ConstantEmbeddings( 
+        self.constant_embedder = ConstantEmbeddings(
             domains=fol.domains,
             constant_embedding_sizes_per_domain={
                 domain.name: constant_embedding_size
@@ -140,23 +138,22 @@ class KGEModel(Model):
                     constant_embeddings_fixed[name],
                     constant_embeddings_adaptive[name])
                 for name in X_domains.keys()}
-        else: 
+        else:
             constant_embeddings = self.constant_embedder(X_domains) # For the constant embedds, I always need global idx to get consistent embedds every batch
-
         predicate_embeddings = self.predicate_embedder(self.predicate_index_tensor) # Embedds for every pred in fol (global idx)
 
         # Given the embedds of the constants and the predicates, I create the triplets with the embeddings of the atoms and the predicates. 
         # A_predicates indicates the indeces of the constants for each grounding of the predicate, i.e., the queries
         predicate_embeddings_per_triplets, constant_embeddings_for_triplets = \
-            self.create_triplets(constant_embeddings, predicate_embeddings, A_predicates,X_domains) 
+            self.create_triplets(constant_embeddings, predicate_embeddings, A_predicates)
         # Given the triplets with their embeddings obtained in create_triplets, I get the embeddings of the atoms with e.g. Transe
         atom_embeddings = self.kge_embedder((predicate_embeddings_per_triplets,
                                              constant_embeddings_for_triplets))
-        # Get the score for each atom    CAREFFUUUUUUUUUUL HERE
+        # Get the score for each atom
         atom_outputs = tf.expand_dims(self.output_layer(atom_embeddings), -1)
         return atom_outputs, atom_embeddings
-    
-    
+
+
 class CollectiveModel(Model):
 
     def __init__(self,
@@ -187,11 +184,9 @@ class CollectiveModel(Model):
                  dot_product: bool,
                  cdcr_use_positional_embeddings: bool,
                  cdcr_num_formulas: int,
-                 r2n_prediction_type: str,
-                 device: str = 'cpu',):
+                 r2n_prediction_type: str):
         super().__init__()
-
-        self.testing = False
+        # Reasoning depth of the model structure.
         self.reasoner_depth = reasoner_depth
         # Reasoning depth currently used, this can differ from  self.reasoner_depth during multi-stage learning (like if pretraining the KGEs).
         self.enabled_reasoner_depth = reasoner_depth
@@ -200,16 +195,13 @@ class CollectiveModel(Model):
         self.logic = GodelTNorm()
 
         self.kge_model = KGEModel(fol, kge,
-                                kge_regularization,
-                                constant_embedding_size,
-                                predicate_embedding_size,
-                                kge_atom_embedding_size,
-                                kge_dropout_rate,
-                                num_adaptive_constants,
-                                dot_product,
-                                device='cpu',)
-        self.output_layer = self.kge_model.output_layer
-            
+                                  kge_regularization,
+                                  constant_embedding_size,
+                                  predicate_embedding_size,
+                                  kge_atom_embedding_size,
+                                  kge_dropout_rate,
+                                  num_adaptive_constants,
+                                  dot_product)
         self.model_name = model_name
 
         # REASONING LAYER
@@ -259,7 +251,7 @@ class CollectiveModel(Model):
                   def SumAndSigmoidOutput(x):
                       return tf.nn.sigmoid(tf.reduce_sum(x, axis=-1))
                   output_layer = (Lambda(SumAndSigmoidOutput, name='output_layer')
-                                  if kge == 'rotate' else self.output_layer)
+                                  if kge == 'rotate' else self.kge_model.output_layer)
                   self.reasoning.append(R2NReasoningLayer(
                       rules=rules,
                       formula_hidden_size=reasoner_formula_hidden_embedding_size,
@@ -301,9 +293,6 @@ class CollectiveModel(Model):
     def explain_mode(self, mode=True):
         self._explain_mode = mode
 
-    def test_mode(self, dataset_type, mode=False):
-        self.testing = mode
-        self.dataset_type = dataset_type
 
     def call(self, inputs, training=False, *args, **kwargs):
         '''
@@ -319,10 +308,12 @@ class CollectiveModel(Model):
             # Check that we are using an explainable model.
             assert self.model_name == 'dcr' or self.model_name == 'cdcr'
 
+        # X_domains type is Dict[str, tensor[constant_indices_in_domain]]
+        # A_predicate: Dict[predicate_name, List[Tuple[Index1, ..., IndexN]]]
+        #              e.g. mapping predicate_name -> tensor [num_groundings, arity]
+        #                   with constant indices for each grounding.
         (X_domains, A_predicates, A_rules, Q) = inputs
-
         concept_output, concept_embeddings = self.kge_model((X_domains, A_predicates))
- 
         task_output = tf.identity(concept_output) # (len(sum A_pred),1)
 
         explanations = None
@@ -334,7 +325,7 @@ class CollectiveModel(Model):
                         [task_output, atom_embeddings, A_rules])
                 task_output, atom_embeddings = self.reasoning[i]([
                     task_output, atom_embeddings, A_rules])
-            if self.embedding_resnet: # CAREFUL IN CASE OF ULTRA, THE OUTPUT LAYER SHOULD BE GIVEN BY ULTRA
+            if self.embedding_resnet:
                 # In this case we need to recompute the output from the updated embeddings.
                 w = tf.clip_by_value(self.embedding_resnet_weight(tf.concat([concept_embeddings, atom_embeddings], axis=-1)), 1e-9, 1.0 - 1e-7)
                 tf.print('embedding_resnet_weight', tf.reduce_mean(w))
