@@ -325,7 +325,7 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
         filepath: Optional[str] = None,
         save_weights_only: bool = True,
         save_best_only: bool = True,
-        maximize: bool = False,
+        maximize: bool = True,
         verbose: bool = True,
         frequency: int = 1,
         name: str = None
@@ -344,7 +344,7 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
         """
         super().__init__()
         
-        self.model = model
+        self.model_ = model
         self.monitor = monitor
         self.filepath = filepath
         self.save_weights_only = save_weights_only
@@ -363,7 +363,7 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch: int, logs: Dict[str, Any] = None):
         """Check for improvement on epoch end."""
         logs = logs or {}
-
+        
         # Skip if not checking this epoch
         if (epoch + 1) % self.frequency != 0:
             return
@@ -382,12 +382,12 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
                       f'Delta = {self.best_value-current_value:.5f}') if self.best_epoch is not None else None
             self.best_value = current_value
             self.best_epoch = epoch
-            self.best_weights = self.model.get_weights()
+            self.best_weights = self.model_.get_weights()
 
             # Save checkpoint and info
             if self.filepath:
                 save_path = f'{self.filepath}.ckpt'
-                self.model.save_weights(save_path)
+                self.model_.save_weights(save_path)
                 self.last_save_path = save_path
                 self.write_info(epoch, current_value)
                 
@@ -397,7 +397,7 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
     def restore_weights(self):
         """Restore the best weights."""
         if self.best_weights is not None:
-            self.model.set_weights(self.best_weights)
+            self.model_.set_weights(self.best_weights)
             if self.verbose:
                 print(f'Restored best weights from epoch {self.best_epoch + 1}')
         else:
@@ -947,6 +947,8 @@ def KgeLossFactory(name: str) -> tf.keras.losses.Loss:
         return CategoricalCrossEntropyRagged()
     elif name == 'binary_crossentropy':
         return BinaryCrossEntropyRagged()
+    # include binary_crossentropy that converts the tensors to dense 
+    # and then applies the loss, and then converts back to ragged
     elif name == 'balanced_binary_crossentropy':
         return BinaryCrossEntropyRagged(balance_negatives=True)
     elif name == 'balanced_pairwise_crossentropy':
@@ -955,45 +957,81 @@ def KgeLossFactory(name: str) -> tf.keras.losses.Loss:
         assert False, 'Unknown loss %s'% name
 
 class MRRMetric(tf.keras.metrics.Metric):
-  """Implements mean reciprocal rank (MRR). It uses the same implementation
-     of tensorflow_ranking MRRMetric but with an online check for ragged
-     tensors."""
-  def __init__(self, name='mrr', dtype=None, **kwargs):
-      super().__init__(name, dtype, **kwargs)
-      self.mrr = self.add_weight("total", initializer="zeros")
-      self._count = self.add_weight("count", initializer="zeros")
-      self.reset_state()
+    """Implements mean reciprocal rank (MRR)."""
+    def __init__(self, name='mrr', dtype=tf.float32, **kwargs):
+        super().__init__(name=name, dtype=dtype, **kwargs)
+        self.mrr = self.add_weight(name="total", shape=(), initializer="zeros", dtype=dtype)
+        self._count = self.add_weight(name="count", shape=(), initializer="zeros", dtype=dtype)
 
-  def reset_state(self):
-      self.mrr.assign(0.)
-      self._count.assign(0.)
+    def reset_state(self):
+        self.mrr.assign(0.)
+        self._count.assign(0.)
 
-  def result(self):
-      return tf.math.divide_no_nan(self.mrr, self._count)
+    def result(self):
+        return tf.math.divide_no_nan(self.mrr, self._count)
 
-  def update_state(self, y_true, y_pred, sample_weight=None):
-    mrrs = self._compute(y_true, y_pred)
-    self.mrr.assign_add(tf.reduce_sum(mrrs))
-    self._count.assign_add(tf.reduce_sum(tf.ones_like(mrrs)))
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        mrrs = self._compute(y_true, y_pred)
+        self.mrr.assign_add(tf.reduce_sum(mrrs))
+        self._count.assign_add(tf.cast(tf.size(mrrs), dtype=self._dtype))
 
-  def _compute(self, labels, predictions):
-    if any(isinstance(tensor, tf.RaggedTensor)
-           for tensor in [labels, predictions]):
-      labels, predictions, _, _ = ragged_to_dense(labels, predictions, None)
+    def _compute(self, labels, predictions):
+        if any(isinstance(tensor, tf.RaggedTensor) for tensor in [labels, predictions]):
+            labels, predictions, _, _ = ragged_to_dense(labels, predictions, None)
 
-    topn = tf.shape(predictions)[1] #  number of predictions per sample, which is the size of the second dimension of the predictions tensor
-    sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None) # sort the labels by the predictions
-    sorted_list_size = tf.shape(input=sorted_labels)[1] # usually is the same as topn, unless for example I only care about the top 3 predictions
-    # Relevance = 1.0 when labels >= 1.0 to accommodate graded relevance.
-    relevance = tf.cast(tf.greater_equal(sorted_labels, 1.0), dtype=tf.float32) # if the label is greater or equal to 1, then the relevance is 1, otherwise 0
-    reciprocal_rank = 1.0 / tf.cast(
-        tf.range(1, sorted_list_size + 1), dtype=tf.float32) #  This generates a range of ranks from 1 to the size of the sorted list. The reciprocal rank is 1/rank
-    # MRR has a shape of [batch_size, 1].
-    # Element-wise Multiplication: relevance * reciprocal_rank computes the reciprocal rank for relevant items (i.e., where relevance is 1.0)
-    # Maximum Reciprocal Rank: tf.reduce_max(..., axis=1, keepdims=True) finds the maximum reciprocal rank for each sample across the list of predictions. This is because MRR considers the highest (earliest) rank of a relevant item.
-    mrr = tf.reduce_max(
-        input_tensor=relevance * reciprocal_rank, axis=1, keepdims=True)
-    return mrr
+        topn = tf.shape(predictions)[1]
+        sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None)
+        sorted_list_size = tf.shape(sorted_labels)[1]
+
+        relevance = tf.cast(tf.greater_equal(sorted_labels, 1.0), dtype=tf.float32)
+        reciprocal_rank = 1.0 / tf.cast(tf.range(1, sorted_list_size + 1), dtype=tf.float32)
+        mrr = tf.reduce_max(relevance * reciprocal_rank, axis=1, keepdims=True)
+        return mrr
+    
+
+
+class HitsMetric(tf.keras.metrics.Metric):
+    """Implements the HITS@N metric."""
+    def __init__(self, n, name='hits', dtype=tf.float32, **kwargs):
+        super().__init__(name=f'{name}@{n}', dtype=dtype, **kwargs)
+        self._n = n
+        # Correctly initialize weights with the appropriate shape and dtype
+        self.hits = self.add_weight(name="total", shape=(), initializer="zeros", dtype=dtype)
+        self._count = self.add_weight(name="count", shape=(), initializer="zeros", dtype=dtype)
+        # self.name =  f'{name}@{n}'
+
+    def reset_state(self):
+        """Reset the state of the metric."""
+        self.hits.assign(0.)
+        self._count.assign(0.)
+
+    def result(self):
+        """Return the computed HITS@N score."""
+        return tf.math.divide_no_nan(self.hits, self._count)
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        """Update the state of the metric with new values."""
+        hits = self._compute(y_true, y_pred)
+        self.hits.assign_add(tf.reduce_sum(hits))
+        self._count.assign_add(tf.cast(tf.size(hits), dtype=self.dtype))
+
+    def _compute(self, labels, predictions):
+        """Compute the HITS@N metric."""
+        # Convert ragged tensors to dense if needed
+        if any(isinstance(tensor, tf.RaggedTensor) for tensor in [labels, predictions]):
+            labels, predictions, _, _ = ragged_to_dense(labels, predictions, None)
+
+        topn = tf.shape(predictions)[1]
+        # Sort labels by predictions
+        sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None)
+        sorted_list_size = tf.shape(sorted_labels)[1]
+
+        # Calculate relevance and hits
+        relevance = tf.cast(tf.greater_equal(sorted_labels, 1.0), dtype=tf.float32)
+        top_relevance = relevance[:, :self._n]
+        hits = tf.reduce_sum(top_relevance, axis=1, keepdims=True)
+        return hits
+
 
 # Wrapper around tf.keras.metrics.AUC adding the convertion to ragged tensors.
 class AUCPRMetric(tf.keras.metrics.AUC):
@@ -1009,47 +1047,92 @@ class AUCPRMetric(tf.keras.metrics.AUC):
       labels, predictions, _, _ = ragged_to_dense(labels, predictions, None)
     return super()._compute(labels, predictions)
 
-class HitsMetric(tf.keras.metrics.Metric):
-  """Implements the HITS@N metric. It uses the same implementation
-     of tensorflow_ranking MRRMetric but with an online check for ragged
-     tensors."""
-  def __init__(self, n, name='hits', dtype=None, **kwargs):
-      super().__init__('%s@%d' % (name, n), dtype, **kwargs)
-      self._n = n
-      self.hits = self.add_weight("total", initializer="zeros")
-      self._count = self.add_weight("count", initializer="zeros")
-      self.reset_state()
+# METRICS FROM ORIGINAL REPO
 
-  def reset_state(self):
-      self.hits.assign(0.)
-      self._count.assign(0.)
+# class MRRMetric(tf.keras.metrics.Metric):
+#   """Implements mean reciprocal rank (MRR). It uses the same implementation
+#      of tensorflow_ranking MRRMetric but with an online check for ragged
+#      tensors."""
+#   def __init__(self, name='mrr', dtype=None, **kwargs):
+#       super().__init__(name, dtype, **kwargs)
+#       self.mrr = self.add_weight("total", initializer="zeros")
+#       self._count = self.add_weight("count", initializer="zeros")
+#       self.reset_state()
 
-  def result(self):
-      return tf.math.divide_no_nan(self.hits, self._count)
+#   def reset_state(self):
+#       self.mrr.assign(0.)
+#       self._count.assign(0.)
 
-  def update_state(self, y_true, y_pred, sample_weight=None):
-    hits = self._compute(y_true, y_pred)
-    self.hits.assign_add(tf.reduce_sum(hits))
-    self._count.assign_add(tf.reduce_sum(tf.ones_like(hits)))
+#   def result(self):
+#       return tf.math.divide_no_nan(self.mrr, self._count)
 
-  def _compute(self, labels, predictions):
-    if any(isinstance(tensor, tf.RaggedTensor)
-           for tensor in [labels, predictions]):
-      labels, predictions, _, _ = ragged_to_dense(labels, predictions, None)
+#   def update_state(self, y_true, y_pred, sample_weight=None):
+#     mrrs = self._compute(y_true, y_pred)
+#     self.mrr.assign_add(tf.reduce_sum(mrrs))
+#     self._count.assign_add(tf.reduce_sum(tf.ones_like(mrrs)))
 
-    topn = tf.shape(predictions)[1]
-    sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None)
-    sorted_list_size = tf.shape(input=sorted_labels)[1]
-    # Relevance = 1.0 when labels >= 1.0 to accommodate graded relevance.
-    relevance = tf.cast(tf.greater_equal(sorted_labels, 1.0), dtype=tf.float32)
-    top_relevance = relevance[:, :self._n]
-    hits = tf.reduce_sum(top_relevance, axis=1, keepdims=True)
-    return hits
+#   def _compute(self, labels, predictions):
+#     if any(isinstance(tensor, tf.RaggedTensor)
+#            for tensor in [labels, predictions]):
+#       labels, predictions, _, _ = ragged_to_dense(labels, predictions, None)
 
-  def get_config(self):
-      base_config = super().get_config()
-      config = { 'n': self._n, }
-      return {**base_config, **config}
+#     topn = tf.shape(predictions)[1] #  number of predictions per sample, which is the size of the second dimension of the predictions tensor
+#     sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None) # sort the labels by the predictions
+#     sorted_list_size = tf.shape(input=sorted_labels)[1] # usually is the same as topn, unless for example I only care about the top 3 predictions
+#     # Relevance = 1.0 when labels >= 1.0 to accommodate graded relevance.
+#     relevance = tf.cast(tf.greater_equal(sorted_labels, 1.0), dtype=tf.float32) # if the label is greater or equal to 1, then the relevance is 1, otherwise 0
+#     reciprocal_rank = 1.0 / tf.cast(
+#         tf.range(1, sorted_list_size + 1), dtype=tf.float32) #  This generates a range of ranks from 1 to the size of the sorted list. The reciprocal rank is 1/rank
+#     # MRR has a shape of [batch_size, 1].
+#     # Element-wise Multiplication: relevance * reciprocal_rank computes the reciprocal rank for relevant items (i.e., where relevance is 1.0)
+#     # Maximum Reciprocal Rank: tf.reduce_max(..., axis=1, keepdims=True) finds the maximum reciprocal rank for each sample across the list of predictions. This is because MRR considers the highest (earliest) rank of a relevant item.
+#     mrr = tf.reduce_max(
+#         input_tensor=relevance * reciprocal_rank, axis=1, keepdims=True)
+#     return mrr
+
+
+
+# class HitsMetric(tf.keras.metrics.Metric):
+#   """Implements the HITS@N metric. It uses the same implementation
+#      of tensorflow_ranking MRRMetric but with an online check for ragged
+#      tensors."""
+#   def __init__(self, n, name='hits', dtype=None, **kwargs):
+#       super().__init__('%s@%d' % (name, n), dtype, **kwargs)
+#       self._n = n
+#       self.hits = self.add_weight("total", initializer="zeros")
+#       self._count = self.add_weight("count", initializer="zeros")
+#       self.reset_state()
+
+#   def reset_state(self):
+#       self.hits.assign(0.)
+#       self._count.assign(0.)
+
+#   def result(self):
+#       return tf.math.divide_no_nan(self.hits, self._count)
+
+#   def update_state(self, y_true, y_pred, sample_weight=None):
+#     hits = self._compute(y_true, y_pred)
+#     self.hits.assign_add(tf.reduce_sum(hits))
+#     self._count.assign_add(tf.reduce_sum(tf.ones_like(hits)))
+
+#   def _compute(self, labels, predictions):
+#     if any(isinstance(tensor, tf.RaggedTensor)
+#            for tensor in [labels, predictions]):
+#       labels, predictions, _, _ = ragged_to_dense(labels, predictions, None)
+
+#     topn = tf.shape(predictions)[1]
+#     sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None)
+#     sorted_list_size = tf.shape(input=sorted_labels)[1]
+#     # Relevance = 1.0 when labels >= 1.0 to accommodate graded relevance.
+#     relevance = tf.cast(tf.greater_equal(sorted_labels, 1.0), dtype=tf.float32)
+#     top_relevance = relevance[:, :self._n]
+#     hits = tf.reduce_sum(top_relevance, axis=1, keepdims=True)
+#     return hits
+
+#   def get_config(self):
+#       base_config = super().get_config()
+#       config = { 'n': self._n, }
+#       return {**base_config, **config}
 
 
 def get_model_memory_usage(batch_size, model):

@@ -1,14 +1,21 @@
 import sys
 import os
-# Get the directory of the current script
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 sys.path.append(os.path.join(current_dir, '..'))
 sys.path.append(os.path.join(current_dir, '..', 'ns_lib'))
-import tensorflow as tf
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
+import tensorflow as tf
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
+tf.config.set_soft_device_placement(True)
+print("GPUs used: ", gpus)
+# tf.config.run_functions_eagerly(True)
 import copy
 from itertools import product
 from train import main
@@ -24,19 +31,16 @@ wandb.login()
 
 if __name__ == '__main__':
 
-
-    print("GPUs used: ", tf.config.experimental.list_physical_devices('GPU'))
-    # tf.config.run_functions_eagerly(True)
     use_logger = False
     use_WB = False
     load_model_ckpt = False
     load_kge_ckpt = False
-    save_model_ckpt = True
+    save_model_ckpt = False
     save_kge_ckpt = save_model_ckpt
     log_folder :str = "./experiments/runs/"
     ckpt_folder = "./../checkpoints/"
     data_path :str = "experiments/data"
-    epochs: int = 10
+    epochs: int = 20
     EARLY_STOPPING = True
     GLOBAL_SERIALIZATION = False
     DATASET_NAME = ['countries_s1'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']

@@ -10,7 +10,7 @@ from typing import List, Tuple, Dict
 
 from dataset import KGCDataHandler
 from model import CollectiveModel
-from keras.callbacks import CSVLogger
+# from keras.callbacks import CSVLogger
 from ns_lib.logic.commons import Atom, Domain, FOL, Rule, RuleLoader
 from ns_lib.grounding.grounder_factory import BuildGrounder
 from ns_lib.utils import MMapModelCheckpoint, KgeLossFactory, get_arg, load_model_weights
@@ -20,18 +20,14 @@ import wandb
 from wandb.integration.keras import WandbCallback
 from wandb.integration.keras import WandbMetricsLogger
 
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus:
-    for gpu in gpus:
-        tf.config.experimental.set_memory_growth(gpu, True)
-
-tf.config.set_soft_device_placement(True)
-
 explain_enabled: bool = False
 
 
 
 def main(data_path, log_filename, use_WB, args):
+
+    # # Start the TensorFlow Profiler server
+    # tf.profiler.experimental.server.start(6009)  # Choose any available port, e.g., 6009
 
     print('\nARGS', args,'\n')
     seed = get_arg(args, 'seed_run_i', 0)
@@ -146,19 +142,28 @@ def main(data_path, log_filename, use_WB, args):
     loss_name = get_arg(args, 'loss', 'binary_crossentropy')
     loss = KgeLossFactory(loss_name)
 
-    metrics = [ns.utils.MRRMetric(),
-               ns.utils.HitsMetric(1),
-               ns.utils.HitsMetric(3),
-               ns.utils.HitsMetric(10)]
-                # ns.utils.AUCPRMetric()]
+    loss = { 'concept': loss, 'task': loss}
+    loss_weights = { 'concept': 1-args.weight_loss, 'task': args.weight_loss  }
+
+    metrics = {
+        'concept': [
+            ns.utils.MRRMetric(),
+            ns.utils.HitsMetric(1),
+            ns.utils.HitsMetric(3),
+            ns.utils.HitsMetric(10)
+        ],
+        'task': [
+            ns.utils.MRRMetric(),
+            ns.utils.HitsMetric(1),
+            ns.utils.HitsMetric(3),
+            ns.utils.HitsMetric(10)
+        ]
+    }
 
     optimizer,lr_scheduler = choose_optimizer_scheduler(args.optimizer,args.lr_sched,args.learning_rate)
     model.compile(optimizer=optimizer,
                     loss=loss,
-                    loss_weights = {
-                        'concept': 1-args.weight_loss,  
-                        'task': args.weight_loss    
-                                    },
+                    loss_weights = loss_weights,
                     metrics=metrics,
                     run_eagerly=False)
 
@@ -204,7 +209,7 @@ def main(data_path, log_filename, use_WB, args):
     
     model_checkpoint = MMapModelCheckpoint(
         model=model,
-        monitor='val_task_loss',
+        monitor='val_task_mrr',
         filepath= ckpt_filepath if args.save_model_ckpt else None,
         save_best_only=True,
         save_weights_only=True,
@@ -213,7 +218,7 @@ def main(data_path, log_filename, use_WB, args):
 
     kge_model_checkpoint = MMapModelCheckpoint(
         model=model.kge_model,
-        monitor='val_concept_loss',
+        monitor='val_concept_mrr',
         filepath= ckpt_filepath+'_kge_model' if args.save_kge_ckpt else None,
         save_best_only=True,
         save_weights_only=True,
@@ -223,7 +228,12 @@ def main(data_path, log_filename, use_WB, args):
     callbacks.append(model_checkpoint)
     callbacks.append(kge_model_checkpoint)
 
-
+    # # Set up logging for TensorBoard
+    # import datetime
+    # log_dir = os.path.join("./../logs", "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, profile_batch=(1, 19))
+    # callbacks.append(tensorboard_callback)
+    
     # Initialize a W&B run
     if use_WB:
         current_dir = os.path.dirname(os.path.abspath(__file__))
