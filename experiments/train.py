@@ -272,14 +272,11 @@ def main(data_path, log_filename, use_WB, args):
 
     # EVALUATION
     print("\nEvaluation train", flush=True)
-    model.test_mode('train',mode=True)
     train_metrics = model.evaluate(data_gen_train)#,train_data=True,testing=True) 
     print("\nEvaluation val", flush=True)
-    model.test_mode('valid',mode=True)
     valid_metrics =  model.evaluate(data_gen_valid)#,val_data=True,testing=True) 
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
-    model.test_mode('test',mode=True)
     test_metrics  =  model.evaluate(data_gen_test)#,test_data=True,testing=True)
     end_inf = time.time()
     args.time_inference = np.round(end_inf - start_inf,2)
