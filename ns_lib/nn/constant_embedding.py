@@ -7,16 +7,7 @@ from keras.regularizers import L2
 from typing import Dict, List, Tuple
 import tensorflow as tf
 import tensorflow_probability as tfp
-import torch
 from ns_lib.logic.commons import Domain
-# from transformers import AutoModel, AutoTokenizer
-from ns_lib.logic import FOL
-# import wikipediaapi as wk
-# from transformers import AutoTokenizer, AutoModel
-import torch.nn.functional as F
-from tqdm import tqdm
-import numpy as np 
-from sklearn.decomposition import PCA
 
 class ConstantEmbeddings(Layer):
     """Calls the constant rules_embedders, differenciating the behavior of
@@ -48,35 +39,6 @@ class ConstantEmbeddings(Layer):
             domain_features[domain.name] = self.embedder[domain.name](
                 domain_inputs[domain.name])
         return domain_features
-    
-
-class ConstantEmbeddings_Global(Layer):
-    """Calls the constant rules_embedders, differenciating the behavior of
-       the single domains."""
-    def __init__(self, domains: List[Domain],
-                 constant_embedding_sizes_per_domain: Dict[str, int],
-                 regularization: float=0.0,
-                 has_features: bool=False):
-        super().__init__()
-        self.embedder = {}
-        self.domains = domains
-       
-        max_index = sum([len(domain.constants) for domain in domains]) 
-        self.embedder = Embedding(
-            max_index+ 1,
-            constant_embedding_sizes_per_domain[domains[0].name],
-            embeddings_regularizer=L2(regularization))
-
-    # domain_inputs is Dict domain->tensor of idx
-    def call(self, domain_inputs: Dict[str, tf.Tensor], **kwargs):
-        domain_features = {}
-        for domain in self.domains:
-            # put the domain_inputs as a second key of a dict 
-            domain_features[domain.name] = (domain_inputs[domain.name],self.embedder(
-                domain_inputs[domain.name]))
-        return domain_features
-
-
 
 class PredicateEmbeddings(Layer):
     """Calls the predicate embedders."""

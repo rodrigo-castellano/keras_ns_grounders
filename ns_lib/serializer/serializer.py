@@ -57,23 +57,10 @@ class LogicSerializerFast(IndexerBase):
                         i + offset)
                     self.adaptive_constant2domain[constant] = domain.name
 
-
-
         self.predicate_to_domains = {}
         for predicate in self.predicates:
             self.predicate_to_domains[predicate.name] = [
                 domain.name for domain in predicate.domains]
-        
-        # #####################################
-
-        # Create a constant_to_global_unique_index in which each constant, even if in different domains, has a unique index. This is useful for ultra
-        self.constant_to_global_unique_index = defaultdict(OrderedDict)
-        counter = 0
-        for domain in domains:
-            for constant in domain.constants:
-                self.constant_to_global_unique_index[domain.name][constant] = counter
-                counter += 1
-
 
     def serialize(self, queries:List[List[Tuple]],
                   rule_groundings:Dict[str, RuleGroundings]):
@@ -107,7 +94,7 @@ class LogicSerializerFast(IndexerBase):
         all_atoms_per_predicate = {predicate.name: []
                                    for predicate in self.predicates}
         for atom in all_atoms:
-            all_atoms_per_predicate[atom[0]].append(atom) 
+            all_atoms_per_predicate[atom[0]].append(atom)
 
         atom_to_index = {}
         count = 0
@@ -128,12 +115,12 @@ class LogicSerializerFast(IndexerBase):
 
                     # get the local indices of the ctes built so far for this batch
                     constant_index = domain_to_local_constant_index[domain] # It is a domain_to_global_index but for the local indices, created for every batch
-                    if c not in constant_index:  
+                    if c not in constant_index:
                         constant_index[c] = len(constant_index) # Add it to domain_to_local_constant_index if not already there
                         domain_to_global[domain].append(
                             self.constant_to_global_index[domain][c]) # get the global idx and append it to X_domains
                     indices_cs.append(constant_index[c]) # Append the local index of the constant to A_predicates
-                constant_tuples.append(indices_cs) 
+                constant_tuples.append(indices_cs)
             predicate_to_constant_tuples[predicate.name] = constant_tuples
 
         index_groundings = {}
@@ -157,8 +144,6 @@ class LogicSerializerFast(IndexerBase):
             index_groundings,
             # [atom_local_indices_for_query]
             index_queries)
-    
-
 
 
 #################################################

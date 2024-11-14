@@ -40,12 +40,7 @@ class KnownBodyGrounder(Engine):
 
         self._init_internals(queries)
         for rule in self.rules:
-            print('\nrule ', rule, ' """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" ')
-            # print('rule', rule)
-            # print('rule.body', rule.body)
-            # print('rule.head[0][0]', rule.head[0][0])
             rel_queries = self.relation2queries.get(rule.head[0][0], [])
-            # print('rel_queries',rel_queries)
             if rel_queries:
                 if len(rule.body) <= 2:
                     self.ground_one_rule_body_len2(rule, rel_queries)
@@ -60,6 +55,7 @@ class KnownBodyGrounder(Engine):
             ret = {rule_name:
                    RuleGroundings(rule_name, list(groundings))
                    for rule_name,groundings in self.rule2groundings.items()}
+        # print('Queries', len(queries), 'Groundings', [len(v.groundings) for v in ret.values()], '=', sum([len(v.groundings) for v in ret.values()]))
         return ret
 
     # Special case for rules with body len < 2.
@@ -75,12 +71,8 @@ class KnownBodyGrounder(Engine):
           'not supported yet')
 
       new_groundings = set()
-      cont = 0 
-      lim=10
-      for q in queries:
-        print('\n\n***************q', q,'********************') if cont< lim else None
-        cont +=1
 
+      for q in queries:
         if q[0] != head[0]:  # predicates must match.
           continue
 
@@ -94,11 +86,9 @@ class KnownBodyGrounder(Engine):
         ground_body_atom = (body_atom[0], ) + tuple(
             [head_var_assignments.get(body_atom[j+1], None)
              for j in range(len(body_atom)-1)])
-        # print('\nground_body_atom:', ground_body_atom, '. Substitution (by None) of the vars not present in head.') if cont< lim else None
         if all(ground_body_atom[1:]):
           # Variables all match, so we have already the wanted grounding.
           # Rule was in the form A(x,y) ^ ... -> B(x,y)
-        #   print('groundings already done, #all vars are subtituted', groundings) if cont< lim else None
           groundings = (ground_body_atom,)
         else:
           # One varibale match, rule was in the form A(x,z) ^ ... -> B(x,y)
@@ -106,30 +96,24 @@ class KnownBodyGrounder(Engine):
           # This is the list of ground atoms for the i-th atom in the body.
           # groundings = self._fact_index.get_matching_atoms(ground_body_atom)
           groundings = self._fact_index._index.get(ground_body_atom, [])  # optimization to avoid one extra function call
-          print('groundings found in facts', groundings) if cont< lim else None
-        #   print('groundings found in facts', groundings) if cont< lim else None
+
         if len(rule.body) == 1:
-        #   print('length one in the body, one predicate') if cont< lim else None  
           # Shortcut, we are done, the clause has no free variables.
           # Return the groundings.
           new_groundings.add(((q,), groundings))
-          print('ADDED', q, '->', (groundings,)) if cont< lim else None
           continue
 
         # Select the other atom in the body and ground it with the
         # assignments with the head and the other body ground atom fixed.
         body_atom2 = rule.body[1]
 
-        # print('\nfor every grounding of the body atom') if cont< lim else None
         for atom in groundings:
-          print('--grounded_atom', atom, ' The other vars (not present in head) are left as free') if cont< lim else None
           head_body_var_assignments = copy.copy(head_var_assignments)
           head_body_var_assignments.update(
               {v: a for v, a in zip(body_atom[1:], atom[1:])})
           new_grounding = (body_atom2[0], ) + tuple(
               [head_body_var_assignments.get(body_atom2[j+1], None)
                for j in range(len(body_atom2)-1)])
-          print('----new_grounding:', new_grounding) if cont< lim else None
           if all(new_grounding) and self._fact_index._index.get(
               new_grounding, []):
               # (body_atom1, body_atom2)
@@ -138,8 +122,6 @@ class KnownBodyGrounder(Engine):
               # print('ADDED', q, '->', tuple(body_grounding))
 
       self.rule2groundings[rule.name].update(new_groundings)
-      print('NUM_GROUNDINGS', len(new_groundings))
-      print('NEW GROUNDINGS', new_groundings)
 
     def ground_one_rule(self, rule: Rule, queries: List[Tuple]):
       # We have a rule like A(x,y) B(y,z) => C(x,z)
@@ -148,11 +130,8 @@ class KnownBodyGrounder(Engine):
       head = rule.head[0]
 
       new_groundings = set()
-      cont = 0
-      lim=10
+
       for q in queries:
-        cont += 1 
-        print('\n\n***************q', q,'********************') if cont< lim else None
         if q[0] != head[0]:  # predicates must match.
           continue
 
@@ -166,16 +145,10 @@ class KnownBodyGrounder(Engine):
             ground_body_atom = (body_atom[0], ) + tuple(
                 [head_ground_vars.get(body_atom[j], None)
                  for j in range(1, len(body_atom))])
-            print('\n-i', i,'. ground_body_atom:', ground_body_atom, '. Substitution (by None) of the vars not present in head.') if cont< lim else None
             # optimization to avoid one extra function call.
             atom_candidates = self._fact_index._index.get(ground_body_atom, [])
-            print('groundings found in facts', atom_candidates) if cont< lim else None
-            # Now, it goes through the vars in the body atom i and tries to see possible assigments to the vars
-            print('body_atom', body_atom) if cont< lim else None
-            print('var2constants', var2constants) if cont< lim else None
             for j in range(1, len(body_atom)):
                 if ground_body_atom[j] is not None:
-                    print('     -j= ',j,'. var', body_atom[j], 'is already substituted') if cont< lim else None
                     continue
                 constant_candidates = [a[j] for a in atom_candidates]
                 var = body_atom[j]
@@ -184,27 +157,19 @@ class KnownBodyGrounder(Engine):
                                               set(constant_candidates))
                 else:
                     var2constants[var] = list(set(constant_candidates))
-                # take the candidates form the atoms found in facts 
-                print('     -j= ',j,'. var', var, 'free. Candidates from groundings in facts:', var2constants[var]) if cont< lim else None
                 if len(var2constants[var]) == 0:
-                    print('fail,next body query') if cont< lim else None
                     break
 
         vars = var2constants.keys()
-        print('\nvar2constants', var2constants) if cont< lim else None
         for ground_vars in product(*[c for c in var2constants.values()]):
-            print('for every possible grounding of the free vars',ground_vars) if cont< lim else None
             full_ground_vars = dict(zip(vars, ground_vars))
             ground_body_atoms = []
             for body_atom in rule.body:
                 ground_body_atom = (body_atom[0], ) + tuple(
                     [full_ground_vars.get(body_atom[j+1], None)
                      for j in range(len(body_atom)-1)])
-                print('         -ground_body_atom:', ground_body_atom, '. Substitution (by None) of the vars not present in head.') if cont< lim else None
                 ground_body_atoms.append(ground_body_atom)
+
             new_groundings.add(((q,), tuple(ground_body_atoms)))
-            print('     ADDED', q, '->', tuple(ground_body_atoms)) if cont< lim else None
-        print('------UPDATED NEW GROUNDINGS', len(new_groundings), new_groundings) if cont< lim else None
+
       self.rule2groundings[rule.name].update(new_groundings)
-      print('NUM_GROUNDINGS', len(new_groundings))
-      print('NEW GROUNDINGS', new_groundings)

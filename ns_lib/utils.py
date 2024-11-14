@@ -992,7 +992,7 @@ class MRRMetric(tf.keras.metrics.Metric):
     # Element-wise Multiplication: relevance * reciprocal_rank computes the reciprocal rank for relevant items (i.e., where relevance is 1.0)
     # Maximum Reciprocal Rank: tf.reduce_max(..., axis=1, keepdims=True) finds the maximum reciprocal rank for each sample across the list of predictions. This is because MRR considers the highest (earliest) rank of a relevant item.
     mrr = tf.reduce_max(
-        input_tensor=relevance * reciprocal_rank, axis=1, keepdims=True) 
+        input_tensor=relevance * reciprocal_rank, axis=1, keepdims=True)
     return mrr
 
 # Wrapper around tf.keras.metrics.AUC adding the convertion to ragged tensors.
@@ -1094,3 +1094,71 @@ def get_model_memory_usage(batch_size, model):
 #        rank_l = 1. + tf.cast(tf.argsort(tf.argsort(- y_pred))[:, 0], tf.float32)
 #        mrr =  1.0 / rank_l
 #        return np.mean(mrr, axis=0)
+
+
+
+def save_embeddings_from_model(model, fol, serializer, save_dir="embeddings"):
+    """
+    Extract and save embeddings from a trained KGEModel. Get the emb with the global indices for
+    constants and predicates, and map them to their names.
+    
+    Args:
+        model: Trained KGEModel instance 
+        save_dir: Directory to save embedding dictionaries
+        
+    Returns:
+        constant_embeddings_dict: Dict mapping constant names to embeddings for each domain
+        predicate_embeddings_dict: Dict mapping predicate names to embeddings
+    """
+
+    constant_to_global_index = serializer.constant_to_global_index  # Dict[domain][constant] = index
+    # print('constant_to_global_index', [(k,v) for k,v in constant_to_global_index.items()])
+
+    print('domain.constants', [(domain.name, len(domain.constants)) for domain in fol.domains])
+    embedder = model.kge_model.constant_embedder.embedder # there's one per domain
+
+    embeddings_c = {domain.name: embedder[domain.name](tf.range(len(domain.constants))) for domain in fol.domains}
+    print('embeddings_c', [(name, embeddings.shape) for name, embeddings in embeddings_c.items()])
+
+    # create a dictionary with the constant str as key and the embedding as value
+    from collections import defaultdict
+    constant_embeddings_dict = defaultdict(dict)
+
+    for domain in fol.domains:
+        for (c_str, idx) in constant_to_global_index[domain.name].items():
+            print('c_str', c_str, 'idx', idx, 'embeddings_c[domain.name]', embeddings_c[domain.name].shape) if idx < 15 else None
+            constant_embeddings_dict[domain.name][c_str] = embeddings_c[domain.name][idx]
+    print('constant_embeddings_dict', [(name, len(embeddings)) for name, embeddings in constant_embeddings_dict.items()])
+
+    predicate_to_global_index = {p: i for i, p in enumerate(fol.predicates)}
+    predicate_embedder = model.kge_model.predicate_embedder.embedder
+    predicate_embeddings = predicate_embedder(tf.range(len(fol.predicates)))
+    predicate_embeddings_dict = {p: predicate_embeddings[i] for p, i in predicate_to_global_index.items()}
+    print('predicate_embeddings_dict', [(name, embeddings.shape) for name, embeddings in predicate_embeddings_dict.items()])
+    
+    # DO A TEST TO SEE IF THE EMBEDDINGS ARE CORRECT. print 5 elements of the first embedding of each domain
+    print('CONSTANTS')
+    for domain in fol.domains:
+        print('\ndomain', domain.name,'first embedding')
+        print('saved', constant_embeddings_dict[domain.name][list(constant_embeddings_dict[domain.name].keys())[0]][:5])
+        print('from embedders', embeddings_c[domain.name][0,:5])
+        print('they are equal',constant_embeddings_dict[domain.name][list(constant_embeddings_dict[domain.name].keys())[0]][:5] == embeddings_c[domain.name][0,:5])
+    print('\nPREDICATES')
+    print('saved', predicate_embeddings_dict[list(predicate_embeddings_dict.keys())[0]][:5])
+    print('from embedders', predicate_embeddings[0,:5])
+    print('they are equal',predicate_embeddings_dict[list(predicate_embeddings_dict.keys())[0]][:5] == predicate_embeddings[0,:5])
+    
+
+
+    # Save embeddings
+    os.makedirs(save_dir, exist_ok=True)
+
+    with open(os.path.join(save_dir, "constant_embeddings.pkl"), "wb") as f:
+        pickle.dump(constant_embeddings_dict, f)
+        
+    with open(os.path.join(save_dir, "predicate_embeddings.pkl"), "wb") as f:
+        pickle.dump(predicate_embeddings_dict, f)
+        
+    print(f"Saved embeddings to {save_dir}/")
+
+    return constant_embeddings_dict,  predicate_embeddings_dict
