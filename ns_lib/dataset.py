@@ -194,7 +194,7 @@ class DataGenerator(tf.keras.utils.Sequence):
             constants_features=constants_features,
             deterministic=self.deterministic) 
 
-        return (X_domains_data, A_predicates_data, A_rules_data, Q), y
+        return (X_domains_data, A_predicates_data, A_rules_data, Q), {'concept': y, 'task': y}
 
 
 
