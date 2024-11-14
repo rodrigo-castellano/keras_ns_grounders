@@ -19,6 +19,14 @@ from model_utils import *
 import wandb
 from wandb.integration.keras import WandbCallback
 from wandb.integration.keras import WandbMetricsLogger
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
+
+tf.config.set_soft_device_placement(True)
+
 explain_enabled: bool = False
 
 
@@ -58,7 +66,6 @@ def main(data_path, log_filename, use_WB, args):
     dot_product = get_arg(args, 'engine_dot_product', False)
 
     num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
-
 
 
     # DEFINING RULES AND GROUNDING ENGINE
@@ -132,7 +139,6 @@ def main(data_path, log_filename, use_WB, args):
             args, 'cdcr_use_positional_embeddings', True),
         cdcr_num_formulas=get_arg(args, 'cdcr_num_formulas', 3),
         r2n_prediction_type=get_arg(args, 'r2n_prediction_type', 'full'),
-        device=args.device,
     )
 
 

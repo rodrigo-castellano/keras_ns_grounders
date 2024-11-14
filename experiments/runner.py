@@ -8,6 +8,7 @@ sys.path.append(os.path.join(current_dir, '..', 'ns_lib'))
 import tensorflow as tf
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 import copy
 from itertools import product
 from train import main
@@ -145,9 +146,9 @@ if __name__ == '__main__':
             continue
 
         # Data params
-        args.corrupt_mode = 'TAIL' if (dataset_name=='pharmkg_full' or dataset_name=='FB15k237' or dataset_name=='wn18rr' or 'countries' in dataset_name) else 'HEAD_AND_TAIL'
+        args.corrupt_mode = 'TAIL' if ('countries' in dataset_name) else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
-        args.valid_negatives = 200
+        args.valid_negatives = 100
         args.test_negatives = 500 if dataset_name=='FB15k237' else None # all possible negatives
         args.ragged = True
         args.format = "functional"
