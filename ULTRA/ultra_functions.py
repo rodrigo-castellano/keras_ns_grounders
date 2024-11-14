@@ -1344,3 +1344,126 @@ class LogicSerializerFast(IndexerBase):
                 predicate_to_constant_tuples,
                 index_groundings,
                 index_queries,(queries_global,A_predicates_global,A_predicates_global_textualized))
+    
+
+
+class LMEmbeddings():
+    # Load model from HuggingFace Hub
+    # tokenizer = AutoTokenizer.from_pretrained('cross-encoder/ms-marco-MiniLM-L-12-v2')
+    # model = AutoModel.from_pretrained('cross-encoder/ms-marco-MiniLM-L-12-v2')
+    embedded_constants = {}
+    @staticmethod
+    def encode(sentences) -> tf.Tensor:
+        """
+        Performs mean pooling on the token embeddings based on the attention mask.
+
+        Args:
+            model_output (tf.Tensor): The output of the model.
+            attention_mask (tf.Tensor): The attention mask to indicate which tokens to include in the pooling.
+
+        Returns:
+            tf.Tensor: The mean-pooled token embeddings.
+
+        """
+        # Tokenize sentences
+        encoded_input = LMEmbeddings.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt')
+
+        # Compute token embeddings
+        with torch.no_grad():
+            model_output = LMEmbeddings.model(**encoded_input)
+    
+        token_embeddings = model_output[0] #First element of model_output contains all token embeddings
+        input_mask_expanded = encoded_input['attention_mask'].unsqueeze(-1).expand(token_embeddings.size()).float()
+        embedding = torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+        return F.normalize(embedding, p=2, dim=1)
+    
+    def __init__(self, fol: FOL, model_name: str):
+        """
+        Initialize the ConstantEmbedding class.
+
+        Args:
+            model_name (str): The name of the pre-trained model.
+
+        Returns:
+            None
+        """
+        # self.lm = AutoModel.from_pretrained(model_name, device_map = 'cuda')
+        self.fol = fol
+        self.constant_to_global_unique_index = defaultdict(OrderedDict)
+        self.global_unique_index_to_constant = defaultdict(OrderedDict)
+        counter = 0
+        for domain in self.fol.domains:
+            for constant in domain.constants:
+                self.constant_to_global_unique_index[domain.name][constant] = counter
+                self.global_unique_index_to_constant[counter] = [domain.name, constant]
+                counter += 1
+        
+        self.predicate_to_global_unique_index = defaultdict(OrderedDict)
+        self.global_unique_index_to_predicate = defaultdict(OrderedDict)
+        counter = 0
+        for predicate in self.fol.predicates:
+            self.predicate_to_global_unique_index[predicate] = counter
+            self.global_unique_index_to_predicate[counter] = predicate
+            counter += 1
+            
+        self.wikipedia = wk.Wikipedia('MyProjectName (merlin@example.com)', 'en')
+        
+
+        #Embed relation
+        predicates_description = ["""The predicate locatedInCR(countries,regions)locatedInCR(countries,regions) indicates a relationship where a country is geographically situated within a specified region. It asserts that the entity represented by "countries" is contained within the spatial boundaries of the entity represented by "regions.""",
+                                """The predicate asserts that a country is situated within a specific subregion. Here, "countries" represents the country or countries, and "subregions" represents the subregions within which these countries are located.""",
+                                """The predicate asserts that a subregion is situated within a specific region. In this context, "subregions" represents the subregion or subregions, and "regions" represents the regions within which these subregions are located.""",
+                                """The predicate asserts that two countries share a common border. Here, both arguments represent countries that are geographically adjacent to each other."""]
+        
+        
+        if os.path.exists("constants_pca.pkl") and os.path.exists("relations_pca.pkl"):
+            self.embedded_constants_tensor = pickle.load(open("constants_pca.pkl", "rb"))
+            self.embedded_relations_tensor = pickle.load(open("relations_pca.pkl", "rb"))
+            return
+        
+        self.embedded_relations = []
+        for predicate, description in zip(self.fol.predicates,predicates_description):
+            self.embedded_relations.append(self.encode(description))
+        self.embedded_relations_tensor = tf.convert_to_tensor(np.array(self.embedded_relations))
+                
+        #Embed constants
+        
+        print("Embedding constants...")
+        self.embedded_constants_tensor = []
+        for domain in self.fol.domains:
+            print("Embedding constants for domain: ", domain.name)
+            LMEmbeddings.embedded_constants[domain.name] = {}
+            for constant in tqdm(domain.constants):
+                if constant in LMEmbeddings.embedded_constants[domain.name]:
+                    continue
+                self.embedded_constants[domain.name][constant] = self.encode(self.wikipedia.page(constant).summary.split(".")[0])
+                self.embedded_constants_tensor.append(self.embedded_constants[domain.name][constant])
+        self.embedded_constants_tensor = tf.convert_to_tensor(np.array(self.embedded_constants_tensor))
+        
+        self.pca = PCA(n_components=128)
+        self.embedded_constants_tensor = pickle.load(open("constants.pkl", "rb"))
+        self.pca.fit(tf.concat([self.embedded_relations_tensor, self.embedded_constants_tensor], 0)[:,0,:]) # (num_predicates + num_constants, embedding_size)
+        self.embedded_relations_tensor = self.pca.transform(self.embedded_relations_tensor[:,0,:])
+        self.embedded_constants_tensor = self.pca.transform(self.embedded_constants_tensor[:,0,:])
+        pickle.dump(self.embedded_constants_tensor, open("constants_pca.pkl", "wb"))
+        pickle.dump(self.embedded_relations_tensor, open("relations_pca.pkl", "wb"))
+        # self.embedded_relations = tf.concat(self.embedded_relations, 0)
+        # self.embedded_constants = tf.concat(self.embedded_constants, 0)
+        
+    def __call__(self, A_predicates: tf.Tensor) -> tf.Tensor:
+        """
+        Applies the embedding model to the given inputs.
+
+        Args:
+            inputs (tf.Tensor): The input tensor to be embedded.
+
+        Returns:
+            tf.Tensor: The embedded tensor.
+        """
+        A_as_np_array = tf.convert_to_tensor(A_predicates)
+        
+        constants_embeddings = tf.gather(self.embedded_constants_tensor, A_as_np_array[:,:2]) # (batch_size, 2, embedding_size)
+        
+        predicate_embeddings = tf.gather(self.embedded_relations_tensor, A_as_np_array[:,2]) # (batch_size, embedding_size)
+        predicate_embeddings = tf.expand_dims(predicate_embeddings, 1) # (batch_size, 1, embedding_size)
+        return constants_embeddings, predicate_embeddings
