@@ -28,7 +28,7 @@ if __name__ == '__main__':
     # tf.config.run_functions_eagerly(True)
     use_logger = False
     use_WB = False
-    load_model_ckpt = True
+    load_model_ckpt = False
     load_kge_ckpt = False
     save_model_ckpt = True
     save_kge_ckpt = save_model_ckpt
