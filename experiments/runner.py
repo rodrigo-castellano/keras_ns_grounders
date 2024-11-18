@@ -40,9 +40,8 @@ if __name__ == '__main__':
     log_folder :str = "./experiments/runs/"
     ckpt_folder = "./../checkpoints/"
     data_path :str = "experiments/data"
-    epochs: int = 20
+    epochs: int = 100
     EARLY_STOPPING = True
-    GLOBAL_SERIALIZATION = False
     DATASET_NAME = ['countries_s1'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
     GROUNDER = ['backward_1_1'] # ['backward_0_1','backward_0_2','backward_0_3','backward_1_1','backward_1_2','backward_1_3',
                # 'backward_2_1','backward_2_2','backward_2_3',] # 'domainbody','relationentity','full']
@@ -150,7 +149,7 @@ if __name__ == '__main__':
             continue
 
         # Data params
-        args.corrupt_mode = 'TAIL' if ('countries' in dataset_name) else 'HEAD_AND_TAIL'
+        args.corrupt_mode = 'TAIL' if ('countries' in dataset_name or 'ablation' in dataset_name or 'test' in dataset_name) else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 100
         args.test_negatives = 500 if dataset_name=='FB15k237' else None # all possible negatives
@@ -203,9 +202,6 @@ if __name__ == '__main__':
         run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg, e, args.batch_size, args.val_batch_size, args.test_batch_size)
         args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e','train_batch_size','val_batch_size','test_batch_size']
         args.run_signature = '-'.join(f'{v}' for v in run_vars)    
-
-        args.device = 'cpu' # if not tf.config.experimental.list_physical_devices('GPU') else 'gpu'
-        args.global_serialization = GLOBAL_SERIALIZATION
 
         args.ckpt_folder = ckpt_folder
         args.load_model_ckpt = load_model_ckpt

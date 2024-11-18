@@ -1,0 +1,4 @@
+neighborOf(spain,france).
+neighborOf(france,spain).
+locatedInCR(spain,europe).
+locatedInCR(belgium,europe).

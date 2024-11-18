@@ -19,6 +19,7 @@ from model_utils import *
 import wandb
 from wandb.integration.keras import WandbCallback
 from wandb.integration.keras import WandbMetricsLogger
+from ns_lib.utils import save_embeddings_from_model
 
 explain_enabled: bool = False
 
@@ -268,15 +269,15 @@ def main(data_path, log_filename, use_WB, args):
         print('Training time:', np.round(end_train - start_train,2), 'seconds')
 
         # Restore the best weights after training
+        kge_model_checkpoint.restore_weights() if args.load_kge_ckpt else model_checkpoint.restore_weights()
         model_checkpoint.restore_weights()
-        kge_model_checkpoint.restore_weights()
 
     else:
         if use_WB:
             run.finish
         args.time_train = 0
     
-    # save_embeddings_from_model(model, fol, serializer, save_dir="./../embeddings")
+    save_embeddings_from_model(model, fol, serializer, save_dir="./../embeddings")
 
 
 

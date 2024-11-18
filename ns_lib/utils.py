@@ -13,6 +13,9 @@ import datetime
 # from tensorflow_ranking.python.utils import sort_by_scores, ragged_to_dense
 from ns_lib.logic.commons import Atom, Domain, Rule, RuleLoader
 from collections import defaultdict
+from collections import defaultdict
+import pickle
+import json
 
 def nested_dict(n, type):
     """
@@ -1204,7 +1207,6 @@ def save_embeddings_from_model(model, fol, serializer, save_dir="embeddings"):
     print('embeddings_c', [(name, embeddings.shape) for name, embeddings in embeddings_c.items()])
 
     # create a dictionary with the constant str as key and the embedding as value
-    from collections import defaultdict
     constant_embeddings_dict = defaultdict(dict)
 
     for domain in fol.domains:
@@ -1231,17 +1233,39 @@ def save_embeddings_from_model(model, fol, serializer, save_dir="embeddings"):
     print('from embedders', predicate_embeddings[0,:5])
     print('they are equal',predicate_embeddings_dict[list(predicate_embeddings_dict.keys())[0]][:5] == predicate_embeddings[0,:5])
     
-
+    # convert the embeddings to numpy arrays
+    constant_embeddings_dict = {str(k): {str(kk): v.numpy() for kk, v in vv.items()} for k, vv in constant_embeddings_dict.items()}
+    predicate_embeddings_dict = {str(k): v.numpy() for k, v in predicate_embeddings_dict.items()}
 
     # Save embeddings
     os.makedirs(save_dir, exist_ok=True)
 
     with open(os.path.join(save_dir, "constant_embeddings.pkl"), "wb") as f:
         pickle.dump(constant_embeddings_dict, f)
-        
     with open(os.path.join(save_dir, "predicate_embeddings.pkl"), "wb") as f:
         pickle.dump(predicate_embeddings_dict, f)
+
+    # with open(os.path.join(save_dir, "constant_embeddings.json"), "w") as f:
+    #     json.dump(constant_embeddings_dict, f)
+    # with open(os.path.join(save_dir, "predicate_embeddings.json"), "w") as f:
+    #     json.dump(predicate_embeddings_dict, f)
         
     print(f"Saved embeddings to {save_dir}/")
 
+    # load them back
+    
+    with open(os.path.join(save_dir, "constant_embeddings.pkl"), "rb") as f:
+        constant_embeddings_dict = pickle.load(f)
+    with open(os.path.join(save_dir, "predicate_embeddings.pkl"), "rb") as f:
+        predicate_embeddings_dict = pickle.load(f)
+
+    # with open(os.path.join(save_dir, "constant_embeddings.json"), "r") as f:
+    #     constant_embeddings_dict = json.load(f)
+    # with open(os.path.join(save_dir, "predicate_embeddings.json"), "r") as f:
+    #     predicate_embeddings_dict = json.load(f)
+
+    print('predicate_embeddings_dict', [(k, v.shape) for k, v in predicate_embeddings_dict.items()])
+    print('constant_embeddings_dict', [(domain, {c: emb.shape for c, emb in dict_.items()}) for domain, dict_ in constant_embeddings_dict.items()])
+    print('constant_embeddings_dict', constant_embeddings_dict)
+    print('predicate_embeddings_dict',  predicate_embeddings_dict)
     return constant_embeddings_dict,  predicate_embeddings_dict
