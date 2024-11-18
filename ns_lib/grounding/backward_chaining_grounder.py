@@ -393,7 +393,7 @@ class ApproximateBackwardChainingGrounder(Engine):
         self._rule2processed_queries = {rule.name: set() for rule in self.rules}
         # groundings_numbers = []
         for step in range(self.num_steps):
-            # print('STEP NUMBER ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^', step,'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^','step ',step,'/', self.num_steps, 'known body',step == self.num_steps - 1, )
+            # print('\n\nSTEP NUMBER ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^', step,'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^','step ',step,'/', self.num_steps, 'known body',step == self.num_steps - 1, )
             for j,rule in enumerate(self.rules):
                 # print('\nrule ', rule, ' """"""""""""""""""""""""""""""""""""""""" """""""""""""""""""""""""" ')
                 # Here we assume to have a Horn clause, fix it.

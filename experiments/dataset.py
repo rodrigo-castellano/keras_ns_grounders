@@ -435,20 +435,29 @@ class KGCDataHandler():
             ret1=[]
             ret2=[]
             r_idx, s_idx, o_idx = q
-
+            # print('query', q, flush=True)
             if corrupt_mode == 'HEAD_AND_TAIL' or corrupt_mode == 'HEAD':
                 # Head corruptions
                 o_domain = constant2domain[o_idx]
                 n_constants = len(domain2constants[o_domain])
                 constants = domain2constants[o_domain]
+                # print('domain', o_domain, 'number of constants in domain', n_constants, flush=True)
+                # print('constants', constants, flush=True)
+                # print('known facts', known_facts, flush=True)
+                cont = 0
                 while num_corruptions_head < num_negatives:
+                    # print('num_corruptions_head', num_corruptions_head, flush=True) if cont < 10 else None
+                    # print('num_negatives', num_negatives, flush=True) if cont < 10 else None
                     idx = random.randint(0, n_constants - 1)
+                    # print('range', 0, n_constants - 1, 'index', idx, flush=True) if cont < 10 else None
                     entity = constants[idx]
                     a1 = (r_idx, s_idx, entity)
+                    # print('corruption', a1, flush=True) if cont < 10 else None
                     if a1 not in known_facts:
                         ret1.append(a1)
                         num_corruptions_head += 1
-
+                    cont += 1
+            # print('number of corruptions for query is', len(ret1), flush=True) if cont < 10 else None
             if corrupt_mode == 'HEAD_AND_TAIL' or corrupt_mode == 'TAIL':
                 # Tail corruptions
                 s_domain = constant2domain[s_idx]
@@ -461,7 +470,7 @@ class KGCDataHandler():
                     if a2 not in known_facts:
                         ret2.append(a2)
                         num_corruptions_tail += 1
-
+            # print('number of corruptions for query is', len(ret1)+len(ret2), flush=True)
             Q.append(Corruption(head=ret1, tail=ret2))
 
         return Q
