@@ -498,21 +498,15 @@ def main(base_path, output_filename, kge_output_filename, log_filename, args):
     
     fol = data_handler.fol 
 
-    enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
-    if enable_rules: 
-        rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
+    rules = ns.utils.read_rules(join(base_path, args.dataset_name, args.rules_file),args)
 
-        if 'backward' in args.grounder:
-            num_steps = int(args.grounder.split('_')[-1])
-            prune_backward = True  
-            print('Using backward chaining with %d steps' % num_steps)
-            engine = BackwardChainingGrounder(rules, facts=list(data_handler.train_known_facts_set),
-                                                        domains={d.name:d for d in fol.domains},
-                                                        num_steps=num_steps,prune_incomplete_proofs=prune_backward)
-
-    else:
-        rules = []
-        engine = None
+    if 'backward' in args.grounder:
+        num_steps = int(args.grounder.split('_')[-1])
+        prune_backward = True  
+        print('Using backward chaining with %d steps' % num_steps)
+        engine = BackwardChainingGrounder(rules, facts=list(data_handler.train_known_facts_set),
+                                                    domains={d.name:d for d in fol.domains},
+                                                    num_steps=num_steps,prune_incomplete_proofs=prune_backward)
  
     queries, labels = dataset_test[0:len(dataset_test)]
     facts = fol.facts

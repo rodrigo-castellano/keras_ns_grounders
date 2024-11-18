@@ -14,10 +14,9 @@ from keras.callbacks import CSVLogger
 from ns_lib.logic.commons import Atom, Domain, FOL, Rule, RuleLoader
 from ns_lib.grounding.grounder_factory import BuildGrounder
 from ns_lib.utils import MMapModelCheckpoint, KgeLossFactory, get_arg
-from ns_lib.dataset import get_ultra_datasets
 import time
 from model_utils import * 
-from ultra_utils import nested_dict
+from ns_lib.utils import nested_dict
 explain_enabled: bool = False
 from collections import Counter
 
@@ -29,455 +28,455 @@ from typing import List, Set, Tuple, Dict, Union
 from ns_lib.logic.commons import Atom, Domain, Rule, RuleGroundings
 from ns_lib.grounding.engine import Engine
 
-class DomainFullGrounder(Engine):
+# class DomainFullGrounder(Engine):
 
-    def __init__(self,
-                 rules: List[Rule],
-                 domains:Dict[str, Domain],
-                 domain2adaptive_constants: Dict[str, List[str]]=None,
-                 pure_adaptive: bool=False,
-                 exclude_symmetric: bool=False,
-                 exclude_query: bool=False,
-                 limit: int=None):
+#     def __init__(self,
+#                  rules: List[Rule],
+#                  domains:Dict[str, Domain],
+#                  domain2adaptive_constants: Dict[str, List[str]]=None,
+#                  pure_adaptive: bool=False,
+#                  exclude_symmetric: bool=False,
+#                  exclude_query: bool=False,
+#                  limit: int=None):
 
-        self.rules = rules
-        # The flat grounder is not query oriented.
-        self.domains = domains
-        self.domain2adaptive_constants = domain2adaptive_constants
-        self.pure_adaptive = pure_adaptive
-        if self.pure_adaptive:
-            assert self.domain2adaptive_constants, (
-                'Need adaptive variable if in pure adaptive mode.')
-        self.limit = limit
-        self.exclude_symmetric = exclude_symmetric
-        self.exclude_query = exclude_query
+#         self.rules = rules
+#         # The flat grounder is not query oriented.
+#         self.domains = domains
+#         self.domain2adaptive_constants = domain2adaptive_constants
+#         self.pure_adaptive = pure_adaptive
+#         if self.pure_adaptive:
+#             assert self.domain2adaptive_constants, (
+#                 'Need adaptive variable if in pure adaptive mode.')
+#         self.limit = limit
+#         self.exclude_symmetric = exclude_symmetric
+#         self.exclude_query = exclude_query
 
-    #@lru_cache
-    def ground(self,
-               facts: List[Tuple],
-               queries: List[Tuple],
-               **kwargs) -> Dict[str, RuleGroundings]:
+#     #@lru_cache
+#     def ground(self,
+#                facts: List[Tuple],
+#                queries: List[Tuple],
+#                **kwargs) -> Dict[str, RuleGroundings]:
 
-        res = {}
-        for rule in self.rules:
-            print('RULE', rule, 'out of', len(self.rules))
-            added = 0
-            groundings = []
+#         res = {}
+#         for rule in self.rules:
+#             print('RULE', rule, 'out of', len(self.rules))
+#             added = 0
+#             groundings = []
 
-            if self.pure_adaptive:
-                ground_var_groups = [self.domain2adaptive_constants.get(d, [])
-                                     for d in rule.vars2domain.values()]
-            elif self.domain2adaptive_constants is not None:
-                ground_var_groups = [self.domains[d].constants +
-                                     self.domain2adaptive_constants.get(d, [])
-                                     for d in rule.vars2domain.values()]
-            else:
-                ground_var_groups = [self.domains[d].constants
-                                     for d in rule.vars2domain.values()]
+#             if self.pure_adaptive:
+#                 ground_var_groups = [self.domain2adaptive_constants.get(d, [])
+#                                      for d in rule.vars2domain.values()]
+#             elif self.domain2adaptive_constants is not None:
+#                 ground_var_groups = [self.domains[d].constants +
+#                                      self.domain2adaptive_constants.get(d, [])
+#                                      for d in rule.vars2domain.values()]
+#             else:
+#                 ground_var_groups = [self.domains[d].constants
+#                                      for d in rule.vars2domain.values()]
 
-            for ground_vars in product(*ground_var_groups):
-                var_assignments = {k:v for k,v in zip(
-                    rule.vars2domain.keys(), ground_vars)}
+#             for ground_vars in product(*ground_var_groups):
+#                 var_assignments = {k:v for k,v in zip(
+#                     rule.vars2domain.keys(), ground_vars)}
 
-                is_good = True
-                body_atoms = []
-                for atom in rule.body:
-                    ground_atom = (atom[0], ) + tuple(
-                        [var_assignments.get(atom[j+1], None)
-                         for j in range(len(atom)-1)])
-                    assert all(ground_atom), 'Unresolved %s' % str(ground_atom)
-                    if (self.exclude_symmetric and
-                        ground_atom[1] == ground_atom[2]):
-                        is_good = False
-                        break
-                    if self.exclude_query and ground_atom in queries:
-                        is_good = False
-                        break
-                    body_atoms.append(ground_atom)
+#                 is_good = True
+#                 body_atoms = []
+#                 for atom in rule.body:
+#                     ground_atom = (atom[0], ) + tuple(
+#                         [var_assignments.get(atom[j+1], None)
+#                          for j in range(len(atom)-1)])
+#                     assert all(ground_atom), 'Unresolved %s' % str(ground_atom)
+#                     if (self.exclude_symmetric and
+#                         ground_atom[1] == ground_atom[2]):
+#                         is_good = False
+#                         break
+#                     if self.exclude_query and ground_atom in queries:
+#                         is_good = False
+#                         break
+#                     body_atoms.append(ground_atom)
 
-                head_atoms = []
-                for atom in rule.head:
-                    ground_atom = (atom[0], ) + tuple(
-                        [var_assignments.get(atom[j+1], atom[j+1])
-                         for j in range(len(atom)-1)])
-                    assert all(ground_atom), 'Unresolved %s' % str(ground_atom)
-                    if self.exclude_symmetric and ground_atom[1] == ground_atom[2]:
-                        is_good = False
-                        break
-                    if self.exclude_query and ground_atom in queries:
-                        is_good = False
-                        break
-                    head_atoms.append(ground_atom)
+#                 head_atoms = []
+#                 for atom in rule.head:
+#                     ground_atom = (atom[0], ) + tuple(
+#                         [var_assignments.get(atom[j+1], atom[j+1])
+#                          for j in range(len(atom)-1)])
+#                     assert all(ground_atom), 'Unresolved %s' % str(ground_atom)
+#                     if self.exclude_symmetric and ground_atom[1] == ground_atom[2]:
+#                         is_good = False
+#                         break
+#                     if self.exclude_query and ground_atom in queries:
+#                         is_good = False
+#                         break
+#                     head_atoms.append(ground_atom)
 
-                # Check that nothing has been discarded.
-                if is_good:
-                    groundings.append((tuple(head_atoms), tuple(body_atoms)))
-                    added += 1
-                    if self.limit is not None and self.limit >= added:
-                        break
+#                 # Check that nothing has been discarded.
+#                 if is_good:
+#                     groundings.append((tuple(head_atoms), tuple(body_atoms)))
+#                     added += 1
+#                     if self.limit is not None and self.limit >= added:
+#                         break
 
-            res[rule.name] = groundings
-            # res[rule.name] = RuleGroundings(rule.name, groundings=groundings)
-        groundings_per_level = {0: res}
-        return res, groundings_per_level
+#             res[rule.name] = groundings
+#             # res[rule.name] = RuleGroundings(rule.name, groundings=groundings)
+#         groundings_per_level = {0: res}
+#         return res, groundings_per_level
 
 
-class AtomIndex():
-    def __init__(self, facts: List[Tuple[str, str, str]]):
-        _index = {}
-        for f in facts:
-            r_idx, s_idx, o_idx = f
-            key = (r_idx, None, None)
-            if key not in _index:
-                _index[key] = set()
-            _index[key].add(f)
-            key = (r_idx, s_idx, None)
-            if key not in _index:
-                _index[key] = set()
-            _index[key].add(f)
-            key = (r_idx,  None, o_idx)
-            if key not in _index:
-                _index[key] = set()
-            _index[key].add(f)
-            key = f
-            _index[key] = set([f])
+# class AtomIndex():
+#     def __init__(self, facts: List[Tuple[str, str, str]]):
+#         _index = {}
+#         for f in facts:
+#             r_idx, s_idx, o_idx = f
+#             key = (r_idx, None, None)
+#             if key not in _index:
+#                 _index[key] = set()
+#             _index[key].add(f)
+#             key = (r_idx, s_idx, None)
+#             if key not in _index:
+#                 _index[key] = set()
+#             _index[key].add(f)
+#             key = (r_idx,  None, o_idx)
+#             if key not in _index:
+#                 _index[key] = set()
+#             _index[key].add(f)
+#             key = f
+#             _index[key] = set([f])
 
-        # Store tuple instead of sets.
-        self._index = {k: tuple(v) for k, v in _index.items()}
+#         # Store tuple instead of sets.
+#         self._index = {k: tuple(v) for k, v in _index.items()}
 
-    def get_matching_atoms(self,
-                           atom: Tuple[str, str, str]) -> Tuple[Tuple[str, str, str]]:
-        return self._index.get(atom, [])
+#     def get_matching_atoms(self,
+#                            atom: Tuple[str, str, str]) -> Tuple[Tuple[str, str, str]]:
+#         return self._index.get(atom, [])
 
-def get_atoms(r2g:Dict[str, Set[Tuple[Tuple, Tuple]]]) -> Set[Tuple]:
-    atoms = set()
-    for r, g in r2g.items():
-        for rule_atoms in g:
-            for atom in rule_atoms[0]:
-                atoms.add(atom)
-            for atom in rule_atoms[1]:
-                atoms.add(atom)
-    return atoms
+# def get_atoms(r2g:Dict[str, Set[Tuple[Tuple, Tuple]]]) -> Set[Tuple]:
+#     atoms = set()
+#     for r, g in r2g.items():
+#         for rule_atoms in g:
+#             for atom in rule_atoms[0]:
+#                 atoms.add(atom)
+#             for atom in rule_atoms[1]:
+#                 atoms.add(atom)
+#     return atoms
 
-def get_atoms_on_groundings(groundings:Set[Tuple[Tuple, Tuple]]) -> Set[Tuple]:
-    atoms = set()
-    for rule_atoms in groundings:
-        for atom in rule_atoms[0]:  # head
-            atoms.add(atom)
-        for atom in rule_atoms[1]:  # tail
-            atoms.add(atom)
-    return atoms
+# def get_atoms_on_groundings(groundings:Set[Tuple[Tuple, Tuple]]) -> Set[Tuple]:
+#     atoms = set()
+#     for rule_atoms in groundings:
+#         for atom in rule_atoms[0]:  # head
+#             atoms.add(atom)
+#         for atom in rule_atoms[1]:  # tail
+#             atoms.add(atom)
+#     return atoms
 
-# res is a Set of (Tuple_head_groundings, Tuple_body_groundings)
-#@profile
-def approximate_backward_chaining_grounding_one_rule(
-    groundings_per_level,
-    domains: Dict[str, Domain],
-    domain2adaptive_constants: Dict[str, List[str]],
-    pure_adaptive: bool,
-    rule: Rule,
-    queries: List[Tuple],
-    fact_index: AtomIndex,
-    # Max number of unknown facts to expand:
-    # 0 implements the known_body_grounder
-    # -1 or body_size implements pure unrestricted backward_chaining (
-    max_unknown_fact_count: int,
-    res: Set[Tuple[Tuple, Tuple]]=None,
-    # proof is a dictionary:
-    # atom -> list of atoms needed to be proved in the application of the rule.
-    proofs: Dict[Tuple[Tuple, Tuple], List[Tuple[Tuple, Tuple]]]=None,
-    step=-1, n_steps=-1):
-    #start = time.time()
-    # We have a rule like A(x,y) B(y,z) => C(x,z)
-    assert len(rule.head) == 1, (
-        'Rule is not a Horn clause %s' % str(rule))
-    head = rule.head[0]
-    build_proofs: bool = (proofs is not None)
+# # res is a Set of (Tuple_head_groundings, Tuple_body_groundings)
+# #@profile
+# def approximate_backward_chaining_grounding_one_rule(
+#     groundings_per_level,
+#     domains: Dict[str, Domain],
+#     domain2adaptive_constants: Dict[str, List[str]],
+#     pure_adaptive: bool,
+#     rule: Rule,
+#     queries: List[Tuple],
+#     fact_index: AtomIndex,
+#     # Max number of unknown facts to expand:
+#     # 0 implements the known_body_grounder
+#     # -1 or body_size implements pure unrestricted backward_chaining (
+#     max_unknown_fact_count: int,
+#     res: Set[Tuple[Tuple, Tuple]]=None,
+#     # proof is a dictionary:
+#     # atom -> list of atoms needed to be proved in the application of the rule.
+#     proofs: Dict[Tuple[Tuple, Tuple], List[Tuple[Tuple, Tuple]]]=None,
+#     step=-1, n_steps=-1):
+#     #start = time.time()
+#     # We have a rule like A(x,y) B(y,z) => C(x,z)
+#     assert len(rule.head) == 1, (
+#         'Rule is not a Horn clause %s' % str(rule))
+#     head = rule.head[0]
+#     build_proofs: bool = (proofs is not None)
 
-    new_ground_atoms = set()
+#     new_ground_atoms = set()
     
-    # lim = 1
-    # cont = 0
-    for q in queries:
-    #   groundings_per_query = 0
-    #   cont += 1 
-    #   print('\n\n***************q', q,'********************') if cont< lim else None
-      if q[0] != head[0]:  # predicates must match.
-        continue
+#     # lim = 1
+#     # cont = 0
+#     for q in queries:
+#     #   groundings_per_query = 0
+#     #   cont += 1 
+#     #   print('\n\n***************q', q,'********************') if cont< lim else None
+#       if q[0] != head[0]:  # predicates must match.
+#         continue
 
-      # Get the variable assignments from the head.
-      head_ground_vars = {v: a for v, a in zip(head[1:], q[1:])}
+#       # Get the variable assignments from the head.
+#       head_ground_vars = {v: a for v, a in zip(head[1:], q[1:])}
 
-      for i in range(len(rule.body)):
-        # Ground atom by replacing variables with constants.
-        # The result is the partially ground atom A('Antonio',None)
-        # with None indicating unground variables.
-        body_atom = rule.body[i]
-        ground_body_atom = (body_atom[0], ) + tuple(
-            [head_ground_vars.get(body_atom[j+1], None)
-             for j in range(len(body_atom)-1)])
-        # print('\n- i', i,'. ground_body_atom:', ground_body_atom, '. Substitution (by None) of the vars not present in head.') if cont< lim else None
-        if all(ground_body_atom[1:]):
-            groundings = (ground_body_atom,)
-        else:
-            # Tuple of atoms matching A(Antonio,None) in the facts.
-            # This is the list of ground atoms for the i-th atom in the body.
-            # groundings = fact_index.get_matching_atoms(ground_body_atom)
-            groundings = fact_index._index.get(ground_body_atom, [])
-            # print(' GROUNDINGS', groundings) if cont< lim else None
+#       for i in range(len(rule.body)):
+#         # Ground atom by replacing variables with constants.
+#         # The result is the partially ground atom A('Antonio',None)
+#         # with None indicating unground variables.
+#         body_atom = rule.body[i]
+#         ground_body_atom = (body_atom[0], ) + tuple(
+#             [head_ground_vars.get(body_atom[j+1], None)
+#              for j in range(len(body_atom)-1)])
+#         # print('\n- i', i,'. ground_body_atom:', ground_body_atom, '. Substitution (by None) of the vars not present in head.') if cont< lim else None
+#         if all(ground_body_atom[1:]):
+#             groundings = (ground_body_atom,)
+#         else:
+#             # Tuple of atoms matching A(Antonio,None) in the facts.
+#             # This is the list of ground atoms for the i-th atom in the body.
+#             # groundings = fact_index.get_matching_atoms(ground_body_atom)
+#             groundings = fact_index._index.get(ground_body_atom, [])
+#             # print(' GROUNDINGS', groundings) if cont< lim else None
 
-        if len(rule.body) == 1:
-            # Shortcut, we are done, the clause has no free variables.
-            # Return the groundings.
-            # print('groundings already done, #all vars are subtituted', groundings) if cont< lim else None
-            # print('ADDED', q, '->', (groundings,)) if cont< lim else None
-            new_ground_atoms.add(((q,), groundings))
-            continue
+#         if len(rule.body) == 1:
+#             # Shortcut, we are done, the clause has no free variables.
+#             # Return the groundings.
+#             # print('groundings already done, #all vars are subtituted', groundings) if cont< lim else None
+#             # print('ADDED', q, '->', (groundings,)) if cont< lim else None
+#             new_ground_atoms.add(((q,), groundings))
+#             continue
 
-        for ground_atom in groundings:
-            # print('     -GROUND ATOM', ground_atom) if cont< lim else None
-            # This loop is only needed to ground at least one atom in the body
-            # of the formula. Otherwise it would be enough to start with the
-            # loop for ground_vars in product(...) but it would often expand
-            # into many nodes. The current solution does not allow to fully
-            # recover a classical backward_chaining, though.
-            head_body_ground_vars = copy.copy(head_ground_vars)
-            head_body_ground_vars.update(
-                {v: a for v, a in zip(body_atom[1:], ground_atom[1:])})
+#         for ground_atom in groundings:
+#             # print('     -GROUND ATOM', ground_atom) if cont< lim else None
+#             # This loop is only needed to ground at least one atom in the body
+#             # of the formula. Otherwise it would be enough to start with the
+#             # loop for ground_vars in product(...) but it would often expand
+#             # into many nodes. The current solution does not allow to fully
+#             # recover a classical backward_chaining, though.
+#             head_body_ground_vars = copy.copy(head_ground_vars)
+#             head_body_ground_vars.update(
+#                 {v: a for v, a in zip(body_atom[1:], ground_atom[1:])})
 
-            free_var2domain = [(v,d) for v,d in rule.vars2domain.items()
-                               if v not in head_body_ground_vars]
-            free_vars = [vd[0] for vd in free_var2domain]
-            if pure_adaptive:
-                ground_var_groups = [domain2adaptive_constants.get(vd[1], [])
-                                     for vd in free_var2domain]
-            elif domain2adaptive_constants is not None:
-                ground_var_groups = [domains[vd[1]].constants +
-                                     domain2adaptive_constants.get(vd[1], [])
-                                     for vd in free_var2domain]
-            else:
-                ground_var_groups = [domains[vd[1]].constants
-                                     for vd in free_var2domain]
+#             free_var2domain = [(v,d) for v,d in rule.vars2domain.items()
+#                                if v not in head_body_ground_vars]
+#             free_vars = [vd[0] for vd in free_var2domain]
+#             if pure_adaptive:
+#                 ground_var_groups = [domain2adaptive_constants.get(vd[1], [])
+#                                      for vd in free_var2domain]
+#             elif domain2adaptive_constants is not None:
+#                 ground_var_groups = [domains[vd[1]].constants +
+#                                      domain2adaptive_constants.get(vd[1], [])
+#                                      for vd in free_var2domain]
+#             else:
+#                 ground_var_groups = [domains[vd[1]].constants
+#                                      for vd in free_var2domain]
 
-            # Iterate over the groundings of the free vars.
-            # If no free vars are available, product returns a single empty
-            # tuple, meaning that we still correctly enter in the following
-            # for loop for a single round.
-            # print('     FREE VARS_SPAN', list(product(*[domains[vd[1]].constants for vd in free_var2domain])))
-            for ground_vars in product(*ground_var_groups):
-                var2ground = dict(zip(free_vars, ground_vars))
-                full_ground_vars = {**head_body_ground_vars, **var2ground}
-                # print('     FULL_VARS', full_ground_vars) if cont< lim else None
+#             # Iterate over the groundings of the free vars.
+#             # If no free vars are available, product returns a single empty
+#             # tuple, meaning that we still correctly enter in the following
+#             # for loop for a single round.
+#             # print('     FREE VARS_SPAN', list(product(*[domains[vd[1]].constants for vd in free_var2domain])))
+#             for ground_vars in product(*ground_var_groups):
+#                 var2ground = dict(zip(free_vars, ground_vars))
+#                 full_ground_vars = {**head_body_ground_vars, **var2ground}
+#                 # print('     FULL_VARS', full_ground_vars) if cont< lim else None
 
-                accepted: bool = True
-                body_grounding = []
-                if build_proofs:
-                    body_grounding_to_prove = []
-                unknown_fact_count: int = 0
-                for j in range(len(rule.body)):
-                    if i == j:
-                        # print('         -j=i') if cont< lim else None
-                        new_ground_atom = ground_atom
-                        # by definition as it is coming from the groundings.
-                        is_known_fact = True
-                    else:
-                        body_atom2 = rule.body[j]
-                        new_ground_atom = (body_atom2[0], ) + tuple(
-                            [full_ground_vars.get(body_atom2[k+1], None)
-                             for k in range(len(body_atom2)-1)])
-                        if new_ground_atom == q:
-                            # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, ' Same atom as query, discard') if cont< lim else None
-                            accepted = False
-                            break
-                        is_known_fact = (fact_index._index.get(
-                            new_ground_atom, None) is not None)
+#                 accepted: bool = True
+#                 body_grounding = []
+#                 if build_proofs:
+#                     body_grounding_to_prove = []
+#                 unknown_fact_count: int = 0
+#                 for j in range(len(rule.body)):
+#                     if i == j:
+#                         # print('         -j=i') if cont< lim else None
+#                         new_ground_atom = ground_atom
+#                         # by definition as it is coming from the groundings.
+#                         is_known_fact = True
+#                     else:
+#                         body_atom2 = rule.body[j]
+#                         new_ground_atom = (body_atom2[0], ) + tuple(
+#                             [full_ground_vars.get(body_atom2[k+1], None)
+#                              for k in range(len(body_atom2)-1)])
+#                         if new_ground_atom == q:
+#                             # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, ' Same atom as query, discard') if cont< lim else None
+#                             accepted = False
+#                             break
+#                         is_known_fact = (fact_index._index.get(
+#                             new_ground_atom, None) is not None)
 
-                    assert all(new_ground_atom), (
-                        'Unexpected free variables in %s' %
-                        str(new_ground_atom))
-                    if not is_known_fact and (
-                            max_unknown_fact_count < 0 or
-                            unknown_fact_count < max_unknown_fact_count):
-                        body_grounding.append(new_ground_atom)
-                        if build_proofs:
-                            body_grounding_to_prove.append(new_ground_atom)
-                        unknown_fact_count += 1
-                        # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Accepted. We have to prove it') if cont< lim else None
-                    elif is_known_fact:
-                        body_grounding.append(new_ground_atom)
-                        # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Accepted') if cont< lim else None
-                    else:
-                        # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Discard',unknown_fact_count,'/', max_unknown_fact_count) if cont< lim else None
-                        accepted = False
-                        break
+#                     assert all(new_ground_atom), (
+#                         'Unexpected free variables in %s' %
+#                         str(new_ground_atom))
+#                     if not is_known_fact and (
+#                             max_unknown_fact_count < 0 or
+#                             unknown_fact_count < max_unknown_fact_count):
+#                         body_grounding.append(new_ground_atom)
+#                         if build_proofs:
+#                             body_grounding_to_prove.append(new_ground_atom)
+#                         unknown_fact_count += 1
+#                         # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Accepted. We have to prove it') if cont< lim else None
+#                     elif is_known_fact:
+#                         body_grounding.append(new_ground_atom)
+#                         # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Accepted') if cont< lim else None
+#                     else:
+#                         # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact,'. Discard',unknown_fact_count,'/', max_unknown_fact_count) if cont< lim else None
+#                         accepted = False
+#                         break
 
-                if accepted:
-                    # print('     ADDED', q, '->', tuple(body_grounding)) if cont< lim else None
-                    # print('ADDED', q, '->', tuple(body_grounding), 'TO_PROVE',          str(body_grounding_to_prove) if build_proofs else '')
-                    new_ground_atoms.add(((q,), tuple(body_grounding)))
-                    # groundings_per_query +=1
-                    if build_proofs:
-                        proofs.append((q, body_grounding_to_prove))
+#                 if accepted:
+#                     # print('     ADDED', q, '->', tuple(body_grounding)) if cont< lim else None
+#                     # print('ADDED', q, '->', tuple(body_grounding), 'TO_PROVE',          str(body_grounding_to_prove) if build_proofs else '')
+#                     new_ground_atoms.add(((q,), tuple(body_grounding)))
+#                     # groundings_per_query +=1
+#                     if build_proofs:
+#                         proofs.append((q, body_grounding_to_prove))
                     
-    #   print('NUM_GROUNDINGS for the query',q, groundings_per_query) #, 'TIME', end - start)
-    #   groundings_numbers.append(groundings_per_query)
-    #   print('       AVG_NUM_GROUNDINGS', sum(groundings_numbers)/len(groundings_numbers))
-    # print('AVG_NUM_GROUNDINGS', sum(groundings_numbers)/len(groundings_numbers))
+#     #   print('NUM_GROUNDINGS for the query',q, groundings_per_query) #, 'TIME', end - start)
+#     #   groundings_numbers.append(groundings_per_query)
+#     #   print('       AVG_NUM_GROUNDINGS', sum(groundings_numbers)/len(groundings_numbers))
+#     # print('AVG_NUM_GROUNDINGS', sum(groundings_numbers)/len(groundings_numbers))
 
-    end = time.time()
-    # print('NUM GROUNDINGS', len(new_ground_atoms),'. TIME', end - start)
-    # print('NEW GROUND ATOMS', new_ground_atoms) if cont< lim else None
+#     end = time.time()
+#     # print('NUM GROUNDINGS', len(new_ground_atoms),'. TIME', end - start)
+#     # print('NEW GROUND ATOMS', new_ground_atoms) if cont< lim else None
 
-    if step not in groundings_per_level:
-        groundings_per_level[step] = set()
-    if new_ground_atoms is not None:
-        for g in new_ground_atoms:
-            groundings_per_level[step].add(g)
+#     if step not in groundings_per_level:
+#         groundings_per_level[step] = set()
+#     if new_ground_atoms is not None:
+#         for g in new_ground_atoms:
+#             groundings_per_level[step].add(g)
 
-    if res is None:
-        return new_ground_atoms, groundings_per_level
-    else:
-        res.update(new_ground_atoms), groundings_per_level
+#     if res is None:
+#         return new_ground_atoms, groundings_per_level
+#     else:
+#         res.update(new_ground_atoms), groundings_per_level
 
-# res is a Set of (Tuple_head_groundings, Tuple_body_groundings)
-#@profile
-def backward_chaining_grounding_one_rule(
-    groundings_per_level,
-    domains: Dict[str, Domain],
-    domain2adaptive_constants: Dict[str, List[str]],
-    pure_adaptive: bool,
-    rule: Rule,
-    queries: List[Tuple],
-    fact_index: AtomIndex,
-    res: Set[Tuple[Tuple, Tuple]]=None,
-    step=-1, n_steps=-1):
-    # We have a rule like A(x,y) B(y,z) => C(x,z)
-    assert len(rule.head) == 1, (
-        'Rule is not a Horn clause %s' % str(rule))
-    head = rule.head[0]
+# # res is a Set of (Tuple_head_groundings, Tuple_body_groundings)
+# #@profile
+# def backward_chaining_grounding_one_rule(
+#     groundings_per_level,
+#     domains: Dict[str, Domain],
+#     domain2adaptive_constants: Dict[str, List[str]],
+#     pure_adaptive: bool,
+#     rule: Rule,
+#     queries: List[Tuple],
+#     fact_index: AtomIndex,
+#     res: Set[Tuple[Tuple, Tuple]]=None,
+#     step=-1, n_steps=-1):
+#     # We have a rule like A(x,y) B(y,z) => C(x,z)
+#     assert len(rule.head) == 1, (
+#         'Rule is not a Horn clause %s' % str(rule))
+#     head = rule.head[0]
 
-    new_ground_atoms = set()
+#     new_ground_atoms = set()
 
-    for q in queries:
-      if q[0] != head[0]:  # predicates must match.
-        continue
+#     for q in queries:
+#       if q[0] != head[0]:  # predicates must match.
+#         continue
 
-      # Get the variable assignments from the head.
-      head_ground_vars = {v: a for v, a in zip(head[1:], q[1:])}
+#       # Get the variable assignments from the head.
+#       head_ground_vars = {v: a for v, a in zip(head[1:], q[1:])}
 
-      free_var2domain = [(v,d) for v,d in rule.vars2domain.items()
-                         if v not in head_ground_vars]
-      free_vars = [vd[0] for vd in free_var2domain]
-      if pure_adaptive:
-          ground_var_groups = [domain2adaptive_constants.get(vd[1], [])
-                               for vd in free_var2domain]
-      elif domain2adaptive_constants is not None:
-          ground_var_groups = [domains[vd[1]].constants +
-                               domain2adaptive_constants.get(vd[1], [])
-                               for vd in free_var2domain]
-      else:
-          ground_var_groups = [domains[vd[1]].constants
-                               for vd in free_var2domain]
+#       free_var2domain = [(v,d) for v,d in rule.vars2domain.items()
+#                          if v not in head_ground_vars]
+#       free_vars = [vd[0] for vd in free_var2domain]
+#       if pure_adaptive:
+#           ground_var_groups = [domain2adaptive_constants.get(vd[1], [])
+#                                for vd in free_var2domain]
+#       elif domain2adaptive_constants is not None:
+#           ground_var_groups = [domains[vd[1]].constants +
+#                                domain2adaptive_constants.get(vd[1], [])
+#                                for vd in free_var2domain]
+#       else:
+#           ground_var_groups = [domains[vd[1]].constants
+#                                for vd in free_var2domain]
 
-      # Iterate over the groundings of the free vars.
-      # If no free vars are available, product returns a single empty
-      # tuple, meaning that we still correctly enter in the following
-      # for loop for a single round.
-      #print('FREE VARS_SPAN', list(product(*ground_var_groups)))
-      for ground_vars in product(*ground_var_groups):
-          var2ground = dict(zip(free_vars, ground_vars))
-          full_ground_vars = {**head_ground_vars, **var2ground}
-          body_grounding = []
-          for j in range(len(rule.body)):
-              body_atom = rule.body[j]
-              new_ground_atom = (body_atom[0], ) + tuple(
-                  [full_ground_vars.get(body_atom[k+1], None)
-                   for k in range(len(body_atom)-1)])
-              body_grounding.append(new_ground_atom)
-          new_ground_atoms.add(((q,), tuple(body_grounding)))
+#       # Iterate over the groundings of the free vars.
+#       # If no free vars are available, product returns a single empty
+#       # tuple, meaning that we still correctly enter in the following
+#       # for loop for a single round.
+#       #print('FREE VARS_SPAN', list(product(*ground_var_groups)))
+#       for ground_vars in product(*ground_var_groups):
+#           var2ground = dict(zip(free_vars, ground_vars))
+#           full_ground_vars = {**head_ground_vars, **var2ground}
+#           body_grounding = []
+#           for j in range(len(rule.body)):
+#               body_atom = rule.body[j]
+#               new_ground_atom = (body_atom[0], ) + tuple(
+#                   [full_ground_vars.get(body_atom[k+1], None)
+#                    for k in range(len(body_atom)-1)])
+#               body_grounding.append(new_ground_atom)
+#           new_ground_atoms.add(((q,), tuple(body_grounding)))
 
-    if step not in groundings_per_level:
-        groundings_per_level[step] = set()
-    if new_ground_atoms is not None:
-        for g in new_ground_atoms:
-            groundings_per_level[step].add(g)
+#     if step not in groundings_per_level:
+#         groundings_per_level[step] = set()
+#     if new_ground_atoms is not None:
+#         for g in new_ground_atoms:
+#             groundings_per_level[step].add(g)
 
-    if res is None:
-        return new_ground_atoms, groundings_per_level
-    else:
-        res.update(new_ground_atoms), groundings_per_level
+#     if res is None:
+#         return new_ground_atoms, groundings_per_level
+#     else:
+#         res.update(new_ground_atoms), groundings_per_level
 
 
-#@profile
-def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
-                          rule2proofs:Dict[str, List[Tuple[Tuple, List[Tuple]]]],
-                          fact_index: AtomIndex,
-                          num_steps: int) ->  Dict[str, Set[Tuple[Tuple, Tuple]]]:
-    #for rn,g in rule2groundings.items():
-    #    print('RIN', rn, len(g))
-    atom2proved: Dist[Tuple[str, str, str], bool] = {}
+# #@profile
+# def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
+#                           rule2proofs:Dict[str, List[Tuple[Tuple, List[Tuple]]]],
+#                           fact_index: AtomIndex,
+#                           num_steps: int) ->  Dict[str, Set[Tuple[Tuple, Tuple]]]:
+#     #for rn,g in rule2groundings.items():
+#     #    print('RIN', rn, len(g))
+#     atom2proved: Dist[Tuple[str, str, str], bool] = {}
 
-    # This loop iteratively finds the atoms that are already proved.
-    for i in range(num_steps):
-        for rule_name,proofs in rule2proofs.items():
-            for query_and_proof in proofs:
-                query, proof = query_and_proof[0], query_and_proof[1]
-                if query not in atom2proved or not atom2proved[query]:
-                    atom2proved[query] = all(
-                        [atom2proved.get(a, False)
-                         # This next check is useless as atoms added in the proofs
-                         # are by definition not proved already in the data.
-                         # or fact_index._index.get(a, None) is not None)
-                         for a in proof])
+#     # This loop iteratively finds the atoms that are already proved.
+#     for i in range(num_steps):
+#         for rule_name,proofs in rule2proofs.items():
+#             for query_and_proof in proofs:
+#                 query, proof = query_and_proof[0], query_and_proof[1]
+#                 if query not in atom2proved or not atom2proved[query]:
+#                     atom2proved[query] = all(
+#                         [atom2proved.get(a, False)
+#                          # This next check is useless as atoms added in the proofs
+#                          # are by definition not proved already in the data.
+#                          # or fact_index._index.get(a, None) is not None)
+#                          for a in proof])
 
-    # Now atom2proved has all proved atoms. Scan the groundings and keep only
-    # the ones that have been proved within num_steps:
-    pruned_rule2groundings = {}
-    for rule_name,groundings in rule2groundings.items():
-        pruned_groundings = []
-        for g in groundings:
-            head_atoms = g[0]
-            # WE CHECK IF ALL THE ATOMS IN THE HEAD ARE PROVED
-            # all elements in the grounding are either in the training data
-            # or they are provable using the rules,
-            if all([(atom2proved.get(a, False) or
-                     fact_index._index.get(a, None) is not None)
-                    for a in head_atoms]):
-                pruned_groundings.append(g)
-        pruned_rule2groundings[rule_name] = set(pruned_groundings)
-    #for rn,g in pruned_rule2groundings.items():
-    #    print('ROUT', rn, len(g))
-    return pruned_rule2groundings
+#     # Now atom2proved has all proved atoms. Scan the groundings and keep only
+#     # the ones that have been proved within num_steps:
+#     pruned_rule2groundings = {}
+#     for rule_name,groundings in rule2groundings.items():
+#         pruned_groundings = []
+#         for g in groundings:
+#             head_atoms = g[0]
+#             # WE CHECK IF ALL THE ATOMS IN THE HEAD ARE PROVED
+#             # all elements in the grounding are either in the training data
+#             # or they are provable using the rules,
+#             if all([(atom2proved.get(a, False) or
+#                      fact_index._index.get(a, None) is not None)
+#                     for a in head_atoms]):
+#                 pruned_groundings.append(g)
+#         pruned_rule2groundings[rule_name] = set(pruned_groundings)
+#     #for rn,g in pruned_rule2groundings.items():
+#     #    print('ROUT', rn, len(g))
+#     return pruned_rule2groundings
 
-def Prune_groundings_per_level(groundings_per_level,
-                          rule2proofs:Dict[str, List[Tuple[Tuple, List[Tuple]]]],
-                          fact_index: AtomIndex,
-                          num_steps: int) ->  Dict[str, Set[Tuple[Tuple, Tuple]]]:
-    #for rn,g in groundings_per_level.items():
-    #    print('RIN', rn, g)
-    # Here we will keep all the proves that are complete, i.e. all the atoms
-    atom2proved: Dist[Tuple[str, str, str], bool] = {}
-    # go through every atom to prove from all queries
-    for i in range(num_steps):
-        for rule_name,proofs in rule2proofs.items():
-            for query_and_proof in proofs:
-                query, proof = query_and_proof[0], query_and_proof[1]
-                if query not in atom2proved or not atom2proved[query]:
-                    atom2proved[query] = all(
-                        [atom2proved.get(a, False) for a in proof])
+# def Prune_groundings_per_level(groundings_per_level,
+#                           rule2proofs:Dict[str, List[Tuple[Tuple, List[Tuple]]]],
+#                           fact_index: AtomIndex,
+#                           num_steps: int) ->  Dict[str, Set[Tuple[Tuple, Tuple]]]:
+#     #for rn,g in groundings_per_level.items():
+#     #    print('RIN', rn, g)
+#     # Here we will keep all the proves that are complete, i.e. all the atoms
+#     atom2proved: Dist[Tuple[str, str, str], bool] = {}
+#     # go through every atom to prove from all queries
+#     for i in range(num_steps):
+#         for rule_name,proofs in rule2proofs.items():
+#             for query_and_proof in proofs:
+#                 query, proof = query_and_proof[0], query_and_proof[1]
+#                 if query not in atom2proved or not atom2proved[query]:
+#                     atom2proved[query] = all(
+#                         [atom2proved.get(a, False) for a in proof])
 
-    # Now atom2proved has all proved atoms. Scan the groundings and keep only
-    # the ones that have been proved within num_steps:
-    pruned_groundings_per_level = {}
-    pruned_groundings = []
-    for g in groundings_per_level:
-        head_atoms = g[0]
-        if all([(atom2proved.get(a, False) or
-                    fact_index._index.get(a, None) is not None)
-                for a in head_atoms]):                
-            pruned_groundings.append(g)
-    pruned_groundings_per_level = set(pruned_groundings)
-    return pruned_groundings_per_level
+#     # Now atom2proved has all proved atoms. Scan the groundings and keep only
+#     # the ones that have been proved within num_steps:
+#     pruned_groundings_per_level = {}
+#     pruned_groundings = []
+#     for g in groundings_per_level:
+#         head_atoms = g[0]
+#         if all([(atom2proved.get(a, False) or
+#                     fact_index._index.get(a, None) is not None)
+#                 for a in head_atoms]):                
+#             pruned_groundings.append(g)
+#     pruned_groundings_per_level = set(pruned_groundings)
+#     return pruned_groundings_per_level
 
 
 # class ApproximateBackwardChainingGrounder(Engine):
@@ -810,7 +809,7 @@ def Prune_groundings_per_level(groundings_per_level,
 
 
 
-def main(data_path, output_filename, log_filename, use_WB, args):
+def main(data_path,args):
 
     ''' 
     INFO TO WRITE IN TXT:
@@ -850,14 +849,9 @@ def main(data_path, output_filename, log_filename, use_WB, args):
     domain2adaptive_constants: Dict[str, List[str]] = None
 
     # DEFINING RULES AND GROUNDING ENGINE
-    rules = []
-    engine = None
-
-    enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
-    if enable_rules:
-        rules = ns.utils.read_rules(join(data_path, args.dataset_name, args.rules_file),args)
-        facts = list(data_handler.train_known_facts_set)
-        engine = BuildGrounder(args, rules, facts, fol, domain2adaptive_constants)
+    rules = ns.utils.read_rules(join(data_path, args.dataset_name, args.rules_file),args)
+    facts = list(data_handler.train_known_facts_set)
+    engine = BuildGrounder(args, rules, facts, fol, domain2adaptive_constants)
 
 
 
