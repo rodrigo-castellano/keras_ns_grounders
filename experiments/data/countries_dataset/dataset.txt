@@ -1066,7 +1066,6 @@ neighborOf(slovenia,italy).
 neighborOf(slovenia,hungary).
 locatedIn(philippines,south_eastern_asia).
 locatedIn(philippines,asia).
-locatedIn(micronesia,micronesia).
 locatedIn(micronesia,oceania).
 locatedIn(china,eastern_asia).
 locatedIn(china,asia).
@@ -1154,6 +1153,13 @@ locatedIn(southern_africa,africa).
 locatedIn(eastern_asia,asia).
 locatedIn(northern_africa,africa).
 locatedIn(melanesia,oceania).
-locatedIn(micronesia,oceania).
 locatedIn(central_asia,asia).
 locatedIn(central_europe,europe).
+neighborOf(south_sudan,chad).
+neighborOf(united_kingdom,cyprus).
+neighborOf(afghanistan,india).
+neighborOf(china,nepal).
+neighborOf(egypt,palestine).
+neighborOf(israel,palestine).
+neighborOf(jordan,palestine).
+neighborOf(chad,sudan).
