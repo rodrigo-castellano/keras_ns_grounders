@@ -8,9 +8,11 @@ neighborOf(brunei,malaysia).
 locatedIn(japan,eastern_asia).
 locatedIn(japan,asia).
 locatedIn(netherlands,western_europe).
+locatedIn(netherlands,europe).
 neighborOf(netherlands,germany).
 neighborOf(netherlands,belgium).
 locatedIn(turkey,western_asia).
+locatedIn(turkey,asia).
 neighborOf(turkey,armenia).
 neighborOf(turkey,azerbaijan).
 neighborOf(turkey,iran).
@@ -82,11 +84,13 @@ neighborOf(ivory_coast,liberia).
 neighborOf(ivory_coast,mali).
 neighborOf(ivory_coast,guinea).
 locatedIn(sierra_leone,western_africa).
+locatedIn(sierra_leone,africa).
 neighborOf(sierra_leone,liberia).
 neighborOf(sierra_leone,guinea).
 locatedIn(mayotte,eastern_africa).
 locatedIn(mayotte,africa).
 locatedIn(poland,eastern_europe).
+locatedIn(poland,europe).
 neighborOf(poland,germany).
 neighborOf(poland,ukraine).
 neighborOf(poland,slovakia).
@@ -113,6 +117,7 @@ locatedIn(turks_and_caicos_islands,americas).
 locatedIn(new_caledonia,melanesia).
 locatedIn(new_caledonia,oceania).
 locatedIn(pakistan,southern_asia).
+locatedIn(pakistan,asia).
 neighborOf(pakistan,china).
 neighborOf(pakistan,afghanistan).
 neighborOf(pakistan,iran).
@@ -127,6 +132,7 @@ neighborOf(argentina,uruguay).
 locatedIn(cuba,caribbean).
 locatedIn(cuba,americas).
 locatedIn(serbia,southern_europe).
+locatedIn(serbia,europe).
 neighborOf(serbia,macedonia).
 neighborOf(serbia,montenegro).
 neighborOf(serbia,kosovo).
@@ -142,6 +148,7 @@ neighborOf(czechia,austria).
 neighborOf(czechia,poland).
 neighborOf(czechia,slovakia).
 locatedIn(nicaragua,central_america).
+locatedIn(nicaragua,americas).
 neighborOf(nicaragua,honduras).
 neighborOf(nicaragua,costa_rica).
 locatedIn(vietnam,south_eastern_asia).
@@ -155,12 +162,14 @@ locatedIn(canada,northern_america).
 locatedIn(canada,americas).
 neighborOf(canada,united_states).
 locatedIn(slovakia,central_europe).
+locatedIn(slovakia,europe).
 neighborOf(slovakia,ukraine).
 neighborOf(slovakia,poland).
 neighborOf(slovakia,austria).
 neighborOf(slovakia,hungary).
 neighborOf(slovakia,czechia).
 locatedIn(mozambique,eastern_africa).
+locatedIn(mozambique,africa).
 neighborOf(mozambique,tanzania).
 neighborOf(mozambique,swaziland).
 neighborOf(mozambique,zimbabwe).
@@ -186,12 +195,14 @@ neighborOf(colombia,peru).
 locatedIn(fiji,melanesia).
 locatedIn(fiji,oceania).
 locatedIn(republic_of_the_congo,middle_africa).
+locatedIn(republic_of_the_congo,africa).
 neighborOf(republic_of_the_congo,gabon).
 neighborOf(republic_of_the_congo,dr_congo).
 neighborOf(republic_of_the_congo,angola).
 neighborOf(republic_of_the_congo,cameroon).
 neighborOf(republic_of_the_congo,central_african_republic).
 locatedIn(saudi_arabia,western_asia).
+locatedIn(saudi_arabia,asia).
 neighborOf(saudi_arabia,qatar).
 neighborOf(saudi_arabia,united_arab_emirates).
 neighborOf(saudi_arabia,jordan).
@@ -220,6 +231,7 @@ locatedIn(svalbard_and_jan_mayen,europe).
 locatedIn(isle_of_man,northern_europe).
 locatedIn(isle_of_man,europe).
 locatedIn(guyana,south_america).
+locatedIn(guyana,americas).
 neighborOf(guyana,brazil).
 neighborOf(guyana,suriname).
 neighborOf(guyana,venezuela).
@@ -235,6 +247,7 @@ neighborOf(nigeria,niger).
 neighborOf(nigeria,cameroon).
 neighborOf(nigeria,benin).
 locatedIn(germany,western_europe).
+locatedIn(germany,europe).
 neighborOf(germany,denmark).
 neighborOf(germany,netherlands).
 neighborOf(germany,poland).
@@ -245,6 +258,7 @@ neighborOf(germany,austria).
 neighborOf(germany,france).
 neighborOf(germany,czechia).
 locatedIn(burkina_faso,western_africa).
+locatedIn(burkina_faso,africa).
 neighborOf(burkina_faso,togo).
 neighborOf(burkina_faso,benin).
 neighborOf(burkina_faso,niger).
@@ -252,6 +266,7 @@ neighborOf(burkina_faso,ghana).
 neighborOf(burkina_faso,mali).
 neighborOf(burkina_faso,ivory_coast).
 locatedIn(tanzania,eastern_africa).
+locatedIn(tanzania,africa).
 neighborOf(tanzania,uganda).
 neighborOf(tanzania,mozambique).
 neighborOf(tanzania,dr_congo).
@@ -267,6 +282,7 @@ locatedIn(belize,americas).
 neighborOf(belize,guatemala).
 neighborOf(belize,mexico).
 locatedIn(norway,northern_europe).
+locatedIn(norway,europe).
 neighborOf(norway,sweden).
 neighborOf(norway,finland).
 neighborOf(norway,russia).
@@ -294,10 +310,12 @@ locatedIn(christmas_island,oceania).
 locatedIn(sao_tome_and_principe,middle_africa).
 locatedIn(sao_tome_and_principe,africa).
 locatedIn(egypt,northern_africa).
+locatedIn(egypt,africa).
 neighborOf(egypt,libya).
 neighborOf(egypt,israel).
 neighborOf(egypt,sudan).
 locatedIn(bulgaria,eastern_europe).
+locatedIn(bulgaria,europe).
 neighborOf(bulgaria,macedonia).
 neighborOf(bulgaria,turkey).
 neighborOf(bulgaria,greece).
@@ -312,6 +330,7 @@ neighborOf(guinea,liberia).
 neighborOf(guinea,senegal).
 neighborOf(guinea,ivory_coast).
 locatedIn(spain,southern_europe).
+locatedIn(spain,europe).
 neighborOf(spain,morocco).
 neighborOf(spain,gibraltar).
 neighborOf(spain,andorra).
@@ -347,12 +366,14 @@ locatedIn(trinidad_and_tobago,americas).
 locatedIn(bahrain,western_asia).
 locatedIn(bahrain,asia).
 locatedIn(myanmar,south_eastern_asia).
+locatedIn(myanmar,asia).
 neighborOf(myanmar,india).
 neighborOf(myanmar,bangladesh).
 neighborOf(myanmar,china).
 neighborOf(myanmar,laos).
 neighborOf(myanmar,thailand).
 locatedIn(iraq,western_asia).
+locatedIn(iraq,asia).
 neighborOf(iraq,turkey).
 neighborOf(iraq,saudi_arabia).
 neighborOf(iraq,iran).
@@ -377,6 +398,7 @@ neighborOf(dr_congo,burundi).
 locatedIn(seychelles,eastern_africa).
 locatedIn(seychelles,africa).
 locatedIn(kyrgyzstan,central_asia).
+locatedIn(kyrgyzstan,asia).
 neighborOf(kyrgyzstan,china).
 neighborOf(kyrgyzstan,kazakhstan).
 neighborOf(kyrgyzstan,tajikistan).
@@ -397,6 +419,7 @@ locatedIn(lesotho,southern_africa).
 locatedIn(lesotho,africa).
 neighborOf(lesotho,south_africa).
 locatedIn(sri_lanka,southern_asia).
+locatedIn(sri_lanka,asia).
 neighborOf(sri_lanka,india).
 locatedIn(belgium,western_europe).
 locatedIn(belgium,europe).
@@ -427,6 +450,7 @@ neighborOf(india,myanmar).
 neighborOf(india,pakistan).
 neighborOf(india,sri_lanka).
 locatedIn(morocco,northern_africa).
+locatedIn(morocco,africa).
 neighborOf(morocco,algeria).
 neighborOf(morocco,spain).
 neighborOf(morocco,western_sahara).
@@ -446,6 +470,7 @@ neighborOf(south_sudan,central_african_republic).
 neighborOf(south_sudan,sudan).
 neighborOf(south_sudan,ethiopia).
 locatedIn(ghana,western_africa).
+locatedIn(ghana,africa).
 neighborOf(ghana,burkina_faso).
 neighborOf(ghana,ivory_coast).
 neighborOf(ghana,togo).
@@ -468,11 +493,13 @@ neighborOf(cameroon,nigeria).
 locatedIn(nauru,micronesia).
 locatedIn(nauru,oceania).
 locatedIn(thailand,south_eastern_asia).
+locatedIn(thailand,asia).
 neighborOf(thailand,cambodia).
 neighborOf(thailand,myanmar).
 neighborOf(thailand,laos).
 neighborOf(thailand,malaysia).
 locatedIn(sudan,northern_africa).
+locatedIn(sudan,africa).
 neighborOf(sudan,chad).
 neighborOf(sudan,libya).
 neighborOf(sudan,south_sudan).
@@ -505,6 +532,7 @@ neighborOf(cambodia,vietnam).
 neighborOf(cambodia,thailand).
 neighborOf(cambodia,laos).
 locatedIn(zimbabwe,eastern_africa).
+locatedIn(zimbabwe,africa).
 neighborOf(zimbabwe,zambia).
 neighborOf(zimbabwe,south_africa).
 neighborOf(zimbabwe,botswana).
@@ -586,6 +614,7 @@ locatedIn(papua_new_guinea,melanesia).
 locatedIn(papua_new_guinea,oceania).
 neighborOf(papua_new_guinea,indonesia).
 locatedIn(north_korea,eastern_asia).
+locatedIn(north_korea,asia).
 neighborOf(north_korea,china).
 neighborOf(north_korea,south_korea).
 neighborOf(north_korea,russia).
@@ -640,10 +669,12 @@ locatedIn(dominican_republic,caribbean).
 locatedIn(dominican_republic,americas).
 neighborOf(dominican_republic,haiti).
 locatedIn(denmark,northern_europe).
+locatedIn(denmark,europe).
 neighborOf(denmark,germany).
 locatedIn(bermuda,northern_america).
 locatedIn(bermuda,americas).
 locatedIn(chile,south_america).
+locatedIn(chile,americas).
 neighborOf(chile,argentina).
 neighborOf(chile,bolivia).
 neighborOf(chile,peru).
@@ -656,6 +687,7 @@ neighborOf(kosovo,montenegro).
 locatedIn(saint_kitts_and_nevis,caribbean).
 locatedIn(saint_kitts_and_nevis,americas).
 locatedIn(eritrea,eastern_africa).
+locatedIn(eritrea,africa).
 neighborOf(eritrea,djibouti).
 neighborOf(eritrea,sudan).
 neighborOf(eritrea,ethiopia).
@@ -704,12 +736,15 @@ neighborOf(senegal,guinea).
 locatedIn(guadeloupe,caribbean).
 locatedIn(guadeloupe,americas).
 locatedIn(monaco,western_europe).
+locatedIn(monaco,europe).
 neighborOf(monaco,france).
 locatedIn(djibouti,eastern_africa).
+locatedIn(djibouti,africa).
 neighborOf(djibouti,eritrea).
 neighborOf(djibouti,somalia).
 neighborOf(djibouti,ethiopia).
 locatedIn(indonesia,south_eastern_asia).
+locatedIn(indonesia,asia).
 neighborOf(indonesia,papua_new_guinea).
 neighborOf(indonesia,timor_leste).
 neighborOf(indonesia,malaysia).
@@ -736,6 +771,7 @@ locatedIn(tunisia,africa).
 neighborOf(tunisia,libya).
 neighborOf(tunisia,algeria).
 locatedIn(ecuador,south_america).
+locatedIn(ecuador,americas).
 neighborOf(ecuador,peru).
 neighborOf(ecuador,colombia).
 locatedIn(brazil,south_america).
@@ -761,11 +797,13 @@ neighborOf(finland,norway).
 neighborOf(finland,sweden).
 neighborOf(finland,russia).
 locatedIn(jordan,western_asia).
+locatedIn(jordan,asia).
 neighborOf(jordan,saudi_arabia).
 neighborOf(jordan,israel).
 neighborOf(jordan,iraq).
 neighborOf(jordan,syria).
 locatedIn(timor_leste,south_eastern_asia).
+locatedIn(timor_leste,asia).
 neighborOf(timor_leste,indonesia).
 locatedIn(montenegro,southern_europe).
 locatedIn(montenegro,europe).
@@ -795,6 +833,7 @@ neighborOf(ukraine,romania).
 locatedIn(dominica,caribbean).
 locatedIn(dominica,americas).
 locatedIn(turkmenistan,central_asia).
+locatedIn(turkmenistan,asia).
 neighborOf(turkmenistan,kazakhstan).
 neighborOf(turkmenistan,afghanistan).
 neighborOf(turkmenistan,uzbekistan).
@@ -822,6 +861,7 @@ neighborOf(austria,hungary).
 neighborOf(austria,liechtenstein).
 neighborOf(austria,czechia).
 locatedIn(hungary,eastern_europe).
+locatedIn(hungary,europe).
 neighborOf(hungary,ukraine).
 neighborOf(hungary,slovakia).
 neighborOf(hungary,slovenia).
@@ -835,6 +875,7 @@ neighborOf(malawi,zambia).
 neighborOf(malawi,tanzania).
 neighborOf(malawi,mozambique).
 locatedIn(hong_kong,eastern_asia).
+locatedIn(hong_kong,asia).
 neighborOf(hong_kong,china).
 locatedIn(liechtenstein,western_europe).
 locatedIn(liechtenstein,europe).
@@ -899,6 +940,7 @@ locatedIn(sweden,europe).
 neighborOf(sweden,norway).
 neighborOf(sweden,finland).
 locatedIn(mexico,northern_america).
+locatedIn(mexico,americas).
 neighborOf(mexico,belize).
 neighborOf(mexico,united_states).
 neighborOf(mexico,guatemala).
@@ -911,6 +953,7 @@ locatedIn(nepal,asia).
 neighborOf(nepal,china).
 neighborOf(nepal,india).
 locatedIn(guatemala,central_america).
+locatedIn(guatemala,americas).
 neighborOf(guatemala,belize).
 neighborOf(guatemala,el_salvador).
 neighborOf(guatemala,mexico).
@@ -925,12 +968,14 @@ neighborOf(moldova,romania).
 locatedIn(mauritius,eastern_africa).
 locatedIn(mauritius,africa).
 locatedIn(belarus,eastern_europe).
+locatedIn(belarus,europe).
 neighborOf(belarus,ukraine).
 neighborOf(belarus,poland).
 neighborOf(belarus,lithuania).
 neighborOf(belarus,russia).
 neighborOf(belarus,latvia).
 locatedIn(bangladesh,southern_asia).
+locatedIn(bangladesh,asia).
 neighborOf(bangladesh,myanmar).
 neighborOf(bangladesh,india).
 locatedIn(malaysia,south_eastern_asia).
@@ -989,6 +1034,7 @@ neighborOf(algeria,niger).
 neighborOf(algeria,mali).
 neighborOf(algeria,western_sahara).
 locatedIn(french_guiana,south_america).
+locatedIn(french_guiana,americas).
 neighborOf(french_guiana,brazil).
 neighborOf(french_guiana,suriname).
 locatedIn(yemen,western_asia).
@@ -1000,12 +1046,14 @@ locatedIn(puerto_rico,americas).
 locatedIn(saint_vincent_and_the_grenadines,caribbean).
 locatedIn(saint_vincent_and_the_grenadines,americas).
 locatedIn(venezuela,south_america).
+locatedIn(venezuela,americas).
 neighborOf(venezuela,brazil).
 neighborOf(venezuela,guyana).
 neighborOf(venezuela,colombia).
 locatedIn(grenada,caribbean).
 locatedIn(grenada,americas).
 locatedIn(united_states,northern_america).
+locatedIn(united_states,americas).
 neighborOf(united_states,canada).
 neighborOf(united_states,mexico).
 locatedIn(tokelau,polynesia).
@@ -1018,6 +1066,7 @@ neighborOf(slovenia,italy).
 neighborOf(slovenia,hungary).
 locatedIn(philippines,south_eastern_asia).
 locatedIn(philippines,asia).
+locatedIn(micronesia,micronesia).
 locatedIn(micronesia,oceania).
 locatedIn(china,eastern_asia).
 locatedIn(china,asia).
@@ -1108,11 +1157,3 @@ locatedIn(melanesia,oceania).
 locatedIn(micronesia,oceania).
 locatedIn(central_asia,asia).
 locatedIn(central_europe,europe).
-neighborOf(china,nepal).
-neighborOf(chad,sudan).
-neighborOf(united_kingdom,cyprus).
-neighborOf(south_sudan,chad).
-neighborOf(jordan,palestine).
-neighborOf(afghanistan,india).
-neighborOf(egypt,palestine).
-neighborOf(israel,palestine).
