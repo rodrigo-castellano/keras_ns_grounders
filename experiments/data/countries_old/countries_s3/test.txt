@@ -6,6 +6,7 @@ locatedInCR(botswana,africa).
 locatedInCR(syria,asia).
 locatedInCR(panama,americas).
 locatedInCR(norway,europe).
+locatedInCR(south_sudan,africa).
 locatedInCR(sudan,africa).
 locatedInCR(spain,europe).
 locatedInCR(french_guiana,americas).
