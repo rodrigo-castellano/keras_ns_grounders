@@ -257,7 +257,7 @@ def test_d2(train: set, Ne_queries: set, val_test: list[set]) -> bool:
     """
     Checks if each query in val_test has neighbors in the training data with no CR queries, and the neighbors of those neighbors have CR queries.
     For every country in val_test, check that:
-        - the country has no neighbors in train
+        - the country has neighbors in train
         - the neighbors of the country have no LocatedInCR queries in train
         - At least one neighbor of the neighbors have a LocatedInCR query in train
     """
@@ -455,7 +455,8 @@ def get_d_dataset(data: set, islands_CR_queries: set) -> Tuple[set, set, set]:
         train = CR_queries.copy()
         val_test_permutation = list(val_test_candidates.copy())
         random.shuffle(val_test_permutation)
-        for query in val_test_permutation:
+        val_test_permutation_iter = val_test_permutation.copy() # to not modify the original list
+        for query in val_test_permutation_iter:
             # print('\n\nquery:',query)
             # remove the query from the permutation
             val_test_permutation.remove(query) 
