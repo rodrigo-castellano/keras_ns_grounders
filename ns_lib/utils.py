@@ -1266,6 +1266,6 @@ def save_embeddings_from_model(model, fol, serializer, save_dir="embeddings"):
 
     print('predicate_embeddings_dict', [(k, v.shape) for k, v in predicate_embeddings_dict.items()])
     print('constant_embeddings_dict', [(domain, {c: emb.shape for c, emb in dict_.items()}) for domain, dict_ in constant_embeddings_dict.items()])
-    print('constant_embeddings_dict', constant_embeddings_dict)
-    print('predicate_embeddings_dict',  predicate_embeddings_dict)
+    # print('constant_embeddings_dict', constant_embeddings_dict)
+    # print('predicate_embeddings_dict',  predicate_embeddings_dict)
     return constant_embeddings_dict,  predicate_embeddings_dict
