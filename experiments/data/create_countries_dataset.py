@@ -4,17 +4,7 @@ import re
 import random
 from typing import Tuple
 from tqdm import tqdm
-# Check that all the countries have their locatedInCR, neighborOf and remove all locatedInCS
 
-
-# For that, first get the set of constants
-root = './experiments/data/countries_dataset/'
-train_path = root+'train.txt'
-val_path = root+'valid.txt'
-test_path = root+'test.txt'
-dataset_path = root + 'dataset.txt'
-ctes_path = root+'domain2constants.txt'
-predicates_path = root+'relations.txt'
 
 def write_queries_to_file(queries, path):
     with open(path, 'w') as f:
@@ -301,8 +291,7 @@ def get_d_dataset(data: set, islands_CR_queries: set) -> Tuple[set, set, set]:
     test_size = n - train_size - val_size
     val_test_size = val_size + test_size
     print('\nCR queries. Total:', n,', distributed in - train_size:', train_size, 'val_size:', val_size, 'test_size:', test_size, 'val_test_size:', val_test_size, )
-    print('data without val_test_candidates:', len(data - val_test_candidates))
-    print('data:', len(data),'\n')
+    print('data:', len(data),'val_test_candidates:', len(data - val_test_candidates),'\n')
 
     max_iters = 1000
     iter = 0
@@ -358,6 +347,7 @@ def get_d_dataset(data: set, islands_CR_queries: set) -> Tuple[set, set, set]:
 
 def s1_condition(val_test, train):
     '''All the val,test queries need to have a locInCS query in train with a locInSR query in train'''
+    print('s1 condition...')
     # countries that appear in a CS query in train, and their subregions
     countries_in_CS_queries = {query[1]: query[2] for query in train if query[0] == 'locatedInCS'}
     # subregions that appear in a SR query in train
@@ -373,6 +363,7 @@ def s1_condition(val_test, train):
 
 def s2_condition(val_test, train):
     '''All the val,test queries need to have a neighborOf query in train with a locatedInCR query'''
+    print('s2 condition...')
     Ne_queries = {query for query in train if query[0] == 'neighborOf'}
     for query in val_test:
         country = query[1]
@@ -385,6 +376,8 @@ def s2_condition(val_test, train):
     return True
     
 def s3_condition(val_test, train):
+    '''All the val,test queries with a neighborOf query in train: remove its LocatedInCR in train and make sure the 2nd neigh has a locatedInCR in train'''
+    print('s3 condition...')
     Ne_queries = {query for query in train if query[0] == 'neighborOf'}
     for query in val_test:
         country = query[1]
@@ -409,12 +402,18 @@ def s3_condition(val_test, train):
 
 if __name__ == '__main__':
 
+    '''(GIUSEPPE'S DATA)'''
 
+    # #  VERIFY PROPERTIES OF THE DATA AS A WHOLE 
+    # # For that, first get the set of constants
+    # root = './experiments/data/countries_dataset_giuseppe/'
+    # train_path, val_path, test_path = root+'train.txt', root+'valid.txt', root+'test.txt'
+    # dataset_path = root + 'dataset.txt'
+    # domain2constants_path = root+'domain2constants.txt'
 
-    # #  VERIFY PROPERTIES OF THE DATA AS A WHOLE
     # constants, predicates, queries = get_constants_predicates_queries(dataset_path)
     # print('number of queries:', len(queries))
-    # domain2constants = get_domain2constants(ctes_path)
+    # domain2constants = get_domain2constants(domain2constants_path)
     # # modify locIn to add a domain
     # queries = add_domain_to_locIn(queries, domain2constants)
     # check_correspondence_domain2constants(constants, domain2constants)
@@ -425,12 +424,14 @@ if __name__ == '__main__':
 
     # # CREATE DATASET
     
-    # # VAL,TEST: I NEED TO CHOOSE VAL, TEST QUERIES THAT HAVE 
-    # #       AT LEAST A NEIGH WITH A LOCATEDINCR. 
-    # #       AT LEAST ONE NEIGH OF A NEIGH HAS A LOCATEDINCR
-    # # TRAIN IN S3: REMOVE THE LOCATEDINCR OF THE 1ST NEIGH
-    # # TRAIN IN S2: DONT REMOVE ANYTHING
-    # # TRAIN IN S1: ALL THE VAL,TEST QUERIES NEED TO HAVE A LOCATEDINCS QUERY IN TRAIN WITH A LOCATEDINSR QUERY IN TRAIN
+    # '''
+    # VAL,TEST: I NEED TO CHOOSE VAL, TEST QUERIES THAT HAVE 
+    #       AT LEAST A NEIGH WITH A LOCATEDINCR. 
+    #       AT LEAST ONE NEIGH OF A NEIGH HAS A LOCATEDINCR
+    # TRAIN IN S3: REMOVE THE LOCATEDINCR OF THE 1ST NEIGH
+    # TRAIN IN S2: DONT REMOVE ANYTHING
+    # TRAIN IN S1: ALL THE VAL,TEST QUERIES NEED TO HAVE A LOCATEDINCS QUERY IN TRAIN WITH A LOCATEDINSR QUERY IN TRAIN
+    # '''
 
     # train, val, test = get_d_dataset(set(queries), islands_CR_queries)
 
@@ -457,34 +458,59 @@ if __name__ == '__main__':
 
     # CHECK THE CORRECTNESS OF THE DATASET
 
-    # load the queries from the files
-    constants_train, predicates_train, train = get_constants_predicates_queries(train_path)
-    _,_, train_s3 = get_constants_predicates_queries(train_path.replace('train','train_s3'))
-    constants_val, predicates_val, val = get_constants_predicates_queries(val_path)
-    constants_test, predicates_test, test = get_constants_predicates_queries(test_path)
-    constants = constants_train | constants_val | constants_test
-    dataset = train + val + test
+    def check_correctness(train_path, val_path, test_path, domain2constants_path):
 
-    problematic_queries = set(val + test) & set(train)
-    if problematic_queries:
-        raise ValueError('There are queries in val or test that are in train:', problematic_queries)
+        # load the queries from the files
+        constants_train, predicates_train, train = get_constants_predicates_queries(train_path)
+        constants_val, predicates_val, val = get_constants_predicates_queries(val_path)
+        constants_test, predicates_test, test = get_constants_predicates_queries(test_path)
+        predicates = predicates_train | predicates_val | predicates_test
+        constants = constants_train | constants_val | constants_test
+        dataset = train + val + test
+
+        domain2constants = get_domain2constants(domain2constants_path)
+        check_correspondence_domain2constants(constants, domain2constants)
+
+        problematic_queries = set(val + test) & set(train)
+        if problematic_queries:
+            raise ValueError('There are queries in val or test that are in train:', [print_query(query) for query in problematic_queries], sep='\n')
+        
+        check_properties_of_dataset(constants, domain2constants, dataset)
+        return train, val, test
 
 
 
+
+    # # GIUSEPPE'S DATA
+    # root = './experiments/data/countries_dataset_giuseppe/'
+    # train_path,val_path,test_path,domain2constants_path = root+'train.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
+    # train, val, test = check_correctness(train_path, val_path, test_path, domain2constants_path)
+    # s1_condition(val+test, train)
+    # s2_condition(val+test, train)
+    # _,_, train_s3 = get_constants_predicates_queries(train_path.replace('train','train_s3'))
+    # s3_condition(val+test, train_s3)
+
+
+    # S1
     # S1. should be able to solve the queries in val and test with the rule locatedInCS(X,W), locatedInSR(W,Z) -> locatedInCR(X,Z)
     # All the val,test queries need to have a locInCS query in train with a locInSR query in train
-    s1_condition(val+test, train)
-
-    # S2. should be able to solve the queries in val and test with the rule neighborOf(X,Y), locatedInCR(Y,Z) -> locatedInCR(X,Z) (THE ONLY RULE)
-    # All the val,test queries need to have a neighborOf query in train with a locatedInCR query
-    s2_condition(val+test, train)
-
-    # S3. should be able to solve the queries in val and test with the rule neighborOf(X,Y), neighborOf(Y,K), locatedInCR(K,Z) -> locatedInCR(X,Z)
-    # All the val,test queries with a neighborOf query in train: remove its LocatedInCR in train and make sure the 2nd neigh has a locatedInCR in train
-    s3_condition(val+test, train_s3)
+    # root = './experiments/data/countries_s1/'
+    # train_path,val_path,test_path,domain2constants_path = root+'train.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
+    # train, val, test = check_correctness(train_path, val_path, test_path, domain2constants_path)
+    # s1_condition(val+test, train)
 
 
 
-    # # make sure that the constants  in train, val and test are in the domain2constants, and all the way round. 
-    # # check all test and val queries are in train
-    # # check_constants_in_domain(constants_train, constants_val, constants_test, constants, domain2constants)
+    # # S2
+    # # S2. should be able to solve the queries in val and test with the rule neighborOf(X,Y), locatedInCR(Y,Z) -> locatedInCR(X,Z) (THE ONLY RULE)
+    # # All the val,test queries need to have a neighborOf query in train with a locatedInCR query
+    # root = './experiments/data/countries_s2/'
+    # train_path,val_path,test_path,domain2constants_path = root+'train.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
+    # train, val, test = check_correctness(train_path, val_path, test_path, domain2constants_path)
+
+    # # S3
+    # # S3. should be able to solve the queries in val and test with the rule neighborOf(X,Y), neighborOf(Y,K), locatedInCR(K,Z) -> locatedInCR(X,Z)
+    # # All the val,test queries with a neighborOf query in train: remove its LocatedInCR in train and make sure the 2nd neigh has a locatedInCR in train
+    # root = './experiments/data/countries_s3/'
+    # train_path,val_path,test_path,domain2constants_path = root+'train.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
+    # train, val, test = check_correctness(train_path, val_path, test_path, domain2constants_path)
