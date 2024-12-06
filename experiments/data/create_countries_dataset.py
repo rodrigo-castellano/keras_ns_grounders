@@ -507,10 +507,12 @@ if __name__ == '__main__':
     # root = './experiments/data/countries_s2/'
     # train_path,val_path,test_path,domain2constants_path = root+'train.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
     # train, val, test = check_correctness(train_path, val_path, test_path, domain2constants_path)
+    # s2_condition(val+test, train)
 
-    # # S3
-    # # S3. should be able to solve the queries in val and test with the rule neighborOf(X,Y), neighborOf(Y,K), locatedInCR(K,Z) -> locatedInCR(X,Z)
-    # # All the val,test queries with a neighborOf query in train: remove its LocatedInCR in train and make sure the 2nd neigh has a locatedInCR in train
-    # root = './experiments/data/countries_s3/'
-    # train_path,val_path,test_path,domain2constants_path = root+'train.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
-    # train, val, test = check_correctness(train_path, val_path, test_path, domain2constants_path)
+    # S3
+    # S3. should be able to solve the queries in val and test with the rule neighborOf(X,Y), neighborOf(Y,K), locatedInCR(K,Z) -> locatedInCR(X,Z)
+    # All the val,test queries with a neighborOf query in train: remove its LocatedInCR in train and make sure the 2nd neigh has a locatedInCR in train
+    root = './experiments/data/countries_s3/'
+    train_path,val_path,test_path,domain2constants_path = root+'train.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
+    train, val, test = check_correctness(train_path, val_path, test_path, domain2constants_path)
+    s3_condition(val+test, train)
