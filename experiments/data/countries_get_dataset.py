@@ -5,8 +5,8 @@ import random
 from typing import Tuple
 from tqdm import tqdm
 
-from data.verify_dataset import get_constants_predicates_queries, get_domain2constants, check_constants_in_domain, check_properties_of_dataset,get_neighbors, get_locatedInCR_from_countries, add_domain_to_locIn, write_queries_to_file
-from data.ablation_get_dataset import get_dataset
+from verify_dataset import get_constants_predicates_queries, get_domain2constants, check_constants_in_domain, check_properties_of_dataset,get_neighbors, get_locatedInCR_from_countries, add_domain_to_locIn, write_queries_to_file
+from ablation_get_dataset import get_dataset
 
 def test_countries(train: set, Ne_queries: set, val_test: list[set]) -> bool:
     """
@@ -53,94 +53,94 @@ def test_countries(train: set, Ne_queries: set, val_test: list[set]) -> bool:
     return True
 
 
-# def get_dataset(data: set, islands_CR_queries: set) -> Tuple[set, set, set]:
-#     '''
-#     Try with different permutations of the CR queries, and in each permutation, see how many queries you can put in val_test,
-#         until you reach the maximum number of queries in val_test. Select a query, if valid_test is still valid with that query, add it. 
-#     Get the d1 dataset. 
-#     c,c1,c2,.. are countries
-#     NE, CR are queries. 
-#     NE is a neighbour query, NE_c1_c2 is a neighbour query that contains c1,c2 (no matter the order)
-#     CR is a LocatedInCR query, CR_c is a LocatedInCR query that contains c
-#     q_c is a CR_c query in val_test
+def get_dataset(data: set, islands_CR_queries: set) -> Tuple[set, set, set]:
+    '''
+    Try with different permutations of the CR queries, and in each permutation, see how many queries you can put in val_test,
+        until you reach the maximum number of queries in val_test. Select a query, if valid_test is still valid with that query, add it. 
+    Get the d1 dataset. 
+    c,c1,c2,.. are countries
+    NE, CR are queries. 
+    NE is a neighbour query, NE_c1_c2 is a neighbour query that contains c1,c2 (no matter the order)
+    CR is a LocatedInCR query, CR_c is a LocatedInCR query that contains c
+    q_c is a CR_c query in val_test
 
-#     Rule:    ∀ q_ci in val_test, ∀ NE_ci(∄ CR_ci, ∃NE_ci_cj(∃CR_cj, )). 
-#     Meaning that for every CR query in val_test, all the neighbour queries in train that 
-#         i.i) do not have a CR query in train, i.ii) have a neighbour query in train that ii) has a CR query in train. 
-#     - I need a function that given queries/countries and trainset, it returns its NeighborOf queries in train / its list of neighbors
-#     - I need a function that given queries/countries and trainset, it returns its LocatedInCR queries in train / bool: if they have LocatedInCR queries
-#     Algo: 
-#     - while iter < max_iters and max_len_val_test<val_test_size:
-#         - start a val_test=[] and train. Generate a random permutation (to change)
-#             - for query in CR_queries_without_islands:
-#                 - atoms_remove: get the CR atoms to remove from train
-#                 - updated_train_test = train - {atoms_remove} - {query}
-#                 - Updated_val_test = val_test + query
-#                 - check if the updated_val_test passes the test_d1 function
-#     '''
+    Rule:    ∀ q_ci in val_test, ∀ NE_ci(∄ CR_ci, ∃NE_ci_cj(∃CR_cj, )). 
+    Meaning that for every CR query in val_test, all the neighbour queries in train that 
+        i.i) do not have a CR query in train, i.ii) have a neighbour query in train that ii) has a CR query in train. 
+    - I need a function that given queries/countries and trainset, it returns its NeighborOf queries in train / its list of neighbors
+    - I need a function that given queries/countries and trainset, it returns its LocatedInCR queries in train / bool: if they have LocatedInCR queries
+    Algo: 
+    - while iter < max_iters and max_len_val_test<val_test_size:
+        - start a val_test=[] and train. Generate a random permutation (to change)
+            - for query in CR_queries_without_islands:
+                - atoms_remove: get the CR atoms to remove from train
+                - updated_train_test = train - {atoms_remove} - {query}
+                - Updated_val_test = val_test + query
+                - check if the updated_val_test passes the test_d1 function
+    '''
 
-#     Ne_queries = {query for query in data if query[0] == 'neighborOf'}
-#     CR_queries = {query for query in data if query[0] == 'locatedInCR'}
-#     val_test_candidates = set(CR_queries - islands_CR_queries)
+    Ne_queries = {query for query in data if query[0] == 'neighborOf'}
+    CR_queries = {query for query in data if query[0] == 'locatedInCR'}
+    val_test_candidates = set(CR_queries - islands_CR_queries)
 
-#     n = len(CR_queries)
-#     train_size = int(n*0.8)
-#     val_size = int(n*0.1)
-#     test_size = n - train_size - val_size
-#     val_test_size = val_size + test_size
-#     print('\nCR queries. Total:', n,', distributed in - train_size:', train_size, 'val_size:', val_size, 'test_size:', test_size, 'val_test_size:', val_test_size, )
-#     print('data:', len(data),'val_test_candidates:', len(data - val_test_candidates),'\n')
+    n = len(CR_queries)
+    train_size = int(n*0.8)
+    val_size = int(n*0.1)
+    test_size = n - train_size - val_size
+    val_test_size = val_size + test_size
+    print('\nCR queries. Total:', n,', distributed in - train_size:', train_size, 'val_size:', val_size, 'test_size:', test_size, 'val_test_size:', val_test_size, )
+    print('data:', len(data),'val_test_candidates:', len(data - val_test_candidates),'\n')
 
-#     max_iters = 1000
-#     iter = 0
-#     max_len_val_test = 0
+    max_iters = 1000
+    iter = 0
+    max_len_val_test = 0
 
-#     # with tqdm(total=max_iters, desc="Processing iterations") as pbar:
-#     while iter < max_iters and max_len_val_test<val_test_size:
-#         percent_complete = (iter + 1) / max_iters * 100
-#         print(f"Iteration: {iter+1}/{max_iters} ({percent_complete:.2f}%)", end="\r")
-#         # Initialise the train and val_test. Generate a random permutation of the CR_queries_without_islands
-#         val_test = []
-#         train = CR_queries.copy()
-#         val_test_permutation = list(val_test_candidates.copy())
-#         random.shuffle(val_test_permutation)
-#         val_test_permutation_iter = val_test_permutation.copy() # to not modify the original list
-#         for i,query in enumerate(val_test_permutation_iter):
-#             # print('query:',i,query)
-#             # remove the query from the permutation
-#             val_test_permutation.remove(query) 
-#             # Do a test with the query, and the updated train set. If it fails, move to the next query
-#             # q_remove = remove_from_train_countries(train, Ne_queries, query)
-#             # train_set = train - {query} - q_remove
-#             train_set = train - {query}
-#             if not test_countries(train_set, Ne_queries,[query]):
-#                 continue
-#             # Check if the val/test passes the test. If it fails, move to the next query. Maybe I can move to the next iteration
-#             if not test_countries(train_set, Ne_queries, val_test + [query]):
-#                 continue
-#             # if it passes the test, update train and val
-#             train -= {query} # | q_remove
-#             val_test.append(query)
+    # with tqdm(total=max_iters, desc="Processing iterations") as pbar:
+    while iter < max_iters and max_len_val_test<val_test_size:
+        percent_complete = (iter + 1) / max_iters * 100
+        print(f"Iteration: {iter+1}/{max_iters} ({percent_complete:.2f}%)", end="\r")
+        # Initialise the train and val_test. Generate a random permutation of the CR_queries_without_islands
+        val_test = []
+        train = CR_queries.copy()
+        val_test_permutation = list(val_test_candidates.copy())
+        random.shuffle(val_test_permutation)
+        val_test_permutation_iter = val_test_permutation.copy() # to not modify the original list
+        for i,query in enumerate(val_test_permutation_iter):
+            # print('query:',i,query)
+            # remove the query from the permutation
+            val_test_permutation.remove(query) 
+            # Do a test with the query, and the updated train set. If it fails, move to the next query
+            # q_remove = remove_from_train_countries(train, Ne_queries, query)
+            # train_set = train - {query} - q_remove
+            train_set = train - {query}
+            if not test_countries(train_set, Ne_queries,[query]):
+                continue
+            # Check if the val/test passes the test. If it fails, move to the next query. Maybe I can move to the next iteration
+            if not test_countries(train_set, Ne_queries, val_test + [query]):
+                continue
+            # if it passes the test, update train and val
+            train -= {query} # | q_remove
+            val_test.append(query)
         
-#         # Update the best train and val_test
-#         if len(val_test) > max_len_val_test:
-#             max_len_val_test = len(val_test)
-#             best_train, best_val_test = set(train), set(val_test)
-#             print('\niter',iter,'max_len_val_test:', max_len_val_test,'/',val_test_size,'. Ratio of success:', max_len_val_test,'/',len(val_test_permutation_iter))
-#         iter += 1
-#         # pbar.update(1)
+        # Update the best train and val_test
+        if len(val_test) > max_len_val_test:
+            max_len_val_test = len(val_test)
+            best_train, best_val_test = set(train), set(val_test)
+            print('\niter',iter,'max_len_val_test:', max_len_val_test,'/',val_test_size,'. Ratio of success:', max_len_val_test,'/',len(val_test_permutation_iter))
+        iter += 1
+        # pbar.update(1)
 
-#     # Take the best train and val_test, and append the rest of the non-CR queries to train
-#     train = best_train.union(data - CR_queries) # append the rest of the non-CR queries. 
-#     test = set(list(best_val_test)[:test_size]) # append best_val_test up to test_size
-#     val = set(list(best_val_test)[test_size:test_size+val_size]) if len(best_val_test) > test_size else set()
-#     if len(best_val_test) > test_size+val_size: # If there are too many queries in val_test, add the rest to train
-#         train = train.union(list(best_val_test)[test_size+val_size:])
+    # Take the best train and val_test, and append the rest of the non-CR queries to train
+    train = best_train.union(data - CR_queries) # append the rest of the non-CR queries. 
+    test = set(list(best_val_test)[:test_size]) # append best_val_test up to test_size
+    val = set(list(best_val_test)[test_size:test_size+val_size]) if len(best_val_test) > test_size else set()
+    if len(best_val_test) > test_size+val_size: # If there are too many queries in val_test, add the rest to train
+        train = train.union(list(best_val_test)[test_size+val_size:])
 
-#     print('New distribution: len train(with non-CR):', len(train), 'len val:', len(val), 'len test:', len(test), 'total:', len(train)+len(val)+len(test))
-#     print('Keeps the length:', len(data)==len(train)+len(val)+len(test),'. Decrease:',len(data)-(len(train)+len(val)+len(test)))
+    print('New distribution: len train(with non-CR):', len(train), 'len val:', len(val), 'len test:', len(test), 'total:', len(train)+len(val)+len(test))
+    print('Keeps the length:', len(data)==len(train)+len(val)+len(test),'. Decrease:',len(data)-(len(train)+len(val)+len(test)))
      
-#     return train, val, test
+    return train, val, test
 
 
 
@@ -151,15 +151,13 @@ if __name__ == '__main__':
     # OBTAIN THE WHOLE DATA
     root = './experiments/data/countries_dataset_giuseppe/'
     train_path, val_path, test_path = root+'train.txt', root+'valid.txt', root+'test.txt'
-    dataset_path = root + 'dataset.txt'
-    domain2constants_path = root+'domain2constants.txt'
+    dataset_path, domain2constants_path = root+'dataset.txt', root+'domain2constants.txt'
 
-    constants, predicates, queries = get_constants_predicates_queries(dataset_path)
-    print('number of queries:', len(queries))
+    constants, predicates, dataset = get_constants_predicates_queries(dataset_path)
     domain2constants = get_domain2constants(domain2constants_path)
-    queries = add_domain_to_locIn(queries, domain2constants)
+    dataset = add_domain_to_locIn(dataset, domain2constants)
     check_constants_in_domain(constants, domain2constants)
-    islands, islands_CR_queries = check_properties_of_dataset(constants, domain2constants, queries)
+    islands, islands_CR_queries = check_properties_of_dataset(constants, domain2constants, dataset)
 
 
     # CREATE SPLITS
@@ -174,7 +172,7 @@ if __name__ == '__main__':
     I can call the get_dataset function to get the data for s1,s2, and maximize for s3 (ask max of queries that have a neigh2 with a CR query and no neigh with a CR query)
     '''
 
-    train, val, test = get_dataset(set(queries), islands_CR_queries)
+    train, val, test = get_dataset(set(dataset), islands_CR_queries)
 
     # Need to modify the train dataset for S3
     train_s3 = set(train.copy())
@@ -188,11 +186,17 @@ if __name__ == '__main__':
         removed_CR_queries = removed_CR_queries.union(CR_queries_from_neighbors)
     print('removed_CR_queries for s3 train:', len(removed_CR_queries))
 
+    from verify_dataset import s1_condition, s2_condition, s3_condition
+    s1_condition(train, val, test)
+    s2_condition(train, val, test)
+    s3_condition(train, val, test)
+
+
     # save the queries to the files
-    write_queries_to_file(train, train_path)
-    write_queries_to_file(train_s3, train_path.replace('train','train_s3'))
-    write_queries_to_file(val, val_path)
-    write_queries_to_file(test, test_path)
+    # write_queries_to_file(train, train_path)
+    # write_queries_to_file(train_s3, train_path.replace('train','train_s3'))
+    # write_queries_to_file(val, val_path)
+    # write_queries_to_file(test, test_path)
 
 
 

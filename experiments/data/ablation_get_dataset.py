@@ -4,13 +4,30 @@ import re
 import random
 from typing import Tuple
 from tqdm import tqdm
-from verify_dataset import write_queries_to_file
-from verify_dataset import get_constants_predicates_queries, get_domain2constants, check_constants_in_domain, remove_locatedInCS_locatedInSR, get_neighbors, get_locatedInCR, get_locatedInCR_from_countries, get_neighbors_from_countries
+from verify_dataset import write_queries_to_file, check_properties_of_dataset, add_domain_to_locIn
+from verify_dataset import get_constants_predicates_queries, get_domain2constants, get_neighbors
 from typing import List, Set, Tuple, Optional
 from collections import defaultdict
+import janus_swi as janus
 
-
-
+def get_one_depth_proof(query, full_rules, max_depth):
+    #print(query)
+    if query in full_rules:
+        #print("remove query")
+        full_rules.remove(query)
+    with open("countries_sub.pl", "w") as f1:
+        f1.write("\n".join(full_rules))
+    f1.close()
+    janus.query_once("abolish(neighborOf/2).")
+    janus.query_once("abolish(locatedInCR/2).")
+    janus.query_once("abolish_all_tables.")
+    janus.consult("countries_sub.pl")
+    args = query.split("(")[1].replace(").", "").split(",")
+    res = janus.query_one(f'locatedInCR_with_depth({args[0]}, {args[1]}, 0, {max_depth}, _Depth, _Proof), term_string(_Depth, Depth), term_string(_Proof, Proof)')
+    if not res['truth']:
+        return False
+    else:
+        return True
 
 def build_neighbor_map(data: Set[Tuple[str, str, str]]) -> dict:
     """Builds a neighbor map for efficient neighbor lookups."""
@@ -398,8 +415,6 @@ def get_dataset(
 
 
 if __name__ == '__main__':
-
-    from verify_dataset import check_properties_of_dataset, add_domain_to_locIn
 
     dataset_type = 'd3'
     root = './experiments/data/countries_ablation/'
