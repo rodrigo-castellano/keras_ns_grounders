@@ -3,27 +3,42 @@ import sys
 import re
 import random
 from typing import Tuple
-from tqdm import tqdm
 from verify_dataset import write_queries_to_file, check_properties_of_dataset, add_domain_to_locIn
-from verify_dataset import get_constants_predicates_queries, get_domain2constants, get_neighbors
+from verify_dataset import get_constants_predicates_queries, get_domain2constants, get_neighbors, check_constants_in_domain
 from typing import List, Set, Tuple, Optional
 from collections import defaultdict
 import janus_swi as janus
 
-def get_one_depth_proof(query, full_rules, max_depth):
-    #print(query)
+
+def get_provability_prolog(queries: List[Tuple[str, str, str]], CR_queries: set[Tuple[str, str, str]], Ne_queries: set[Tuple[str, str, str]], max_depth: int = 10) -> int:
+    # convert queries and rules to strings
+    queries_str = [f"{q[0]}({q[1]},{q[2]})." for q in queries]
+    CR_queries_str = [f"{r[0]}({r[1]},{r[2]})." for r in CR_queries]
+    Ne_queries_str = [f"{r[0]}({r[1]},{r[2]})." for r in Ne_queries]
+
+    r1="locatedInCR_with_depth(X, Z, Recursion, MaxDepth, Depth, Proof) :- Recursion =< MaxDepth, locatedInCR(X, Z), Depth = 1, Proof = [locatedInCR(X, Z)]."
+    r2="locatedInCR_with_depth(X, Z, Recursion, MaxDepth, Depth, Proof) :- Recursion < MaxDepth, neighborOf(X, Y), Next_Recursion is Recursion + 1, locatedInCR_with_depth(Y, Z, Next_Recursion, MaxDepth, SubDepth, SubProof), Depth is SubDepth + 1, Proof = [neighborOf(X, Y) | SubProof]."
+    r3="query_with_depth(X, Z, MaxDepth, Depths, Proofs) :- findall([Depth, Proof], locatedInCR_with_depth(X, Z, 0, MaxDepth, Depth, Proof), Results), findall(D, member([D, _], Results), Depths), findall(P, member([_, P], Results), Proofs)."
+    rules = CR_queries_str + Ne_queries_str + [r1, r2, r3]
+    n_provables = 0
+    for query in queries_str:
+        is_provable = is_query_provable(query, rules.copy(), max_depth)
+        n_provables += int(is_provable)
+    return n_provables
+
+def is_query_provable(query: str, full_rules: List[str], max_depth: int = 10) -> bool:
     if query in full_rules:
-        #print("remove query")
         full_rules.remove(query)
-    with open("countries_sub.pl", "w") as f1:
+    with open("countries_tmp.pl", "w") as f1:
         f1.write("\n".join(full_rules))
     f1.close()
     janus.query_once("abolish(neighborOf/2).")
     janus.query_once("abolish(locatedInCR/2).")
     janus.query_once("abolish_all_tables.")
-    janus.consult("countries_sub.pl")
+    janus.consult("countries_tmp.pl")
+    # print('query',query)
     args = query.split("(")[1].replace(").", "").split(",")
-    res = janus.query_one(f'locatedInCR_with_depth({args[0]}, {args[1]}, 0, {max_depth}, _Depth, _Proof), term_string(_Depth, Depth), term_string(_Proof, Proof)')
+    res = janus.query_once(f'locatedInCR_with_depth({args[0]}, {args[1]}, 0, {max_depth}, _Depth, _Proof), term_string(_Depth, Depth), term_string(_Proof, Proof)')
     if not res['truth']:
         return False
     else:
@@ -83,6 +98,7 @@ def test_d2(train: Set[Tuple[str, str, str]],
         and at least one neighbors of neighbors with a CR queries.
     """
     for query in val_test:
+        print('\n testing query',query) if verbose else None
         if query in train:
             if verbose: print('query in train', query)
             return False
@@ -94,18 +110,16 @@ def test_d2(train: Set[Tuple[str, str, str]],
         if not neighbors:
             if verbose: print('no neighbors', country, neighbors)
             return False
-
+        
         if neighbors & country_with_cr:
             if verbose: print('Some neighbors have locatedInCR', country, neighbors)
             return False
-
         # Step 2: Get neighbors of neighbors and Check that at leasts one of them has a 'locatedInCR' entry
         neighbors_of_neighbors = set()
         for neighbor in neighbors:
             neighbors_of_neighbors.update(get_neighbors(neighbor, neighbor_map))
         neighbors_of_neighbors.discard(country)  # Remove the original country
-
-        if not neighbors_of_neighbors:
+        if not neighbors_of_neighbors: 
             if verbose: print('no neighbors_of_neighbors', country, neighbors, neighbors_of_neighbors)
             return False
 
@@ -176,20 +190,16 @@ def remove_from_train_d3(train: Set[Tuple[str, str, str]],
                         country_with_cr: Set[str],
                         verbose=0) -> Set[Tuple[str, str, str]]:
     '''For the country in a query, remove the CR queries from i) its neighbors and ii) the neighbors of the neighbors'''
-    print('\nRemoving from train:') if verbose else None
     country = query[1]
     neighbors = get_neighbors(country, neighbor_map)
     neighbors_with_cr = neighbors & country_with_cr
-    print('neighbors',len(neighbors),neighbors) if verbose else None
-    print('neighbors_with_cr',len(neighbors_with_cr),neighbors_with_cr) if verbose else None
+
     neighbors_of_neighbors = set()
     for neighbor in neighbors:
         neighbors_of_neighbors.update(get_neighbors(neighbor, neighbor_map))
     neighbors_of_neighbors.discard(country)
-
     neighbors_of_neighbors_with_cr = neighbors_of_neighbors & country_with_cr
-    print('neighbors_of_neighbors',len(neighbors_of_neighbors),neighbors_of_neighbors)  if verbose else None
-    print('neighbors_of_neighbors_with_cr',len(neighbors_of_neighbors_with_cr),neighbors_of_neighbors_with_cr) if verbose else None
+
     countries_to_remove = neighbors_with_cr | neighbors_of_neighbors_with_cr
     print('countries_to_remove',len(countries_to_remove),countries_to_remove) if verbose else None
     return {(relation, c, cr) for relation, c, cr in train if relation == 'locatedInCR' and c in countries_to_remove}
@@ -295,7 +305,7 @@ def iterate_over_candidates(
     Returns:
         Tuple[Set, Set]: The best training set and validation/test set found.
     """
-    max_iters = 100000
+    max_iters = 10
     best_train, best_val_test = set(), set()
     max_len_val_test, max_len_provables_train = 0, 0
 
@@ -316,6 +326,7 @@ def iterate_over_candidates(
         for i,query in enumerate(shuffled_candidates):
             if len(val_test) >= val_test_size:
                 break
+            #     print('\nquery',i,query)
             # Remove query and associated atoms from the training set
             atoms_to_remove = remove_from_train(train, query,type=type, neighbor_map=neighbor_map,country_with_cr=country_with_cr,verbose=0)
             # create a temporary training set and country_with_cr set so that if the query is not valid, we can revert back
@@ -330,34 +341,38 @@ def iterate_over_candidates(
             train -= {query} | atoms_to_remove
             country_with_cr -= {query[1]} | {atom[1] for atom in atoms_to_remove if atom[0] == 'locatedInCR'}
             val_test.append(query)
-        # print('\npassed test',test_dataset(train, val_test, type=type, neighbor_map=neighbor_map,country_with_cr=country_with_cr))
-        # Update the best sets if criteria are met
+
+        
         provable_queries_train = get_provable_queries(train, train, type=type, neighbor_map=neighbor_map,country_with_cr=country_with_cr) 
+        # provable_queries_train_depth_d = get_provable_queries(train, train, type=type, neighbor_map=neighbor_map,country_with_cr=country_with_cr) 
+        # provable_queries_train = get_provability_prolog(train, train, ne_queries, max_depth=10)
+
         if len(val_test) > max_len_val_test or (
             len(val_test) == val_test_size and provable_queries_train > max_len_provables_train
         ):
             max_len_val_test = len(val_test)
             max_len_provables_train = provable_queries_train
             best_train, best_val_test = train.copy(), set(val_test)
+            best_country_with_cr = country_with_cr.copy()
 
-            print(
-                f"\nIteration {iteration + 1}: Updated best sets.\n"
-                f"Validation/Test size: {len(val_test)}/{val_test_size}."
-                f" Provable queries in train: {provable_queries_train}/{train_size}."
-            )
+            print(  f"\nIteration {iteration + 1}: Updated best sets.\n"
+                    f"Validation/Test size: {len(val_test)}/{val_test_size}."
+                    f" Provable queries in train: {provable_queries_train}/{len(train)}"
+                    # f" Provable queries in train depth d: {provable_queries_train_depth_d}/{len(train)}"
+                    )
 
         # Stop early if both criteria are satisfied
-        if len(val_test) == val_test_size and max_len_provables_train >= train_size:
+        if len(val_test) == val_test_size and max_len_provables_train >= len(train):
             break
-    print('\ntest check passed',test_dataset(best_train, best_val_test, type=type, neighbor_map=neighbor_map, country_with_cr=country_with_cr_train))
-
+    print('\ntest check passed',test_dataset(best_train, best_val_test, type=type, neighbor_map=neighbor_map, country_with_cr=best_country_with_cr))
+    print('\nProvable queries in train at any depth:', get_provability_prolog(best_train, best_train, ne_queries, max_depth=10))
     return best_train, best_val_test
 
 
 def get_dataset(
     data: List[Tuple],
     islands_cr_queries: Set[Tuple],
-    type: str = 'd3'
+    type: str = 'd2'
 ) -> Tuple[Set[Tuple], Set[Tuple], Set[Tuple]]:
     """
     Splits the dataset into training, validation, and test sets.
@@ -416,7 +431,7 @@ def get_dataset(
 
 if __name__ == '__main__':
 
-    dataset_type = 'd3'
+    dataset_type = 'd1'
     root = './experiments/data/countries_ablation/'
     dataset_path, domain2constants_path = root + 'dataset.txt', root+'domain2constants.txt'
     train_path, val_path, test_path = root+'train_'+dataset_type+'.txt', root+'val_'+dataset_type+'.txt', root+'test_'+dataset_type+'.txt'
@@ -424,6 +439,7 @@ if __name__ == '__main__':
     constants, predicates, dataset = get_constants_predicates_queries(dataset_path) 
     domain2constants = get_domain2constants(domain2constants_path)
     dataset = add_domain_to_locIn(dataset, domain2constants)
+    check_constants_in_domain(constants, domain2constants)
     islands, islands_CR_queries = check_properties_of_dataset(domain2constants, dataset)
 
     train, val, test = get_dataset(dataset, islands_CR_queries, type=dataset_type)
