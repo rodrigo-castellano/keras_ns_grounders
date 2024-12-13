@@ -277,7 +277,7 @@ def main(data_path, log_filename, use_WB, args):
             run.finish
         args.time_train = 0
     
-    save_embeddings_from_model(model, fol, serializer, save_dir="./../embeddings/"+args.run_signature)
+    # save_embeddings_from_model(model, fol, serializer, save_dir="./../embeddings/"+args.run_signature)
 
 
 
