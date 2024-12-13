@@ -3,7 +3,6 @@ import sys
 import re
 import random
 from typing import Tuple
-from tqdm import tqdm
 
 
 def write_queries_to_file(queries, path):
@@ -178,20 +177,21 @@ def check_properties_of_dataset(domain2constants: dict, queries: list) -> Tuple[
     return islands, islands_CR_queries
 
 
-def check_constants_in_domain(constants_train, constants_val, constants_test, constants,domain2constants):
+def check_constants_in_domain(constants,domain2constants,constants_train=None,constants_val=None,constants_test=None):
     '''make sure that the constants  in train, val and test are in the domain2constants, 
     and all the way round. check all test and val queries are in train'''
     # 1. check that all test,val constants are in train
-    print('\ntest - train:', constants_test - constants_train)
-    print('val - train:', constants_val - constants_train)
+    if constants_train is not None and constants_val is not None and constants_test is not None:
+        print('\ntest - train:', constants_test - constants_train)
+        print('val - train:', constants_val - constants_train)
 
     # 2. check that all test,val,train constants are in the domain2constants
     all_domain2constants = {constant  for domain, constants in domain2constants.items() for constant in constants}
     # print('\ntest - domain:', constants_test - all_domain2constants)
     # print('val - domain:', constants_val - all_domain2constants)
     # print('train - domain:', constants_train - all_domain2constants)
-    print('\ndomain-train,val,test:', all_domain2constants - constants)
-    print('train,val,test-domain:', constants-all_domain2constants)
+    print('\ndomain - dataset constants:', all_domain2constants - constants)
+    print('dataset constants - domain:', constants-all_domain2constants)
     print()
 
 
@@ -224,7 +224,7 @@ def s1_condition(val_test, train):
     # subregions that appear in a SR query in train
     subregions_in_SR_queries = {query[1] for query in train if query[0] == 'locatedInSR'}
     for query in val_test:
-        assert query[0] == 'locatedInCR'
+        assert query[0] == 'locatedInCR', f'query {query} is not locatedInCR'
         country = query[1]
         subregion = countries_in_CS_queries[country]
         if not subregion:
@@ -274,7 +274,7 @@ def s3_condition(val_test, train):
 
 if __name__ == '__main__':
     # COUNTRIES AND ABLATION DATA
-    root = './experiments/data/countries_s1/'
+    root = './experiments/data/countries_s3/'
     train_path,val_path,test_path,domain2constants_path = root+'train.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
 
     constants_train, predicates_train, train = get_constants_predicates_queries(train_path)
@@ -283,11 +283,11 @@ if __name__ == '__main__':
     constants =  constants_train | constants_val | constants_test
     domain2constants = get_domain2constants(domain2constants_path)
     dataset = train + val + test
-    check_constants_in_domain(constants_train, constants_val, constants_test, constants, domain2constants)
+    check_constants_in_domain(constants, domain2constants, constants_train, constants_val, constants_test)
     check_properties_of_dataset(domain2constants, dataset)
-    # s1_condition(val+test, train)
-    # s2_condition(val+test, train)
-    # s3_condition(val+test, train)
+    s1_condition(val+test, train)
+    s2_condition(val+test, train)
+    s3_condition(val+test, train)
 
 
     # # GIUSEPPE's data
@@ -309,7 +309,7 @@ if __name__ == '__main__':
     # constants =  constants_train | constants_val | constants_test
     # domain2constants = get_domain2constants(domain2constants_path)
     # dataset = train + val + test
-    # check_constants_in_domain(constants_train, constants_val, constants_test, constants, domain2constants)
+    # check_constants_in_domain(constants, domain2constants, constants_train, constants_val, constants_test)
     # check_properties_of_dataset(domain2constants, dataset)
 
     # root = './experiments/data/countries_dataset_giuseppe/'
