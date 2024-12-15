@@ -31,11 +31,11 @@ wandb.login()
 
 if __name__ == '__main__':
 
-    use_logger = False
+    use_logger = True
     use_WB = False
     load_model_ckpt = False
     load_kge_ckpt = False
-    save_model_ckpt = False
+    save_model_ckpt = True
     save_kge_ckpt = save_model_ckpt
     log_folder :str = "./experiments/runs/"
     ckpt_folder = "./../checkpoints/"
