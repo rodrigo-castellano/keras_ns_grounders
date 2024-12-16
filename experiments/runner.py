@@ -31,26 +31,26 @@ wandb.login()
 
 if __name__ == '__main__':
 
-    use_logger = False
+    use_logger = True
     use_WB = False
     load_model_ckpt = False
     load_kge_ckpt = False
-    save_model_ckpt = False
+    save_model_ckpt = True
     save_kge_ckpt = save_model_ckpt
     log_folder :str = "./experiments/runs/"
     ckpt_folder = "./../checkpoints/"
     data_path :str = "experiments/data"
     epochs: int = 100
     EARLY_STOPPING = True
-    DATASET_NAME = ['countries_s1','countries_s2','countries_s3'] #['ablation_d2'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
-    GROUNDER = ['backward_1_3'] # ['backward_0_1','backward_0_2','backward_0_3','backward_1_1','backward_1_2','backward_1_3',
+    DATASET_NAME = ["pharmkg_small"] # ['countries_s1','countries_s2','countries_s3'] #['ablation_d2'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
+    GROUNDER = ['backward_1_1','backward_1_2','backward_1_3']# ['backward_0_1','backward_0_2','backward_0_3','backward_1_1','backward_1_2','backward_1_3',
                # 'backward_2_1','backward_2_2','backward_2_3',] # 'domainbody','relationentity','full']
     KGE = ['transe'] # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['r2n'] # ['no_reasoner','dcr','sbr','r2n'] 
     RULE_MINER = ['amie','None'] 
     E = [100]
     DEPTH = [1]
-    SEED = [[0]]# [[0,1,2,3,4]]
+    SEED = [[0,1,2,3,4]]
     NEG_PER_SIDE = [1]
     WEIGHT_LOSS = [.5]  
     DROPOUT = [0.0]
