@@ -2,3 +2,5 @@ neighborOf(spain,france).
 neighborOf(france,spain).
 neighborOf(italy,france).
 neighborOf(france,italy).
+neighborOf(spain,portugal).
+neighborOf(portugal,spain).
