@@ -397,7 +397,7 @@ class ApproximateBackwardChainingGrounder(Engine):
                 print('\nTotal  groundings in res after rule',j,'/',len(self.rules),', step',step,':',sum([len(v) for k, v in self.rule2groundings.items()])) # careful, here there are duplicates
                 print()
                 for k,v in self.rule2groundings.items():
-                    print('rule2groundings', k, len(v), v)
+                    print('\nGroundings:', k, len(v), v)
  
             if step == self.num_steps - 1:
                 break

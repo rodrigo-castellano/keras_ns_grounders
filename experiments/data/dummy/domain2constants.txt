@@ -1,2 +1,2 @@
 regions europe
-countries spain france italy
+countries spain france italy portugal

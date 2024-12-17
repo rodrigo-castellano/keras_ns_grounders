@@ -20,7 +20,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Description of your script')  
 args = parser.parse_args()
 
-args.grounder = 'backward_0_1'
+args.grounder = 'backward_1_2'
 
 args.dataset_name = 'dummy'
 args.data_path = "experiments/data"
