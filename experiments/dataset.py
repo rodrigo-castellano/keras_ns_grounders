@@ -225,7 +225,6 @@ class KGCEvalDataset(Dataset):
             domain2constants=self.domain2constants,
             num_negatives=self.num_negatives,
             corrupt_mode=self.corrupt_mode)
-
         # Eval corruptions are split head and tail corruptions
         Q = []
         L = []

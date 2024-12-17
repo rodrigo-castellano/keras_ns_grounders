@@ -57,7 +57,6 @@ neighborOf(zambia,namibia).
 neighborOf(zambia,malawi).
 locatedIn(cyprus,eastern_europe).
 locatedIn(cyprus,europe).
-neighborOf(cyprus,united_kingdom).
 locatedIn(ireland,northern_europe).
 locatedIn(ireland,europe).
 neighborOf(ireland,united_kingdom).

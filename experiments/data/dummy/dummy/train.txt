@@ -1,3 +1,5 @@
+locatedInCR(spain,europe).
+locatedInCR(italy,europe).
 neighborOf(spain,france).
 neighborOf(france,spain).
 neighborOf(italy,france).

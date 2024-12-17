@@ -305,7 +305,7 @@ def iterate_over_candidates(
     Returns:
         Tuple[Set, Set]: The best training set and validation/test set found.
     """
-    max_iters = 10
+    max_iters = 50000
     best_train, best_val_test = set(), set()
     max_len_val_test, max_len_provables_train = 0, 0
 
@@ -344,8 +344,6 @@ def iterate_over_candidates(
 
         
         provable_queries_train = get_provable_queries(train, train, type=type, neighbor_map=neighbor_map,country_with_cr=country_with_cr) 
-        # provable_queries_train_depth_d = get_provable_queries(train, train, type=type, neighbor_map=neighbor_map,country_with_cr=country_with_cr) 
-        # provable_queries_train = get_provability_prolog(train, train, ne_queries, max_depth=10)
 
         if len(val_test) > max_len_val_test or (
             len(val_test) == val_test_size and provable_queries_train > max_len_provables_train
@@ -354,11 +352,11 @@ def iterate_over_candidates(
             max_len_provables_train = provable_queries_train
             best_train, best_val_test = train.copy(), set(val_test)
             best_country_with_cr = country_with_cr.copy()
-
+            provable_queries_train_prolog = get_provability_prolog(train, train, ne_queries, max_depth=10)
             print(  f"\nIteration {iteration + 1}: Updated best sets.\n"
                     f"Validation/Test size: {len(val_test)}/{val_test_size}."
                     f" Provable queries in train: {provable_queries_train}/{len(train)}"
-                    # f" Provable queries in train depth d: {provable_queries_train_depth_d}/{len(train)}"
+                    f" Provable queries in train prolog: {provable_queries_train_prolog}/{len(train)}"
                     )
 
         # Stop early if both criteria are satisfied
@@ -372,7 +370,7 @@ def iterate_over_candidates(
 def get_dataset(
     data: List[Tuple],
     islands_cr_queries: Set[Tuple],
-    type: str = 'd2'
+    type: str = 'd3'
 ) -> Tuple[Set[Tuple], Set[Tuple], Set[Tuple]]:
     """
     Splits the dataset into training, validation, and test sets.
@@ -431,9 +429,9 @@ def get_dataset(
 
 if __name__ == '__main__':
 
-    dataset_type = 'd1'
+    dataset_type = 'd3'
     root = './experiments/data/countries_ablation/'
-    dataset_path, domain2constants_path = root + 'dataset.txt', root+'domain2constants.txt'
+    dataset_path, domain2constants_path = root + 'dataset_giuseppe.txt', root+'domain2constants.txt'
     train_path, val_path, test_path = root+'train_'+dataset_type+'.txt', root+'val_'+dataset_type+'.txt', root+'test_'+dataset_type+'.txt'
 
     constants, predicates, dataset = get_constants_predicates_queries(dataset_path) 
