@@ -20,9 +20,10 @@ import argparse
 parser = argparse.ArgumentParser(description='Description of your script')  
 args = parser.parse_args()
 
-args.grounder = 'backward_1_2'
+args.grounder = 'backward_0_2'
 
-args.dataset_name = 'dummy'
+args.dataset_name = 'ablation_d2'
+# args.dataset_name = 'dummy'
 args.data_path = "experiments/data"
 args.facts_file = 'facts.txt'
 args.train_file = 'train.txt'  
@@ -60,6 +61,7 @@ fol = data_handler.fol
 facts = fol.facts
 rules = ns.utils.read_rules(join(args.data_path, args.dataset_name, args.rules_file),args)
 queries, labels = dataset_test[0:len(dataset_test)]
+# queries, labels = dataset_train[0:len(dataset_train)]
 
 
 type = args.grounder
@@ -72,7 +74,7 @@ else:
     backward_depth = int(type[-1])
     type = 'BackwardChainingGrounder'
 
-prune_incomplete_proofs = True if (backward_width is None or backward_width == 0) else False
+prune_incomplete_proofs = True #if (backward_width is None or backward_width == 0) else False
 print('Grounder: ',args.grounder,'backward_depth:', backward_depth, 'Prune:', prune_incomplete_proofs, 'backward_width:', backward_width)
 
 if type == 'BackwardChainingGrounder':
@@ -86,18 +88,25 @@ elif type == 'ApproximateBackwardChainingGrounder':
                 rules, facts=facts, domains={d.name:d for d in fol.domains},
                 domain2adaptive_constants=None,
                 pure_adaptive=False,
-                num_steps=backward_depth,
-                max_unknown_fact_count=backward_width,
-                max_unknown_fact_count_last_step=backward_width,
-                prune_incomplete_proofs=prune_incomplete_proofs)
+                num_steps=2,#backward_depth,
+                max_unknown_fact_count=1,#backward_width,
+                max_unknown_fact_count_last_step=1,#backward_width,
+                prune_incomplete_proofs=True)#prune_incomplete_proofs)
 
 
-print('facts:',len(facts),facts)
+# print('facts:',len(facts),facts)
+queries = [('locatedInCR','switzerland','europe')]
 print('queries:',len(queries),queries)
-ground_formulas: Dict[str, RuleGroundings] = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
+ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
+# ground_formulas: Dict[str, RuleGroundings] = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
 
-print('\n\nground_formulas:',len(ground_formulas))
+print('\n\nground_formulas:')
+# for rule in ground_formulas:
+#     print(' Rule:',rule)
+#     for grounding in ground_formulas[rule].groundings:
+#         print('        ',grounding[0][0],'    ',grounding[1])
+
 for rule in ground_formulas:
-    print(' Rule:',rule)
-    for grounding in ground_formulas[rule].groundings:
-        print('        ',grounding[0][0],'    ',grounding[1])
+    for grounding in ground_formulas[rule]:
+
+        print(grounding[0][0],'       ',grounding[1][0], grounding[1][1])

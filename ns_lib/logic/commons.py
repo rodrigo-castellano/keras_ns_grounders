@@ -323,6 +323,9 @@ class RuleGroundings():
         if self.query2groundings != r.query2groundings:
             return False
         return True
+    # iters
+    def __iter__(self):
+        return iter(self.groundings)
 
 def Predicate2Domains(
     atoms: List[Tuple[str, str, str]],
