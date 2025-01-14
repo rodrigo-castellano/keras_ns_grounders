@@ -304,7 +304,7 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
     for rule_name,groundings in rule2groundings.items():
         pruned_groundings = []
         for g in groundings:
-            head_atoms = g[0]
+            # head_atoms = g[0]
             body_atoms = g[1]
             # all elements in the grounding are either in the training data
             # or they are provable using the rules,
