@@ -283,27 +283,36 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
         for rule_name,proofs in rule2proofs.items():
             for query_and_proof in proofs:
                 query, proof = query_and_proof[0], query_and_proof[1]
+                # print('query, proof',query, proof)
                 if query not in atom2proved or not atom2proved[query]:
+                    # for a query in atom2proved, checks if all its atom proofs are in atom2proved
+                    # print('     all([atom2proved.get(a, False) for a in proof])',all([atom2proved.get(a, False) for a in proof]))
                     atom2proved[query] = all(
-                        [atom2proved.get(a, False)
+                        [atom2proved.get(a, False) 
                          # This next check is useless as atoms added in the proofs
                          # are by definition not proved already in the data.
                          # or fact_index._index.get(a, None) is not None)
                          for a in proof])
+    # print('[proved atoms]',atom2proved) # all atoms that are proved
 
     # Now atom2proved has all proved atoms. Scan the groundings and keep only
     # the ones that have been proved within num_steps:
+    # Problem: it only checks the head atoms, regardless of the body (proof). 
+    # If an atom has some true and false groundings, it will add all, as long as they are in atom2proved 
+    # (which will be the case if at least one grounding is true).
     pruned_rule2groundings = {}
     for rule_name,groundings in rule2groundings.items():
         pruned_groundings = []
         for g in groundings:
             head_atoms = g[0]
+            body_atoms = g[1]
             # all elements in the grounding are either in the training data
             # or they are provable using the rules,
             if all([(atom2proved.get(a, False) or
-                     fact_index._index.get(a, None) is not None)
-                    for a in head_atoms]):
+                        fact_index._index.get(a, None) is not None)
+                    for a in body_atoms]):
                 pruned_groundings.append(g)
+                # print('     appended',[atom2proved.get(a, False) for a in head_atoms], [fact_index._index.get(a, None) for a in head_atoms],g)
         pruned_rule2groundings[rule_name] = set(pruned_groundings)
     return pruned_rule2groundings
 
@@ -384,7 +393,8 @@ class ApproximateBackwardChainingGrounder(Engine):
                     self.domains,
                     self.domain2adaptive_constants,
                     self.pure_adaptive,
-                    rule, queries_per_rule, 
+                    rule, 
+                    queries_per_rule, 
                     self._fact_index,
                     (self.max_unknown_fact_count if step < self.num_steps - 1
                      else self.max_unknown_fact_count_last_step),
@@ -394,10 +404,11 @@ class ApproximateBackwardChainingGrounder(Engine):
                 # Update the list of processed rules.
                 self._rule2processed_queries[rule.name].update(queries_per_rule)
                 # print('\nqueries processed (_rule2processed_queries):\n', len(self._rule2processed_queries[rule.name]),self._rule2processed_queries[rule.name])
-                # print('\nTotal  groundings in res after rule',j,'/',len(self.rules),', step',step,':',sum([len(v) for k, v in self.rule2groundings.items()])) # careful, here there are duplicates
+                # print('\nTotal  groundings in res after rule',j+1,'/',len(self.rules),', step',step,':',sum([len(v) for k, v in self.rule2groundings.items()])) # careful, here there are duplicates
                 # print()
                 # for k,v in self.rule2groundings.items():
                     # print('\nGroundings:', k, len(v), v)
+                # print('\nproofs:',self.rule2proofs)
  
             if step == self.num_steps - 1:
                 break
