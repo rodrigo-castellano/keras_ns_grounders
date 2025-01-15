@@ -237,14 +237,20 @@ def s2_condition(val_test, train):
     print('s2 condition...')
     Ne_queries = {query for query in train if query[0] == 'neighborOf'}
     for query in val_test:
+        print('query:',query) if query[1] == 'egypt' else None
         country = query[1]
+        region = query[2]
         neighbors = get_neighbors(country, Ne_queries)
+        print('neighbors:',neighbors) if country == 'egypt' else None
         if not neighbors:
             raise ValueError('The country', country, 'has no neighbors in train')
         neighbors_with_cr = get_locatedInCR_from_countries(neighbors, train)
+        print('neighbors_with_cr:',neighbors_with_cr) if country == 'egypt' else None
         if not neighbors_with_cr:
             print('Not provable, no neighbor has locatedInCR:',country)
             # raise ValueError('The neighbors of', country, 'have no locatedInCR queries in train')
+        if region not in neighbors_with_cr:
+            raise ValueError(f'The query has a proof but for another continent. Query: {query}, neighbors_with_cr: {neighbors_with_cr}')
     return True
     
 def s3_condition(val_test, train):
@@ -282,7 +288,7 @@ def d2_condition(val_test, train):
 if __name__ == '__main__':
     # COUNTRIES AND ABLATION DATA
 
-    root = './experiments/data/countries_s3/'
+    root = './experiments/data/ablation_d2/'
     train_path,val_path,test_path,domain2constants_path = root+'train.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
 
     constants_train, predicates_train, train = get_constants_predicates_queries(train_path)
@@ -293,9 +299,31 @@ if __name__ == '__main__':
     dataset = train + val + test
     check_constants_in_domain(constants, domain2constants, constants_train, constants_val, constants_test)
     check_properties_of_dataset(domain2constants, dataset)
+
+    # train info: 
+    # CR queries, # CS queries, # SR queries, # neighborOf queries
+    # train queries, val queries, test queries
+    # num of provable queries in train, val, test
+    def print_info(data):
+        print('CR:', sum(1 for query in data if query[0] == 'locatedInCR'))
+        print('CS:', sum(1 for query in data if query[0] == 'locatedInCS'))
+        print('SR:', sum(1 for query in data if query[0] == 'locatedInSR'))
+        print('neighborOf:', sum(1 for query in data if query[0] == 'neighborOf'))
+        print('data len:', len(data))
+    print('\ntrain info:')
+    print_info(train)
+    print('\nval info:')
+    print_info(val)
+    print('\ntest info:')
+    print_info(test)
+
+
     # s1_condition(val+test, train)
     # s2_condition(val+test, train)
-    s3_condition(val+test, train)
+    # s3_condition(val+test, train)
+
+    # d1_condition(val+test,train)
+    d2_condition(val+test,train)
 
     # from ablation_get_dataset import build_neighbor_map, get_located_in_cr_countries, test_d1, test_d2, test_d3
     # ne_queries = {query for query in dataset if query[0] == 'neighborOf'}
