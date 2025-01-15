@@ -859,7 +859,6 @@ neighborOf(hungary,romania).
 neighborOf(brazil,argentina).
 neighborOf(panama,colombia).
 neighborOf(kosovo,serbia).
-neighborOf(united_kingdom,cyprus).
 locatedInCS(jersey,northern_europe).
 neighborOf(iran,pakistan).
 locatedInCS(chile,south_america).

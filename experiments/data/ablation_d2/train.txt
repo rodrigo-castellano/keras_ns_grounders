@@ -656,7 +656,6 @@ neighborOf(western_sahara,mauritania).
 neighborOf(jordan,saudi_arabia).
 locatedInCS(palestine,western_asia).
 neighborOf(turkmenistan,afghanistan).
-neighborOf(united_kingdom,cyprus).
 locatedInCS(liberia,western_africa).
 neighborOf(ukraine,russia).
 neighborOf(malaysia,thailand).

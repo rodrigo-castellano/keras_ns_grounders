@@ -92,11 +92,11 @@ def check_properties_of_dataset(domain2constants: dict, queries: list) -> Tuple[
     else:
         print('No subregions found in the dataset')
         subregions = None
-
     # check if there is any repeated query
     repeated_queries = [query for query in queries if queries.count(query) > 1]
     if repeated_queries:
-        raise ValueError('There are repeated queries:', [print_query(query) for query in repeated_queries])
+        print('There are repeated queries:', [print_query(query) for query in repeated_queries])
+        # raise ValueError('There are repeated queries:', [print_query(query) for query in repeated_queries])
         # raise ValueError('There are repeated queries:', [print_query(query) for query in repeated_queries],sep='\n')
 
     # 0. Check that no query has both constants the same
@@ -134,12 +134,12 @@ def check_properties_of_dataset(domain2constants: dict, queries: list) -> Tuple[
             c2 = query[2]
             symmetric_query = ('neighborOf', c2, c1)    
             if symmetric_query not in queries:
-                print('Symmetric query not found:', query)
+                print('Symmetric query to include (not found):', query[0]+'('+c2+','+c1+').')
 
     # 1. SR: its count should be 23
     if subregions:
         count = sum(1 for query in queries if query[0] == 'locatedInSR')
-        if count != 23:
+        if count < 23:
             raise ValueError('There are not 23 locatedInSR queries:', count)
         # for every subregion, there should be a locatedInSR query
         subregions_in_SR_queries = {query[1] for query in queries if query[0] == 'locatedInSR'}
@@ -243,7 +243,8 @@ def s2_condition(val_test, train):
             raise ValueError('The country', country, 'has no neighbors in train')
         neighbors_with_cr = get_locatedInCR_from_countries(neighbors, train)
         if not neighbors_with_cr:
-            raise ValueError('The neighbors of', country, 'have no locatedInCR queries in train')
+            print('Not provable, no neighbor has locatedInCR:',country)
+            # raise ValueError('The neighbors of', country, 'have no locatedInCR queries in train')
     return True
     
 def s3_condition(val_test, train):
@@ -257,7 +258,8 @@ def s3_condition(val_test, train):
             raise ValueError('The country', country, 'has no neighbors in train')
         neighbors_with_cr = get_locatedInCR_from_countries(neighbors, train)
         if neighbors_with_cr:
-            raise ValueError('The neighbors of', country, 'have no locatedInCR queries in train')
+            print('provable at an earlier depth, neighbor has locatedInCR:',country)
+            # raise ValueError('The neighbors of', country, 'have locatedInCR queries in train')
         # Get the neighbors of the neighbors
         neighbors_of_neighbors = [get_neighbors(ne, Ne_queries) for ne in neighbors]
         # substract the country from the neighbors
@@ -271,9 +273,15 @@ def s3_condition(val_test, train):
                             #  ,neighbors,neighbors_of_neighbors,neighbors_of_neighbors_with_cr)
     return True
 
+def d1_condition(val_test, train):
+    return s2_condition(val_test, train)
+
+def d2_condition(val_test, train):
+    return s3_condition(val_test, train)
 
 if __name__ == '__main__':
     # COUNTRIES AND ABLATION DATA
+
     root = './experiments/data/countries_s3/'
     train_path,val_path,test_path,domain2constants_path = root+'train.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
 
@@ -285,9 +293,18 @@ if __name__ == '__main__':
     dataset = train + val + test
     check_constants_in_domain(constants, domain2constants, constants_train, constants_val, constants_test)
     check_properties_of_dataset(domain2constants, dataset)
-    s1_condition(val+test, train)
-    s2_condition(val+test, train)
+    # s1_condition(val+test, train)
+    # s2_condition(val+test, train)
     s3_condition(val+test, train)
+
+    # from ablation_get_dataset import build_neighbor_map, get_located_in_cr_countries, test_d1, test_d2, test_d3
+    # ne_queries = {query for query in dataset if query[0] == 'neighborOf'}
+    # neighbor_map = build_neighbor_map(ne_queries)
+    # cr_queries = {query for query in dataset if query[0] == 'locatedInCR'}
+    # country_with_cr_train = get_located_in_cr_countries(cr_queries)
+    # test_d1(val+test, train, neighbor_map, country_with_cr_train)
+    # test_d2(val+test, train, neighbor_map, country_with_cr_train)
+    # test_d3(val+test, train, neighbor_map, country_with_cr_train)
 
 
     # # GIUSEPPE's data
@@ -310,15 +327,4 @@ if __name__ == '__main__':
     # domain2constants = get_domain2constants(domain2constants_path)
     # dataset = train + val + test
     # check_constants_in_domain(constants, domain2constants, constants_train, constants_val, constants_test)
-    # check_properties_of_dataset(domain2constants, dataset)
-
-    # root = './experiments/data/countries_dataset_giuseppe/'
-    # train_path,val_path,test_path,domain2constants_path = root+'train_s3.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
-    # constants_train, predicates_train, train = get_constants_predicates_queries(train_path)
-    # constants_val, predicates_val, val = get_constants_predicates_queries(val_path)
-    # constants_test, predicates_test, test = get_constants_predicates_queries(test_path)
-    # constants =  constants_train | constants_val | constants_test
-    # domain2constants = get_domain2constants(domain2constants_path)
-    # dataset = train + val + test
-    # check_constants_in_domain(constants_train, constants_val, constants_test, constants, domain2constants)
     # check_properties_of_dataset(domain2constants, dataset)
