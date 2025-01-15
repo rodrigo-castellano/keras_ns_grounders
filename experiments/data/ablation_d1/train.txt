@@ -364,7 +364,6 @@ neighborOf(guatemala,belize).
 locatedInCS(ghana,western_africa).
 neighborOf(slovenia,italy).
 neighborOf(liberia,sierra_leone).
-neighborOf(united_kingdom,cyprus).
 locatedInCR(french_polynesia,oceania).
 neighborOf(zambia,angola).
 locatedInCS(malaysia,south_eastern_asia).
