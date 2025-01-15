@@ -20,9 +20,9 @@ import argparse
 parser = argparse.ArgumentParser(description='Description of your script')  
 args = parser.parse_args()
 
-args.grounder = 'backward_0_2'
+args.grounder = 'backward_1_1'
 
-args.dataset_name = 'ablation_d2'
+args.dataset_name = 'ablation_d1'
 # args.dataset_name = 'dummy'
 args.data_path = "experiments/data"
 args.facts_file = 'facts.txt'
@@ -61,8 +61,6 @@ fol = data_handler.fol
 facts = fol.facts
 rules = ns.utils.read_rules(join(args.data_path, args.dataset_name, args.rules_file),args)
 queries, labels = dataset_test[0:len(dataset_test)]
-# queries, labels = dataset_train[0:len(dataset_train)]
-
 
 type = args.grounder
 backward_width = None
@@ -88,25 +86,27 @@ elif type == 'ApproximateBackwardChainingGrounder':
                 rules, facts=facts, domains={d.name:d for d in fol.domains},
                 domain2adaptive_constants=None,
                 pure_adaptive=False,
-                num_steps=2,#backward_depth,
-                max_unknown_fact_count=1,#backward_width,
-                max_unknown_fact_count_last_step=1,#backward_width,
-                prune_incomplete_proofs=True)#prune_incomplete_proofs)
+                num_steps=backward_depth,
+                max_unknown_fact_count=backward_width,
+                max_unknown_fact_count_last_step=backward_width,
+                prune_incomplete_proofs=True)
 
 
-# print('facts:',len(facts),facts)
-queries = [('locatedInCR','switzerland','europe')]
-print('queries:',len(queries),queries)
-ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
-# ground_formulas: Dict[str, RuleGroundings] = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
+queries = [[('locatedInCR','egypt','africa')]]
+# print('queries:',queries)
+for query in queries:
+    query = query
+    print('\nquery:',query)
+    ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(query)),deterministic=True)
+    print('ground_formulas:',ground_formulas)
 
-print('\n\nground_formulas:')
-# for rule in ground_formulas:
-#     print(' Rule:',rule)
-#     for grounding in ground_formulas[rule].groundings:
-#         print('        ',grounding[0][0],'    ',grounding[1])
-
-for rule in ground_formulas:
-    for grounding in ground_formulas[rule]:
-
-        print(grounding[0][0],'       ',grounding[1][0], grounding[1][1])
+    # num_groundings = len([ground_formulas[rule].groundings for rule in ground_formulas][0])
+    # # assert num_groundings == 0, f'Number of ground formulas: {num_groundings,ground_formulas} for query: {query}'
+    # if num_groundings != 0:
+    #     print('Number of ground formulas:',num_groundings)
+    
+    # print('\n\nground_formulas:')
+    # for rule in ground_formulas:
+    #     print('Rule:',rule,ground_formulas[rule])
+    #     for grounding in ground_formulas[rule]:
+    #         print(grounding[0][0],'       ',grounding[1][0], grounding[1][1])
