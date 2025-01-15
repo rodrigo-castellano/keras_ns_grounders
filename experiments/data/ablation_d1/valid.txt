@@ -8,7 +8,6 @@ locatedInCR(bangladesh,asia).
 locatedInCR(norway,europe).
 locatedInCR(kuwait,asia).
 locatedInCR(montenegro,europe).
-locatedInCR(cyprus,europe).
 locatedInCR(qatar,asia).
 locatedInCR(belarus,europe).
 locatedInCR(zimbabwe,africa).

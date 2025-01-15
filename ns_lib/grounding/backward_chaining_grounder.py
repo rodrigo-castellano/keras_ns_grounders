@@ -66,7 +66,6 @@ def approximate_backward_chaining_grounding_one_rule(
     fact_index: AtomIndex,
     max_unknown_fact_count: int,
     res: Set[Tuple[Tuple, Tuple]]=None,
-    verbose: int=0,
     proofs: Dict[Tuple[Tuple, Tuple], List[Tuple[Tuple, Tuple]]]=None) -> Union[
         None, Set[Tuple[Tuple, Tuple]]]:
     
@@ -251,7 +250,6 @@ def backward_chaining_grounding_one_rule(
       # If no free vars are available, product returns a single empty
       # tuple, meaning that we still correctly enter in the following
       # for loop for a single round.
-    #   print('FREE VARS_SPAN', list(product(*ground_var_groups)))
       for ground_vars in product(*ground_var_groups):
           var2ground = dict(zip(free_vars, ground_vars))
           full_ground_vars = {**head_ground_vars, **var2ground}
@@ -312,7 +310,7 @@ def PruneIncompleteProofs(rule2groundings: Dict[str, Set[Tuple[Tuple, Tuple]]],
                         fact_index._index.get(a, None) is not None)
                     for a in body_atoms]):
                 pruned_groundings.append(g)
-                # print('     appended',[atom2proved.get(a, False) for a in head_atoms], [fact_index._index.get(a, None) for a in head_atoms],g)
+                # print('     appended',[atom2proved.get(a, False) for a in body_atoms], [fact_index._index.get(a, None) for a in body_atoms],g)
         pruned_rule2groundings[rule_name] = set(pruned_groundings)
     return pruned_rule2groundings
 
@@ -404,10 +402,9 @@ class ApproximateBackwardChainingGrounder(Engine):
                 # Update the list of processed rules.
                 self._rule2processed_queries[rule.name].update(queries_per_rule)
                 # print('\nqueries processed (_rule2processed_queries):\n', len(self._rule2processed_queries[rule.name]),self._rule2processed_queries[rule.name])
-                # print('\nTotal  groundings in res after rule',j+1,'/',len(self.rules),', step',step,':',sum([len(v) for k, v in self.rule2groundings.items()])) # careful, here there are duplicates
+                # print('\nTotal  groundings in res after rule',j+1,'/',len(self.rules),', step',step,'/',self.num_steps,':',sum([len(v) for k, v in self.rule2groundings.items()])) # careful, here there are duplicates
                 # print()
-                # for k,v in self.rule2groundings.items():
-                    # print('\nGroundings:', k, len(v), v)
+                # [print('\nGroundings:', k, len(v), v) for k, v in self.rule2groundings.items()]
                 # print('\nproofs:',self.rule2proofs)
  
             if step == self.num_steps - 1:
@@ -435,7 +432,7 @@ class ApproximateBackwardChainingGrounder(Engine):
         #         if head in queries: # WE ARE FILTERING ONLY GROUNDINGS OF POSITIVE QUERIES, BUT THERE ARE MANY OTHER GROUNDINGS
         #             num_groundings_per_head[head] += 1
         # n_heads = len(num_groundings_per_head)
-        # print('Num heads with groundings', n_heads,'/',len(queries), '(',n_heads/len(queries),')')
+        # ('Num heads with groundings', n_heads,'/',len(queries), '(',n_heads/len(queries),')')
 
         if self.prune_incomplete_proofs:
             # check all the groundings with at least 1 atom missing, to see if they are proved (all atoms present in the facts)
@@ -520,7 +517,6 @@ class BackwardChainingGrounder(Engine):
         # Keeps track of the queris already processed for this rule.
         self._rule2processed_queries = {rule.name: set() for rule in self.rules}
         for step in range(self.num_steps):
-            # print('STEP', step)
             for rule in self.rules:
                 # Here we assume to have a Horn clause, fix it.
                 queries_per_rule = list(
@@ -536,7 +532,6 @@ class BackwardChainingGrounder(Engine):
                     res=self.rule2groundings[rule.name])
                 # Update the list of processed rules.
                 self._rule2processed_queries[rule.name].update(queries_per_rule)
-                # print(step, 'PROCESSED', len(queries_per_rule), len(self._rule2processed_queries[rule.name]))
 
             if step == self.num_steps - 1:
                 break
@@ -551,10 +546,8 @@ class BackwardChainingGrounder(Engine):
                     [a for a in get_atoms_on_groundings(groundings)
                      if a not in self._rule2processed_queries[rule.name] and
                      self._fact_index._index.get(a, None) is None])
-            # print(step, 'NEW Q', list(new_queries)[:10], 'FROM', len(groundings))
             self._init_internals(list(new_queries), clean=False)
 
-        #print('R', self.rule2groundings)
         if 'deterministic' in kwargs and kwargs['deterministic']:
             ret = {rule_name: RuleGroundings(
                 rule_name, sorted(list(groundings), key=lambda x : x.__repr__()))
