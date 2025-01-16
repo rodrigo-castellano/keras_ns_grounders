@@ -465,7 +465,7 @@ class ApproximateBackwardChainingGrounder(Engine):
         self._init_internals(queries, clean=(not self.accumulate_groundings))
 
         self._rule2processed_queries = {rule.name: set() for rule in self.rules}
-        time_start = time.time()
+        # time_start = time.time()
         for step in range(self.num_steps):
             # print('\n\nSTEP NUMBER ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^', step,'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^','step ',step,'/', self.num_steps-1)
             for j,rule in enumerate(self.rules):
@@ -511,20 +511,20 @@ class ApproximateBackwardChainingGrounder(Engine):
             # Here we update the queries to process in the next iteration, we only keep the new ones.
             self._init_internals(list(new_queries), clean=False)
 
-        time_end = time.time()
-        print('Time to ground', time_end - time_start)
+        # time_end = time.time()
+        # print('Time to ground', time_end - time_start)
 
         if self.prune_incomplete_proofs:
             # check all the groundings with at least 1 atom missing, to see if they are proved (all atoms present in the facts)
             time_start = time.time()
-            print('Num groundings before pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
+            # print('Num groundings before pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
             self.rule2groundings = PruneIncompleteProofs(self.rule2groundings,
                                                          self.rule2proofs,
                                                          self._fact_index,
                                                          self.num_steps-1)
-            print('Num groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
+            # print('Num groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
             time_end = time.time()
-            print('Time to prune', time_end - time_start)
+            # print('Time to prune', time_end - time_start)
         # This should be done after sorting the groundings to ensure the output
         # to be deterministic.
         if self.max_groundings_per_rule > 0:
