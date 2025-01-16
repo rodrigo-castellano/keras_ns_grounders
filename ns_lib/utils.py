@@ -384,7 +384,7 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
                 print(f'\nBest {self.name} {self.monitor}: {current_value:.5f}. '
                       f'Delta = {self.best_value-current_value:.5f}') if self.best_epoch is not None else None
             self.best_value = current_value
-            self.best_epoch = epoch
+            self.best_epoch = epoch+1
             self.best_weights = self.model_.get_weights()
 
             # Save checkpoint and info
@@ -392,7 +392,7 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
                 save_path = f'{self.filepath}.ckpt'
                 self.model_.save_weights(save_path)
                 self.last_save_path = save_path
-                self.write_info(epoch, current_value)
+                self.write_info(epoch+1, current_value)
                 
                 if self.verbose:
                     print(f'{self.name} weights saved') # to {save_path}')
@@ -426,6 +426,26 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
         info_path = f'{self.filepath}_info.json'
         with open(info_path, 'w') as f:
             json.dump(info, f, indent=2)
+    
+    def write_train_time(self,train_time: float):
+        """Write checkpoint metadata to JSON file."""
+        import json
+        import datetime
+        
+        if self.filepath is None:
+            return
+            
+        info = {
+            'train_time': train_time,
+        }
+        
+        # open the info file and append the train time
+        info_path = f'{self.filepath}_info.json'
+        with open(info_path, 'r') as f:
+            data = json.load(f)
+            data.update(info)
+        with open(info_path, 'w') as f:
+            json.dump(data, f, indent=2)
             
 
 

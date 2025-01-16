@@ -271,6 +271,7 @@ def main(data_path, log_filename, use_WB, args):
         # Restore the best weights after training
         kge_model_checkpoint.restore_weights() if args.load_kge_ckpt else model_checkpoint.restore_weights()
         model_checkpoint.restore_weights()
+        model_checkpoint.write_train_time(args.time_train)
 
     else:
         if use_WB:
