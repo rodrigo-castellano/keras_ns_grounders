@@ -45,11 +45,11 @@ if __name__ == '__main__':
     DATASET_NAME = ['countries_s3'] # ['ablation_d','ablation_d2','ablation_d3'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
     GROUNDER = ['backward_1_1'] #['backward_0_1','backward_1_1','backward_1_2','backward_1_3','backward_2_1','backward_2_2','backward_2_3']  # 'domainbody','relationentity','full']
     KGE = ['complex'] # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['no_reasoner','dcr','sbr','r2n'] 
+    MODEL_NAME = ['no_reasoner'] #,['no_reasoner','dcr','sbr','r2n'] 
     RULE_MINER = ['amie','None'] 
     E = [100]
     DEPTH = [1]
-    SEED = [[0,1,2,3,4]]
+    SEED = [[0]]# [[0,1,2,3,4]]
     NEG_PER_SIDE = [1]
     WEIGHT_LOSS = [.5]  
     DROPOUT = [0.0]
@@ -151,7 +151,7 @@ if __name__ == '__main__':
         args.corrupt_mode = 'TAIL' if ('countries' in dataset_name or 'ablation' in dataset_name or 'test' in dataset_name) else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 100
-        args.test_negatives = 500 if dataset_name=='FB15k237' else None # all possible negatives
+        args.test_negatives = 1000 if (dataset_name=='FB15k237' or dataset_name=='wn18rr') else None # all possible negatives
         args.ragged = True
         args.format = "functional"
         args.engine_num_negatives = 0
@@ -180,6 +180,7 @@ if __name__ == '__main__':
         args.cdcr_num_formulas = 3
         args.valid_frequency = 5 if not EARLY_STOPPING else 1
         args.resnet = True if 'ablation' not in dataset_name else False
+        args.r2n_prediction_type = 'nofull' if 'ablation' in dataset_name else 'full'
         args.reasoner_depth = dp if nr > 0 else 0
         args.reasoner_regularization_factor = rr
         args.reasoner_formula_hidden_embedding_size = args.kge_atom_embedding_size
@@ -250,7 +251,7 @@ if __name__ == '__main__':
                                                             args.run_signature,date,task_mrr,seed))
                 logger.finalize_log_file(log_filename_tmp,log_filename_run_name)
         # If we have done all the seeds in args.seed, we can get the average results
-        info_results = logger.get_avg_results(args.__dict__, args.run_signature,args.seed) if use_logger else None
+        logger.get_avg_results(args.__dict__, args.run_signature,args.seed) if use_logger else None
 
                 
     for args in all_args:

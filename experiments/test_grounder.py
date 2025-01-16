@@ -20,9 +20,9 @@ import argparse
 parser = argparse.ArgumentParser(description='Description of your script')  
 args = parser.parse_args()
 
-args.grounder = 'backward_1_1'
+args.grounder = 'backward_1_3'
 
-args.dataset_name = 'ablation_d1'
+args.dataset_name = 'kinship_family'
 # args.dataset_name = 'dummy'
 args.data_path = "experiments/data"
 args.facts_file = 'facts.txt'
@@ -30,7 +30,7 @@ args.train_file = 'train.txt'
 args.valid_file = 'valid.txt'
 args.test_file = 'test.txt'
 args.domain_file = 'domain2constants.txt'
-args.rules_file = 'rules.txt'
+args.rules_file = 'rules.txt' if args.dataset_name != 'kinship_family' else 'rules_amie.txt'
 
 args.num_negatives = 0
 args.test_negatives = 0
@@ -92,21 +92,22 @@ elif type == 'ApproximateBackwardChainingGrounder':
                 prune_incomplete_proofs=True)
 
 
-queries = [[('locatedInCR','egypt','africa')]]
-# print('queries:',queries)
-for query in queries:
-    query = query
-    print('\nquery:',query)
-    ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(query)),deterministic=True)
-    print('ground_formulas:',ground_formulas)
+ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
+# print('ground_formulas:',ground_formulas)
 
-    # num_groundings = len([ground_formulas[rule].groundings for rule in ground_formulas][0])
-    # # assert num_groundings == 0, f'Number of ground formulas: {num_groundings,ground_formulas} for query: {query}'
-    # if num_groundings != 0:
-    #     print('Number of ground formulas:',num_groundings)
+# queries = [[('locatedInCR','luxembourg','europe')]]
+print('queries:',len(queries))
+# for query in queries:
+#     print('\nquery:',query)
+#     ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(query)),deterministic=True)
+
+#     # num_groundings = len([ground_formulas[rule].groundings for rule in ground_formulas][0])
+#     # # assert num_groundings == 0, f'Number of ground formulas: {num_groundings,ground_formulas} for query: {query}'
+#     # if num_groundings != 0:
+#     #     print('Number of ground formulas:',num_groundings)
     
-    # print('\n\nground_formulas:')
-    # for rule in ground_formulas:
-    #     print('Rule:',rule,ground_formulas[rule])
-    #     for grounding in ground_formulas[rule]:
-    #         print(grounding[0][0],'       ',grounding[1][0], grounding[1][1])
+#     print('\n\nground_formulas:')
+#     for rule in ground_formulas:
+#         print('Rule:',rule,ground_formulas[rule])
+#         for grounding in ground_formulas[rule]:
+#             print(grounding[0][0],'       ',grounding[1][0], grounding[1][1])

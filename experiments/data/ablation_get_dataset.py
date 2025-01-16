@@ -22,6 +22,8 @@ def get_provability_prolog(queries: List[Tuple[str, str, str]], CR_queries: set[
     rules = CR_queries_str + Ne_queries_str + [r1, r2, r3]
     n_provables = 0
     for query in queries_str:
+        if query[0] == 'neighborOf':
+            continue
         is_provable = is_query_provable(query, rules.copy(), max_depth)
         n_provables += int(is_provable)
     return n_provables
@@ -68,6 +70,7 @@ def test_d1(train: Set[Tuple[str, str, str]],
             val_test: List[Tuple[str, str, str]],
             neighbor_map: Optional[dict]=None,
             country_with_cr: Optional[Set[str]]=None,
+            country2region: Optional[dict]=None,
             verbose=0) -> bool:
     """
     Checks if each query in val_test has at least one neighbor with a CR query.
@@ -78,13 +81,20 @@ def test_d1(train: Set[Tuple[str, str, str]],
             return False
 
         country = query[1]
+        region = query[2]
+
         neighbors = get_neighbors(country, neighbor_map)
         if not neighbors:
             if verbose: print('no neighbors', country, neighbors)
             return False
-
-        if not (neighbors & country_with_cr):
+        
+        neighbors_with_cr = neighbors & country_with_cr
+        if not neighbors_with_cr:
             if verbose: print('no neighbors with locatedInCR', country, neighbors)
+            return False
+        contains_region = {country2region.get(ne, [])==region for ne in neighbors_with_cr}
+        if not any(contains_region):
+            if verbose: print(f'The query has a proof but for another continent. Query: {query}, neighbors_with_cr: {neighbors_with_cr}')
             return False
     return True
 
@@ -92,28 +102,30 @@ def test_d2(train: Set[Tuple[str, str, str]],
             val_test: List[Tuple[str, str, str]], 
             neighbor_map: Optional[dict]=None,
             country_with_cr: Optional[Set[str]]=None,
+            country2region: Optional[dict]=None,
             verbose=0) -> bool:
     """
     Checks if each query in val_test has in training data no neighbors with CR queries, 
         and at least one neighbors of neighbors with a CR queries.
     """
     for query in val_test:
-        print('\n testing query',query) if verbose else None
         if query in train:
             if verbose: print('query in train', query)
             return False
 
         country = query[1]
+        region = query[2]
         
         # Step 1: Get neighbors and Check that no of them has a 'locatedInCR' entry
         neighbors = get_neighbors(country, neighbor_map)
         if not neighbors:
             if verbose: print('no neighbors', country, neighbors)
             return False
-        
+         
         if neighbors & country_with_cr:
-            if verbose: print('Some neighbors have locatedInCR', country, neighbors)
+            if verbose: print(f'Some neighbors have locatedinCR. query: {query}, neighbors:{neighbors & country_with_cr}')
             return False
+        
         # Step 2: Get neighbors of neighbors and Check that at leasts one of them has a 'locatedInCR' entry
         neighbors_of_neighbors = set()
         for neighbor in neighbors:
@@ -123,8 +135,14 @@ def test_d2(train: Set[Tuple[str, str, str]],
             if verbose: print('no neighbors_of_neighbors', country, neighbors, neighbors_of_neighbors)
             return False
 
-        if not (neighbors_of_neighbors & country_with_cr):
+        neighbors_of_neighbors_with_cr = neighbors_of_neighbors & country_with_cr
+        if not neighbors_of_neighbors_with_cr:
             if verbose: print('no neighbor of the neighbors has locatedInCR', country, neighbors, neighbors_of_neighbors)
+            return False
+
+        contains_region = {country2region.get(ne, [])==region for ne in neighbors_of_neighbors_with_cr}
+        if not any(contains_region):
+            if verbose: print(f'The query has a proof but for another continent. Query: {query}, neighbors:{neighbors}, neighbors_of_neighbors_with_cr: {neighbors_of_neighbors_with_cr}')
             return False
 
     return True
@@ -133,6 +151,7 @@ def test_d3(train: Set[Tuple[str, str, str]],
             val_test: List[Tuple[str, str, str]], 
             neighbor_map: Optional[dict]=None,
             country_with_cr: Optional[Set[str]]=None,
+            country2region: Optional[dict]=None,
             verbose=0) -> bool:
     """
     Checks if each query in val_test has no neighbors in the training data with CR queries, 
@@ -145,6 +164,7 @@ def test_d3(train: Set[Tuple[str, str, str]],
             return False
 
         country = query[1]
+        region = query[2]
         
         # Step 1: Get neighbors and Check that no of them has a 'locatedInCR' entry
         neighbors = get_neighbors(country, neighbor_map)
@@ -178,10 +198,15 @@ def test_d3(train: Set[Tuple[str, str, str]],
         neighbors_of_neighbors_of_neighbors -= neighbors
         neighbors_of_neighbors_of_neighbors.discard(country)
 
-        if not (neighbors_of_neighbors_of_neighbors & country_with_cr):
-            if verbose: print('no neighbors_of_neighbors_of_neighbors has locatedInCR', country, neighbors, neighbors_of_neighbors, neighbors_of_neighbors_of_neighbors)
+        neighbors_of_neighbors_of_neighbors_with_cr = neighbors_of_neighbors_of_neighbors & country_with_cr
+        if not neighbors_of_neighbors_of_neighbors_with_cr:
+            if verbose: print(f'no neighbors_of_neighbors_of_neighbors has locatedInCR. Query: {query}, neighbors:{neighbors}, neighbors_of_neighbors:{neighbors_of_neighbors}, neighbors_of_neighbors_of_neighbors:{neighbors_of_neighbors_of_neighbors}')
             return False
-
+        
+        contains_region = {country2region.get(ne, [])==region for ne in neighbors_of_neighbors_of_neighbors_with_cr}
+        if not any(contains_region):
+            if verbose: print(f'The query has a proof but for another continent. Query: {query}, neighbors:{neighbors}, neighbors_of_neighbors:{neighbors_of_neighbors}, neighbors_of_neighbors_of_neighbors:{neighbors_of_neighbors_of_neighbors}')
+            return False
     return True
 
 def remove_from_train_d3(train: Set[Tuple[str, str, str]], 
@@ -220,7 +245,8 @@ def get_provable_queries(train: Set[Tuple[str, str, str]],
                         type='d3',
                         ne_queries: Optional[Set[Tuple[str, str, str]]]=None,
                         neighbor_map: Optional[dict]=None,
-                        country_with_cr: Optional[Set[str]]=None) -> int:
+                        country_with_cr: Optional[Set[str]]=None,
+                        country2region: Optional[dict]=None) -> int:
     '''Checks if each query in q_set fulfills the conditions of d by calling the test_d function
     before calling it, remove the q_set query from the train set'''
     if neighbor_map is None:
@@ -233,7 +259,7 @@ def get_provable_queries(train: Set[Tuple[str, str, str]],
         # 1. remove the query temporarily from the train set
         train_temp = train - {query} 
         # 2. Check if the query passes the test_d2 function
-        if test_dataset(train_temp, [query], neighbor_map=neighbor_map, country_with_cr=country_with_cr, type=type):
+        if test_dataset(train_temp, [query], neighbor_map=neighbor_map, country_with_cr=country_with_cr, type=type,country2region=country2region):
             n_provables += 1
     return n_provables
 
@@ -243,6 +269,7 @@ def test_dataset(train: Set[Tuple[str, str, str]],
                 neighbor_map: Optional[dict]=None,
                 country_with_cr: Optional[Set[str]]=None,
                 type='d3',
+                country2region: Optional[dict]=None,
                 verbose=0) -> bool:
     if neighbor_map is None:
         assert ne_queries is not None, "ne_queries must be provided if neighbor_map is not"
@@ -250,11 +277,11 @@ def test_dataset(train: Set[Tuple[str, str, str]],
     if country_with_cr is None:
         country_with_cr = get_located_in_cr_countries(train)
     if type == 'd1':
-        return test_d1(train, val_test, neighbor_map=neighbor_map, country_with_cr=country_with_cr,verbose=verbose)
+        return test_d1(train, val_test, neighbor_map=neighbor_map, country_with_cr=country_with_cr,country2region=country2region,verbose=verbose)
     elif type == 'd2':
-        return test_d2(train, val_test, neighbor_map=neighbor_map, country_with_cr=country_with_cr,verbose=verbose)
+        return test_d2(train, val_test, neighbor_map=neighbor_map, country_with_cr=country_with_cr,country2region=country2region,verbose=verbose)
     elif type == 'd3':
-        return test_d3(train, val_test, neighbor_map=neighbor_map, country_with_cr=country_with_cr,verbose=verbose)
+        return test_d3(train, val_test, neighbor_map=neighbor_map, country_with_cr=country_with_cr,country2region=country2region,verbose=verbose)
     else:
         raise ValueError(f"Invalid type: {type}")
 
@@ -305,10 +332,11 @@ def iterate_over_candidates(
     Returns:
         Tuple[Set, Set]: The best training set and validation/test set found.
     """
-    max_iters = 50000
+    max_iters = 1000
     best_train, best_val_test = set(), set()
     max_len_val_test, max_len_provables_train = 0, 0
 
+    country2region = {query[1]:query[2] for query in list(train_candidates) if query[0] == 'locatedInCR'}
     neighbor_map = build_neighbor_map(ne_queries)
     country_with_cr_train = get_located_in_cr_countries(train_candidates)
 
@@ -333,36 +361,59 @@ def iterate_over_candidates(
             train_tmp = train - {query} - atoms_to_remove
             country_with_cr_tmp = country_with_cr - {query[1]} - {atom[1] for atom in atoms_to_remove if atom[0] == 'locatedInCR'}
             # Validate the query and updated validation/test set
-            if not test_dataset(train_tmp, [query], type=type, neighbor_map=neighbor_map, country_with_cr=country_with_cr_tmp, verbose=0):  
+            if not test_dataset(train_tmp, [query], type=type, neighbor_map=neighbor_map, country_with_cr=country_with_cr_tmp,country2region=country2region, verbose=0):  
                 continue
-            if not test_dataset(train_tmp, val_test + [query], type=type, neighbor_map=neighbor_map, country_with_cr=country_with_cr_tmp): 
+            if not test_dataset(train_tmp, val_test + [query], type=type, neighbor_map=neighbor_map, country_with_cr=country_with_cr_tmp,country2region=country2region): 
                 continue
             # Update training and validation/test sets
             train -= {query} | atoms_to_remove
             country_with_cr -= {query[1]} | {atom[1] for atom in atoms_to_remove if atom[0] == 'locatedInCR'}
             val_test.append(query)
 
-        
-        provable_queries_train = get_provable_queries(train, train, type=type, neighbor_map=neighbor_map,country_with_cr=country_with_cr) 
+        '''If you want to prioritize provable queries in train with prolog or with python up to depth d, comment the following line'''
+        maximize_train_queries_with_prolog = True
+        if not maximize_train_queries_with_prolog:
+            provable_queries_train = get_provable_queries(train, train, type=type, neighbor_map=neighbor_map,country_with_cr=country_with_cr,country2region=country2region) 
 
-        if len(val_test) > max_len_val_test or (
-            len(val_test) == val_test_size and provable_queries_train > max_len_provables_train
-        ):
-            max_len_val_test = len(val_test)
-            max_len_provables_train = provable_queries_train
-            best_train, best_val_test = train.copy(), set(val_test)
-            best_country_with_cr = country_with_cr.copy()
-            provable_queries_train_prolog = get_provability_prolog(train, train, ne_queries, max_depth=10)
-            print(  f"\nIteration {iteration + 1}: Updated best sets.\n"
-                    f"Validation/Test size: {len(val_test)}/{val_test_size}."
-                    f" Provable queries in train: {provable_queries_train}/{len(train)}"
-                    f" Provable queries in train prolog: {provable_queries_train_prolog}/{len(train)}"
-                    )
+            if len(val_test) > max_len_val_test or (
+                len(val_test) == val_test_size and provable_queries_train > max_len_provables_train
+            ):
+                max_len_val_test = len(val_test)
+                max_len_provables_train = provable_queries_train
+                best_train, best_val_test = train.copy(), set(val_test)
+                best_country_with_cr = country_with_cr.copy()
+                provable_queries_train_prolog = get_provability_prolog(train, train, ne_queries, max_depth=10)
+                print(  f"\nIteration {iteration + 1}: Updated best sets.\n"
+                        f"Validation/Test size: {len(val_test)}/{val_test_size}."
+                        f" Provable queries in train: {provable_queries_train}/{len(train)}"
+                        f" Provable queries in train prolog: {provable_queries_train_prolog}/{len(train)}"
+                        )
 
-        # Stop early if both criteria are satisfied
-        if len(val_test) == val_test_size and max_len_provables_train >= len(train):
-            break
-    print('\ntest check passed',test_dataset(best_train, best_val_test, type=type, neighbor_map=neighbor_map, country_with_cr=best_country_with_cr))
+            # Stop early if both criteria are satisfied
+            if len(val_test) == val_test_size and max_len_provables_train >= len(train):
+                break
+        else:
+            provable_queries_train_prolog = get_provability_prolog(train, train, ne_queries, max_depth=6)
+            if len(val_test) > max_len_val_test or (
+                len(val_test) == val_test_size and provable_queries_train_prolog > max_len_provables_train_prolog
+            ):
+                max_len_val_test = len(val_test)
+                max_len_provables_train_prolog = provable_queries_train_prolog
+                best_train, best_val_test = train.copy(), set(val_test)
+                best_country_with_cr = country_with_cr.copy()
+                provable_queries_train = get_provable_queries(train, train, type=type, neighbor_map=neighbor_map,country_with_cr=country_with_cr,country2region=country2region) 
+                print(  f"\nIteration {iteration + 1}: Updated best sets.\n"
+                        f"Validation/Test size: {len(val_test)}/{val_test_size}."
+                        f" Provable queries in train: {provable_queries_train}/{len(train)}"
+                        f" Provable queries in train prolog: {provable_queries_train_prolog}/{len(train)}"
+                        )
+
+            # Stop early if both criteria are satisfied
+            if len(val_test) == val_test_size and max_len_provables_train >= len(train):
+                break  
+
+
+    print('\ntest check passed',test_dataset(best_train, best_val_test, type=type, neighbor_map=neighbor_map, country_with_cr=best_country_with_cr,train_candidates=train_candidates))
     print('\nProvable queries in train at any depth:', get_provability_prolog(best_train, best_train, ne_queries, max_depth=10))
     return best_train, best_val_test
 
@@ -429,27 +480,29 @@ def get_dataset(
 
 if __name__ == '__main__':
 
-    dataset_type = 'd3'
-    root = './experiments/data/countries_ablation/'
-    dataset_path, domain2constants_path = root + 'dataset_giuseppe.txt', root+'domain2constants.txt'
-    train_path, val_path, test_path = root+'train_'+dataset_type+'.txt', root+'val_'+dataset_type+'.txt', root+'test_'+dataset_type+'.txt'
+    dataset_type = 'd2'
+    for dataset_type in ['d1','d2','d3']:
+        root = './experiments/data/countries_ablation/'
+        dataset_path, domain2constants_path = root + 'dataset_giuseppe.txt', root+'domain2constants.txt'
+        train_path, val_path, test_path = root+'train_'+dataset_type+'.txt', root+'val_'+dataset_type+'.txt', root+'test_'+dataset_type+'.txt'
 
-    constants, predicates, dataset = get_constants_predicates_queries(dataset_path) 
-    domain2constants = get_domain2constants(domain2constants_path)
-    dataset = add_domain_to_locIn(dataset, domain2constants)
-    check_constants_in_domain(constants, domain2constants)
-    islands, islands_CR_queries = check_properties_of_dataset(domain2constants, dataset)
+        constants, predicates, dataset = get_constants_predicates_queries(dataset_path) 
+        domain2constants = get_domain2constants(domain2constants_path)
+        dataset = add_domain_to_locIn(dataset, domain2constants)
+        check_constants_in_domain(constants, domain2constants)
+        islands, islands_CR_queries = check_properties_of_dataset(domain2constants, dataset)
 
-    train, val, test = get_dataset(dataset, islands_CR_queries, type=dataset_type)
-    Ne_queries = {query for query in dataset if query[0] == 'neighborOf'}
-    # print('Evaluating validation...')
-    passed_val = test_dataset(train, val, ne_queries=Ne_queries,type=dataset_type)
-    # print('Evaluating test...')
-    passed_test = test_dataset(train, test, ne_queries=Ne_queries,type=dataset_type)
-    passed = passed_val and passed_test
-    print('Final test passed:', passed)
+        train, val, test = get_dataset(dataset, islands_CR_queries, type=dataset_type)
+        Ne_queries = {query for query in dataset if query[0] == 'neighborOf'}
+        country2region = {query[1]:query[2] for query in list(train) if query[0] == 'locatedInCR'}
+        # print('Evaluating validation...')
+        passed_val = test_dataset(train, val, ne_queries=Ne_queries,type=dataset_type,country2region=country2region)
+        # print('Evaluating test...')
+        passed_test = test_dataset(train, test, ne_queries=Ne_queries,type=dataset_type,country2region=country2region)
+        passed = passed_val and passed_test
+        print('Final test passed:', passed)
 
-    # write_queries_to_file(train, root+'train_'+dataset_type+'.txt')
-    # write_queries_to_file(val, root+'val_'+dataset_type+'.txt')
-    # write_queries_to_file(test, root+'test_'+dataset_type+'.txt')
+        write_queries_to_file(train, root+'train_'+dataset_type+'.txt')
+        write_queries_to_file(val, root+'val_'+dataset_type+'.txt')
+        write_queries_to_file(test, root+'test_'+dataset_type+'.txt')
 
