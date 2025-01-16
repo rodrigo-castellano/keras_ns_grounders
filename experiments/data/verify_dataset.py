@@ -216,6 +216,15 @@ def get_locatedInCR_from_countries(countries: set, data: set):
     return {country for country in countries if get_locatedInCR(country, data)}
 
 
+# def get_locatedInCR2(country: str, data: set) -> bool:
+#     '''Check if the country has a LocatedInCR query in the data set'''
+#     return any(query[0] == 'locatedInCR' and query[1] == country for query in data)
+
+# def get_locatedInCR_from_countries2(countries: set, data: set):
+#     """Return the countries that have LocatedInCR query in the data set"""
+#     return [country, for country in countries if get_locatedInCR(country, data)]
+
+
 def s1_condition(val_test, train):
     '''All the val,test queries need to have a locInCS query in train with a locInSR query in train'''
     print('s1 condition...')
@@ -232,36 +241,40 @@ def s1_condition(val_test, train):
         if subregion not in subregions_in_SR_queries:
             raise ValueError('The subregion', subregion, 'does not have a locatedInSR query in train')
 
-def s2_condition(val_test, train):
+def s2_condition(val_test, train, country2region):
     '''All the val,test queries need to have a neighborOf query in train with a locatedInCR query'''
     print('s2 condition...')
     Ne_queries = {query for query in train if query[0] == 'neighborOf'}
     for query in val_test:
-        print('query:',query) if query[1] == 'egypt' else None
         country = query[1]
         region = query[2]
         neighbors = get_neighbors(country, Ne_queries)
-        print('neighbors:',neighbors) if country == 'egypt' else None
         if not neighbors:
-            raise ValueError('The country', country, 'has no neighbors in train')
+            print(f'Not provable, no neighbors of {country} in train. Neighbors: {neighbors}')
+            # raise ValueError('The country', country, 'has no neighbors in train')
         neighbors_with_cr = get_locatedInCR_from_countries(neighbors, train)
-        print('neighbors_with_cr:',neighbors_with_cr) if country == 'egypt' else None
         if not neighbors_with_cr:
             print('Not provable, no neighbor has locatedInCR:',country)
             # raise ValueError('The neighbors of', country, 'have no locatedInCR queries in train')
-        if region not in neighbors_with_cr:
-            raise ValueError(f'The query has a proof but for another continent. Query: {query}, neighbors_with_cr: {neighbors_with_cr}')
+        # contains_region = {region in country2region[ne] for ne in neighbors_with_cr}
+        contains_region = {country2region.get(ne, [])==region for ne in neighbors_with_cr}
+        print('contains_region:',contains_region)
+        if not any(contains_region):
+            print(f'The query has a proof but for another continent. Query: {query}, neighbors_with_cr: {neighbors_with_cr}')
+            # raise ValueError(f'The query has a proof but for another continent. Query: {query}, neighbors_with_cr: {neighbors_with_cr}')
     return True
     
-def s3_condition(val_test, train):
+def s3_condition(val_test, train, country2region):
     '''All the val,test queries with a neighborOf query in train: remove its LocatedInCR in train and make sure the 2nd neigh has a locatedInCR in train'''
     print('s3 condition...')
     Ne_queries = {query for query in train if query[0] == 'neighborOf'}
     for query in val_test:
         country = query[1]
+        region = query[2]
         neighbors = get_neighbors(country, Ne_queries)
         if not neighbors:
-            raise ValueError('The country', country, 'has no neighbors in train')
+            print(f'Not provable, no neighbors of {country} in train. Neighbors: {neighbors}')
+            # raise ValueError('The country', country, 'has no neighbors in train')
         neighbors_with_cr = get_locatedInCR_from_countries(neighbors, train)
         if neighbors_with_cr:
             print('provable at an earlier depth, neighbor has locatedInCR:',country)
@@ -271,24 +284,32 @@ def s3_condition(val_test, train):
         # substract the country from the neighbors
         neighbors_of_neighbors = [ne_set-{country} for ne_set in neighbors_of_neighbors]
         if not neighbors_of_neighbors:
-            raise ValueError('no neighbors_of_neighbors',country,neighbors,neighbors_of_neighbors)
+            print(f'Not provable, no neighbors of {country} in train. Neighbors: {neighbors}, neighbors_with_cr: {neighbors_with_cr}')
+            # raise ValueError('no neighbors_of_neighbors',country,neighbors,neighbors_of_neighbors)
         # Check if any neighbor of the neighbors has a 'locatedInCR' entry
         neighbors_of_neighbors_with_cr = [get_locatedInCR_from_countries(ne_set, train) for ne_set in neighbors_of_neighbors]
         if not any(neighbors_of_neighbors_with_cr):
             print('Not provable, no neighbor of the neighbors has locatedInCR:',country)
                             #  ,neighbors,neighbors_of_neighbors,neighbors_of_neighbors_with_cr)
+        contains_region = {region in country2region[ne] 
+                           for ne_set in neighbors_of_neighbors_with_cr
+                           for ne in ne_set}
+        if not any(contains_region):
+            print(f'The query has a proof but for another continent. Query: {query}, neighbors:{neighbors}, neighbors_of_neighbors_with_cr: {neighbors_of_neighbors_with_cr}')
     return True
 
-def d1_condition(val_test, train):
-    return s2_condition(val_test, train)
+def d1_condition(val_test, train, country2region):
+    return s2_condition(val_test, train, country2region)
 
-def d2_condition(val_test, train):
-    return s3_condition(val_test, train)
+def d2_condition(val_test, train, country2region):
+    return s3_condition(val_test, train, country2region)
 
 if __name__ == '__main__':
     # COUNTRIES AND ABLATION DATA
 
-    root = './experiments/data/ablation_d2/'
+    root = './experiments/data/ablation_d3/'
+    depth = root.split('_')[-1].replace('/','')[-1]
+    depth = int(depth)
     train_path,val_path,test_path,domain2constants_path = root+'train.txt',root+'valid.txt',root+'test.txt',root+'domain2constants.txt'
 
     constants_train, predicates_train, train = get_constants_predicates_queries(train_path)
@@ -304,35 +325,45 @@ if __name__ == '__main__':
     # CR queries, # CS queries, # SR queries, # neighborOf queries
     # train queries, val queries, test queries
     # num of provable queries in train, val, test
-    def print_info(data):
+
+    from ablation_get_dataset import get_provability_prolog, build_neighbor_map, get_located_in_cr_countries, test_d1, test_d2, test_d3
+
+
+    def print_info(data, train):
         print('CR:', sum(1 for query in data if query[0] == 'locatedInCR'))
         print('CS:', sum(1 for query in data if query[0] == 'locatedInCS'))
         print('SR:', sum(1 for query in data if query[0] == 'locatedInSR'))
         print('neighborOf:', sum(1 for query in data if query[0] == 'neighborOf'))
         print('data len:', len(data))
+
+        ne_queries = {query for query in train if query[0] == 'neighborOf'}
+        cr_queries = {query for query in train if query[0] == 'locatedInCR'}
+        n_provables = get_provability_prolog(data,CR_queries=cr_queries,Ne_queries=ne_queries,max_depth=6)#depth)
+        print('num provables:', n_provables)
+
     print('\ntrain info:')
-    print_info(train)
+    print_info(train,train)
     print('\nval info:')
-    print_info(val)
+    print_info(val,train)
     print('\ntest info:')
-    print_info(test)
+    print_info(test,train)
 
-
+    country2region = {query[1]:query[2] for query in train if query[0] == 'locatedInCR'}
     # s1_condition(val+test, train)
-    # s2_condition(val+test, train)
+    # s2_condition(val+test, train, country2region)
     # s3_condition(val+test, train)
 
-    # d1_condition(val+test,train)
-    d2_condition(val+test,train)
+    # d1_condition(val+test,train,country2region)
+    # d2_condition(val+test,train,country2region)
 
-    # from ablation_get_dataset import build_neighbor_map, get_located_in_cr_countries, test_d1, test_d2, test_d3
-    # ne_queries = {query for query in dataset if query[0] == 'neighborOf'}
-    # neighbor_map = build_neighbor_map(ne_queries)
-    # cr_queries = {query for query in dataset if query[0] == 'locatedInCR'}
-    # country_with_cr_train = get_located_in_cr_countries(cr_queries)
-    # test_d1(val+test, train, neighbor_map, country_with_cr_train)
-    # test_d2(val+test, train, neighbor_map, country_with_cr_train)
-    # test_d3(val+test, train, neighbor_map, country_with_cr_train)
+    ne_queries = {query for query in dataset if query[0] == 'neighborOf'}
+    neighbor_map = build_neighbor_map(ne_queries)
+    cr_queries = {query for query in train if query[0] == 'locatedInCR'}
+    country_with_cr_train = get_located_in_cr_countries(cr_queries)
+    for query in val+test:
+        # test_d1(train,[query], neighbor_map, country_with_cr_train,country2region, verbose=1)
+        # test_d2(train,[query], neighbor_map, country_with_cr_train,country2region, verbose=1)
+        test_d3(train,[query], neighbor_map, country_with_cr_train,country2region, verbose=1)
 
 
     # # GIUSEPPE's data
