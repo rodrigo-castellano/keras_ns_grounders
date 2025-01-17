@@ -180,7 +180,7 @@ if __name__ == '__main__':
         args.cdcr_num_formulas = 3
         args.valid_frequency = 5 if not EARLY_STOPPING else 1
         args.resnet = True if 'ablation' not in dataset_name else False
-        args.r2n_prediction_type = 'nofull' if 'ablation' in dataset_name else 'full'
+        args.r2n_prediction_type = 'head' if 'ablation' in dataset_name else 'full'
         args.reasoner_depth = dp if nr > 0 else 0
         args.reasoner_regularization_factor = rr
         args.reasoner_formula_hidden_embedding_size = args.kge_atom_embedding_size
