@@ -286,7 +286,10 @@ def main(data_path, log_filename, use_WB, args):
     print("\nEvaluation train", flush=True)
     train_metrics = model.evaluate(data_gen_train)#,train_data=True,testing=True) 
     print("\nEvaluation val", flush=True)
-    valid_metrics =  model.evaluate(data_gen_valid)#,val_data=True,testing=True) 
+    if do_training:
+        valid_metrics =  model.evaluate(data_gen_valid)#,val_data=True,testing=True) 
+    else:
+        valid_metrics = [0.0]*len(train_metrics)    
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
     test_metrics  =  model.evaluate(data_gen_test)#,test_data=True,testing=True)
