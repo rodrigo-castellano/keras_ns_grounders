@@ -99,20 +99,9 @@ if __name__ == '__main__':
         if not os.path.exists(os.path.join(data_path, dataset_name)):
             print('skipping, dataset not existing', run_vars)
             continue
-        # Define sets for quick membership testing
-        light_datasets_full = {'countries_s1', 'countries_s2', 'pharmkg_small'}
-        heavy_datasets_domainbody_relationentity = {'countries_s3', 'wn18rr', 'pharmkg_full', 'FB15k237', 'kinship_family'}
-
         # Discern the datasets for which the grounders full, domainbody, and relationentity are too heavy to run
         if model_name == 'no_reasoner' and grounder not in {'backward_1_1'}:
             continue
-
-        if dataset_name == 'countries_s3' and (grounder == 'full'):
-            continue
-        elif (dataset_name == 'kinship_family' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237') and (grounder == 'full'
-                     or grounder == 'backward_1_3' or grounder == 'backward_2_1' or grounder == 'backward_2_2' or grounder == 'backward_2_3'):
-            continue
-
 
         args.dataset_name = dataset_name
         args.grounder = grounder
@@ -125,7 +114,6 @@ if __name__ == '__main__':
         args.kge_atom_embedding_size = e
         args.batch_size = 256 # Full batch only for explain.
         args.val_batch_size = 256
-        # args.test_batch_size = 128 if dataset_name in heavy_datasets_domainbody_relationentity else 256
         if dataset_name in 'wn18rr' or dataset_name == 'FB15k237' or dataset_name == 'pharmkg_full' :
             args.test_batch_size = 1
         elif dataset_name == 'kinship_family':
