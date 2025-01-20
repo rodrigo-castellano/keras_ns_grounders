@@ -66,7 +66,8 @@ def approximate_backward_chaining_grounding_one_rule(
     max_unknown_fact_count: int,
     res: Set[Tuple[Tuple, Tuple]]=None,
     proofs: Dict[Tuple[Tuple, Tuple], List[Tuple[Tuple, Tuple]]]=None,
-    head_predicates: Set[str]=None) -> Union[
+    head_predicates: Set[str]=None,
+    prune=True) -> Union[
         None, Set[Tuple[Tuple, Tuple]]]:
     
     assert len(rule.head) == 1, (
@@ -182,7 +183,7 @@ def approximate_backward_chaining_grounding_one_rule(
                     if not is_known_fact and (
                             max_unknown_fact_count < 0 or
                             unknown_fact_count < max_unknown_fact_count):
-                        if head_predicates is not None and new_ground_atom[0] in head_predicates:
+                        if head_predicates is not None and new_ground_atom[0] in head_predicates and prune:
                             body_grounding.append(new_ground_atom)
                         else:
                             accepted = False
@@ -485,7 +486,8 @@ class ApproximateBackwardChainingGrounder(Engine):
                      else self.max_unknown_fact_count_last_step),
                     res=self.rule2groundings[rule.name], # Output added here.
                     proofs=(self.rule2proofs[rule.name] if self.prune_incomplete_proofs else None), # Proofs added here.
-                    head_predicates=self.head_predicates)
+                    head_predicates=self.head_predicates,
+                    prune=prune_incomplete_proofs)
                 # Update the list of processed rules.
                 self._rule2processed_queries[rule.name].update(queries_per_rule)
                 # print('\nqueries processed (_rule2processed_queries):\n', len(self._rule2processed_queries[rule.name]),self._rule2processed_queries[rule.name])
