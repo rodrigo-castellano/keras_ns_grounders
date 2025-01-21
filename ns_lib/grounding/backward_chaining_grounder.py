@@ -487,7 +487,7 @@ class ApproximateBackwardChainingGrounder(Engine):
                     res=self.rule2groundings[rule.name], # Output added here.
                     proofs=(self.rule2proofs[rule.name] if self.prune_incomplete_proofs else None), # Proofs added here.
                     head_predicates=self.head_predicates,
-                    prune=prune_incomplete_proofs)
+                    prune=self.prune_incomplete_proofs)
                 # Update the list of processed rules.
                 self._rule2processed_queries[rule.name].update(queries_per_rule)
                 # print('\nqueries processed (_rule2processed_queries):\n', len(self._rule2processed_queries[rule.name]),self._rule2processed_queries[rule.name])
