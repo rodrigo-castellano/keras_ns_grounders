@@ -24,8 +24,7 @@ def BuildGrounder(args, rules: List[Rule], facts: List[Tuple], fol: FOL,
         else:
             backward_depth = int(type[-1])
             type = 'BackwardChainingGrounder'
-
-        prune_incomplete_proofs = False if 'noprune' in type else True
+        prune_incomplete_proofs = False if 'noprune' in args.grounder else True
         print('Grounder: ',args.grounder,'backward_depth:', backward_depth, 'Prune:', prune_incomplete_proofs, 'backward_width:', backward_width)
 
     if type == 'ApproximateBackwardChainingGrounder':
