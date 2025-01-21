@@ -183,7 +183,7 @@ def approximate_backward_chaining_grounding_one_rule(
                     if not is_known_fact and (
                             max_unknown_fact_count < 0 or
                             unknown_fact_count < max_unknown_fact_count):
-                        if head_predicates is not None and new_ground_atom[0] in head_predicates and prune:
+                        if not prune or (head_predicates is not None and new_ground_atom[0] in head_predicates):
                             body_grounding.append(new_ground_atom)
                         else:
                             accepted = False
