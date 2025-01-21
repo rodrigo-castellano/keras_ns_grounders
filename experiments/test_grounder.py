@@ -89,7 +89,7 @@ elif type == 'ApproximateBackwardChainingGrounder':
                 num_steps=backward_depth,
                 max_unknown_fact_count=backward_width,
                 max_unknown_fact_count_last_step=backward_width,
-                prune_incomplete_proofs=True)
+                prune_incomplete_proofs=prune_incomplete_proofs)
 
 
 ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
