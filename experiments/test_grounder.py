@@ -94,20 +94,17 @@ elif type == 'ApproximateBackwardChainingGrounder':
 
 ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
 # print('ground_formulas:',ground_formulas)
-
+queries = queries[:5]
 # queries = [[('locatedInCR','luxembourg','europe')]]
 print('queries:',len(queries))
-# for query in queries:
-#     print('\nquery:',query)
-#     ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(query)),deterministic=True)
+for query in queries:
+    print('\nquery:',query)
+    ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(query)),deterministic=True)
 
-#     # num_groundings = len([ground_formulas[rule].groundings for rule in ground_formulas][0])
-#     # # assert num_groundings == 0, f'Number of ground formulas: {num_groundings,ground_formulas} for query: {query}'
-#     # if num_groundings != 0:
-#     #     print('Number of ground formulas:',num_groundings)
-    
-#     print('\n\nground_formulas:')
-#     for rule in ground_formulas:
-#         print('Rule:',rule,ground_formulas[rule])
-#         for grounding in ground_formulas[rule]:
-#             print(grounding[0][0],'       ',grounding[1][0], grounding[1][1])
+    print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
+
+    # print('\n\nground_formulas:')
+    # for rule in ground_formulas:
+    #     print('Rule:',rule)#,ground_formulas[rule])
+    #     for grounding in ground_formulas[rule]:
+    #         print(grounding[0][0],'       ',grounding[1][0], grounding[1][1])
