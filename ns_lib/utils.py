@@ -312,6 +312,30 @@ def load_model_weights(model, ckpt_filepath, verbose=True):
             print('Weights not found in', ckpt_filepath)
     return success
 
+def load_kge_weights(model, ckpt_filepath, verbose=True):
+    """
+    Load the weights of a model from a checkpoint file.
+    
+    Args:
+        model: Keras model instance
+        ckpt_filepath: Path to the checkpoint file
+        verbose: Print information about the loading process
+    
+    Returns:
+        success: Boolean indicating whether the weights were loaded successfully
+    """
+    success = False
+    ckpt_filepath = ckpt_filepath + '.ckpt'
+    if os.path.exists(ckpt_filepath + '.index'):
+        model.kge_model.load_weights(ckpt_filepath)
+        success = True
+        if verbose:
+            print('Weights loaded from', ckpt_filepath)
+    else:
+        if verbose:
+            print('Weights not found in', ckpt_filepath)
+    return success
+
 
 # Checkpointer that allows both in-memory and filename checkpointing.
 # This extends the functionalities of tf.keras.callbacks.ModelCheckpoint,

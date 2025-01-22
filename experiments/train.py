@@ -13,7 +13,7 @@ from model import CollectiveModel
 # from keras.callbacks import CSVLogger
 from ns_lib.logic.commons import Atom, Domain, FOL, Rule, RuleLoader
 from ns_lib.grounding.grounder_factory import BuildGrounder
-from ns_lib.utils import MMapModelCheckpoint, KgeLossFactory, get_arg, load_model_weights
+from ns_lib.utils import MMapModelCheckpoint, KgeLossFactory, get_arg, load_model_weights, load_kge_weights
 import time
 from model_utils import * 
 import wandb
@@ -183,8 +183,14 @@ def main(data_path, log_filename, use_WB, args):
     # If checkpoint_load is not None, try to load the weights
     if args.load_model_ckpt or args.load_kge_ckpt:
         path_ = ckpt_filepath if args.load_model_ckpt else ckpt_filepath+'_kge_model'
-        success = load_model_weights(model, path_, verbose=True)
-
+        if '_kge_model' in path_:
+            # subtitute args.model_name with 'no_reasoner'
+            path_ = path_.replace(args.model_name, 'no_reasoner')  
+            path_ = path_.replace(args.grounder, 'backward_1_1')
+            assert os.path.exists(os.path.dirname(path_)), 'The folder with no_reasoner does not exist'
+            success = load_kge_weights(model, path_, verbose=True)
+        else:
+            success = load_model_weights(model, path_, verbose=True)
         # update the arg that was true
         args.load_model_ckpt = success if args.load_model_ckpt else args.load_model_ckpt
         args.load_kge_ckpt = success if args.load_kge_ckpt else args.load_kge_ckpt
