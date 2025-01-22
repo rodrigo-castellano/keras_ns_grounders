@@ -15,7 +15,7 @@ if gpus:
         tf.config.experimental.set_memory_growth(gpu, True)
 tf.config.set_soft_device_placement(True)
 print("GPUs used: ", gpus)
-# tf.config.run_functions_eagerly(True)
+tf.config.run_functions_eagerly(True)
 import copy
 from itertools import product
 from train import main
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     data_path :str = "experiments/data"
     epochs: int = 100
     EARLY_STOPPING = True
-    DATASET_NAME = ['countries_s3'] # ['ablation_d','ablation_d2','ablation_d3'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
+    DATASET_NAME = ['countries_s1'] # ['ablation_d','ablation_d2','ablation_d3'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
     GROUNDER = ['backward_1_1'] #['backwardnoprune_1_1','backward_1_1','backward_1_2','backward_1_3','backward_2_1','backward_2_2','backward_2_3']  #  'domainbody','relationentity','full']
     KGE = ['complex'] # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['dcr'] #,['no_reasoner','dcr','sbr','r2n'] 

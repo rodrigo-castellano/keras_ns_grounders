@@ -202,10 +202,14 @@ def main(data_path, log_filename, use_WB, args):
     
     if args.early_stopping:
         early_stopping = keras.callbacks.EarlyStopping(
-            monitor="val_loss",
-            min_delta=0.001,
-            patience=50,
-            verbose=1)
+            # monitor="val_loss",
+            monitor="val_task_mrr",
+            # min_delta=0.01,
+            patience=20,
+            verbose=1,
+            mode='max'
+            # mode='min'
+            )
         callbacks.append(early_stopping)
     
     model_checkpoint = MMapModelCheckpoint(
