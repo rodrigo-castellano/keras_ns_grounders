@@ -43,7 +43,7 @@ if __name__ == '__main__':
     epochs: int = 100
     EARLY_STOPPING = True
     DATASET_NAME = ['countries_s3'] # ['ablation_d','ablation_d2','ablation_d3'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
-    GROUNDER = ['backward_1_1'] #['backwardnoprune_1_1','backward_1_1','backward_1_2','backward_1_3','backward_2_1','backward_2_2','backward_2_3']  # 'domainbody','relationentity','full']
+    GROUNDER = ['backward_1_1'] #['backwardnoprune_1_1','backward_1_1','backward_1_2','backward_1_3','backward_2_1','backward_2_2','backward_2_3']  #  'domainbody','relationentity','full']
     KGE = ['complex'] # ["distmult", "transe","complex", "rotate"]
     MODEL_NAME = ['dcr'] #,['no_reasoner','dcr','sbr','r2n'] 
     RULE_MINER = ['amie','None'] 
