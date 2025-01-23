@@ -293,18 +293,19 @@ def main(data_path, log_filename, use_WB, args):
 
 
     # EVALUATION
-    print("\nEvaluation train", flush=True)
-    train_metrics = model.evaluate(data_gen_train)#,train_data=True,testing=True) 
-    print("\nEvaluation val", flush=True)
-    if do_training:
-        valid_metrics =  model.evaluate(data_gen_valid)#,val_data=True,testing=True) 
-    else:
-        valid_metrics = [0.0]*len(train_metrics)    
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
     test_metrics  =  model.evaluate(data_gen_test)#,test_data=True,testing=True)
     end_inf = time.time()
     args.time_inference = np.round(end_inf - start_inf,2)
+
+    if do_training:
+        print("\nEvaluation train", flush=True)
+        train_metrics = model.evaluate(data_gen_train)#,train_data=True,testing=True) 
+        print("\nEvaluation val", flush=True)
+        valid_metrics =  model.evaluate(data_gen_valid)#,val_data=True,testing=True)     
+    else:
+        train_metrics = valid_metrics = [0.0]*len(test_metrics) 
     print('Inference time:', np.round(end_inf - start_inf,2), 'seconds')
 
     print('\nMetrics names:',model.metrics_names)
