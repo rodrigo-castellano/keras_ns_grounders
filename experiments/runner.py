@@ -15,7 +15,7 @@ if gpus:
         tf.config.experimental.set_memory_growth(gpu, True)
 tf.config.set_soft_device_placement(True)
 print("GPUs used: ", gpus)
-tf.config.run_functions_eagerly(True)
+tf.config.run_functions_eagerly(False)
 import copy
 from itertools import product
 from train import main
