@@ -139,7 +139,7 @@ if __name__ == '__main__':
         args.corrupt_mode = 'TAIL' if ('countries' in dataset_name or 'ablation' in dataset_name or 'test' in dataset_name) else 'HEAD_AND_TAIL'
         args.num_negatives = neg  
         args.valid_negatives = 100
-        args.test_negatives = 1000 if (dataset_name=='FB15k237' or dataset_name=='wn18rr') else None # all possible negatives
+        args.test_negatives = 1000 if (dataset_name=='FB15k237') else None # all possible negatives
         args.ragged = True
         args.format = "functional"
         args.engine_num_negatives = 0
