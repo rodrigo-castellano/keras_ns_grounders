@@ -1,2 +1,0 @@
-regions europe
-countries spain france belgium
