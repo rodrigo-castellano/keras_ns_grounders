@@ -32,7 +32,7 @@ wandb.login()
 if __name__ == '__main__':
 
     use_logger = True
-    use_WB = False
+    use_WB = True
     load_model_ckpt = False
     load_kge_ckpt = True
     save_model_ckpt = True
@@ -95,9 +95,8 @@ if __name__ == '__main__':
             DATASET_NAME,GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
             LR,LR_SCHEDULER,OPTIMIZER, NUM_RULES, RR ):  
 
-        run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
         if not os.path.exists(os.path.join(data_path, dataset_name)):
-            print('skipping, dataset not existing', run_vars)
+            print('skipping, dataset not existing', os.path.join(data_path, dataset_name))
             continue
         # Discern the datasets for which the grounders full, domainbody, and relationentity are too heavy to run
         if model_name == 'no_reasoner' and grounder not in {'backward_1_1'}:

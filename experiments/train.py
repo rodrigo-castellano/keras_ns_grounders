@@ -178,7 +178,10 @@ def main(data_path, log_filename, use_WB, args):
 
     # LOAD CKPT
     assert not args.load_model_ckpt or not args.load_kge_ckpt, "Only one of ckpt_load and load_kge_ckpt can be set."
-    ckpt_filepath = os.path.join(args.ckpt_folder, args.run_signature+'_seed_'+str(seed), args.run_signature+'_seed_'+str(seed))
+    name = args.run_signature+'_seed_'+str(seed)
+    current_dir = os.getcwd()
+    ckpt_filepath = os.path.join(current_dir, args.ckpt_folder, name, name)
+    os.makedirs(args.ckpt_folder, exist_ok=True)
 
     # If checkpoint_load is not None, try to load the weights
     if args.load_model_ckpt or args.load_kge_ckpt:
@@ -245,16 +248,24 @@ def main(data_path, log_filename, use_WB, args):
     # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, profile_batch=(1, 19))
     # callbacks.append(tensorboard_callback)
     
+
     # Initialize a W&B run
     if use_WB:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         dir = os.path.join(current_dir, '../..')
-        run = wandb.init(project = "Grounders-exp", name=args.run_signature,
-                dir=dir,  config = dict(
-                shuffle_buffer = 1024,
-                batch_size = args.batch_size,
-                learning_rate = args.learning_rate,
-                epochs = args.epochs)) 
+        run = wandb.init(project = "Grounders-exp", 
+                        group=args.run_signature,
+                        name=args.run_signature+'_seed_'+str(seed),
+                        dir=dir,  
+                        config = dict(
+                            dataset = args.dataset_name,
+                            model = args.model_name,
+                            grounder = args.grounder,
+                            seed = seed,
+                            # **vars(args),
+                            config = args), 
+                        tags = [args.dataset_name, args.model_name, args.grounder],
+                        )
         callbacks.append(WandbMetricsLogger(log_freq=10))
 
 
@@ -295,30 +306,27 @@ def main(data_path, log_filename, use_WB, args):
     # EVALUATION
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
-    test_metrics  =  model.evaluate(data_gen_test)#,test_data=True,testing=True)
+    test_metrics = model.evaluate(data_gen_test, return_dict=True)
     end_inf = time.time()
     args.time_inference = np.round(end_inf - start_inf,2)
 
     if do_training:
         print("\nEvaluation train", flush=True)
-        train_metrics = model.evaluate(data_gen_train)#,train_data=True,testing=True) 
+        train_metrics = model.evaluate(data_gen_train, return_dict=True)
         print("\nEvaluation val", flush=True)
-        valid_metrics =  model.evaluate(data_gen_valid)#,val_data=True,testing=True)     
+        valid_metrics = model.evaluate(data_gen_valid, return_dict=True)    
     else:
-        train_metrics = valid_metrics = [0.0]*len(test_metrics) 
+        # create a copy of test metrics, with all values set to 0
+        train_metrics = valid_metrics = {k: 0 for k in test_metrics.keys()}
     print('Inference time:', np.round(end_inf - start_inf,2), 'seconds')
 
-    print('\nMetrics names:',model.metrics_names)
-    train_eval_metrics = dict(zip(model.metrics_names,train_metrics))
-    valid_eval_metrics = dict(zip(model.metrics_names,valid_metrics))
-    test_eval_metrics = dict(zip(model.metrics_names,test_metrics))
     training_info = history.history if do_training else None
 
-    print('\nMetrics:',train_eval_metrics.keys()) 
-    print('\nResults',
-          '\nTrain', np.round(train_metrics,3),
-          '\nVal', np.round(valid_metrics,3),
-          '\nTest', np.round(test_metrics,3),
+    print('\nResults'),
+    print('Metrics:',train_metrics.keys(),
+          '\nTrain', np.round(np.array(list(train_metrics.values())), 3),
+          '\nVal', np.round(np.array(list(valid_metrics.values())), 3),
+          '\nTest', np.round(np.array(list(test_metrics.values())), 3),
           flush=True)
 
 
@@ -338,4 +346,4 @@ def main(data_path, log_filename, use_WB, args):
         for r in model.reasoning[-1].rule_embedders.values():
             r._verbose=True
         print(model.predict(data_gen_test_positive_only)[-1])
-    return train_eval_metrics,valid_eval_metrics, test_eval_metrics, training_info
+    return train_metrics,valid_metrics, test_metrics, training_info

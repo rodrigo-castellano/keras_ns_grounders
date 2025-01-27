@@ -32,7 +32,7 @@ wandb.login()
 if __name__ == '__main__':
 
     use_logger = True
-    use_WB = False
+    use_WB = True
     load_model_ckpt = False
     load_kge_ckpt = False
     save_model_ckpt = True
@@ -45,11 +45,11 @@ if __name__ == '__main__':
     DATASET_NAME = ['countries_s1'] # ['ablation_d','ablation_d2','ablation_d3'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
     GROUNDER = ['backward_1_1'] #['backwardnoprune_1_1','backward_1_1','backward_1_2','backward_1_3','backward_2_1','backward_2_2','backward_2_3']  #  'domainbody','relationentity','full']
     KGE = ['complex'] # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['dcr'] #,['no_reasoner','dcr','sbr','r2n'] 
+    MODEL_NAME = ['r2n'] #,['no_reasoner','dcr','sbr','r2n'] 
     RULE_MINER = ['amie','None'] 
     E = [100]
     DEPTH = [1]
-    SEED = [[0]]# [[0,1,2,3,4]]
+    SEED = [[0,1]]# [[0,1,2,3,4]]
     NEG_PER_SIDE = [1]
     WEIGHT_LOSS = [.5]  
     DROPOUT = [0.0]
@@ -95,9 +95,8 @@ if __name__ == '__main__':
             DATASET_NAME,GROUNDER, KGE, MODEL_NAME, RULE_MINER, E, DEPTH, SEED, NEG_PER_SIDE, WEIGHT_LOSS, DROPOUT, R,
             LR,LR_SCHEDULER,OPTIMIZER, NUM_RULES, RR ):  
 
-        run_vars = (dataset_name,grounder, kge, model_name, rule_miner, neg, e)
         if not os.path.exists(os.path.join(data_path, dataset_name)):
-            print('skipping, dataset not existing', run_vars)
+            print('skipping, dataset not existing', os.path.join(data_path, dataset_name))
             continue
         # Discern the datasets for which the grounders full, domainbody, and relationentity are too heavy to run
         if model_name == 'no_reasoner' and grounder not in {'backward_1_1'}:
