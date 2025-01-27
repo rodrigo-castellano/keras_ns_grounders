@@ -26,7 +26,8 @@ args.grounder = 'backward_1_1'
 
 # args.dataset_name = 'wn18rr'
 # args.dataset_name = 'kinship_family'
-args.dataset_name = 'FB15k237'
+# args.dataset_name = 'FB15k237'
+args.dataset_name = 'pharmkg_full'
 # args.dataset_name = 'dummy'
 args.data_path = "experiments/data"
 args.facts_file = 'facts.txt'
@@ -35,6 +36,11 @@ args.valid_file = 'valid.txt'
 args.test_file = 'test.txt'
 args.domain_file = 'domain2constants.txt'
 args.rules_file = 'rules_amie.txt' if (args.dataset_name == 'kinship_family') else 'rules.txt'
+# args.rules_file = 'rules_head.txt'
+# args.rules_file = 'rules_pca.txt'
+# args.rules_file = 'rules_std.txt'
+args.rules_file = 'rules_best.txt'
+
 
 args.num_negatives = 0
 args.test_negatives = 0
@@ -99,9 +105,9 @@ queries, labels = dataset_test[0:len(dataset_test)]
 engine = BuildGrounder(args, rules, facts=facts, fol=fol, domain2adaptive_constants=None)
 
 
-ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
+# ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
 # print('ground_formulas:',ground_formulas)
-queries = queries[:30]
+queries = queries[:60]
 # queries = [[('locatedInCR','luxembourg','europe')]]
 print('number of queries:',len(queries))
 
