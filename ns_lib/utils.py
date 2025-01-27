@@ -205,7 +205,7 @@ def read_rules(path,args):
 
             # print all the info
             # if len(rules) < 1001:
-            #     print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
+            # print('rule name: ', rule_name, 'rule weight: ', rule_weight, 'rule head: ', rule_head, 
             #         'rule body: ', rule_body, 'var_names: ', var_names)
             rules.append(Rule(name=rule_name,var2domain=var_names,body=rule_body,head=rule_head))
     print('number of rules: ', len(rules))
