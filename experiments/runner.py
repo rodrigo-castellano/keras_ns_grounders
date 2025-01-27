@@ -21,7 +21,6 @@ from itertools import product
 from train import main
 import shutil as sh
 import ns_lib as ns
-from ns_lib.utils import NSParser
 import numpy as np
 import ast
 import argparse
