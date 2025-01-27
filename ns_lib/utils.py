@@ -549,53 +549,6 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
 
 
 #############################################
-# Runtime utils.
-class NSParser(argparse.ArgumentParser):
-
-    def __init__(self):
-        super().__init__()
-
-        self.add_argument("-k", "--kge", type=str,
-                            default='complex', help="The KGE embedder.")
-        self.add_argument("-a", "--kge_atom_embedding_size", type=int,
-                            default=10, help="Atom embedding size.")
-        self.add_argument("-rd", "--reasoning_depth", type=int,
-                            default=1, help="Reasoning depth.")
-        self.add_argument("-e", "--epochs", type=int,
-                            default=200, help="Epoch number for training.")
-        self.add_argument("-s", "--seed", default=0, type=int,
-                            help="Seed for random generators.")
-        self.add_argument("-lr", "--learning_rate", default=0.01, type=float,
-                            help="Learning rate.")
-
-class Logger():
-
-
-    def __init__(self, file):
-        self.file = file
-        if os.path.exists(self.file):
-            self.df = pd.read_csv(self.file)
-        else:
-            self.df = None
-
-
-
-    def log(self, args:dict):
-        if self.df is None:
-            self.df = pd.DataFrame(columns=[k for k in args.keys()])
-        self.df = self.df.append(args, ignore_index = True)
-        self.df.to_csv(self.file, index=False)
-
-
-    def exists(self, args:dict):
-        if self.df is None:
-            return False
-        ddf = self.df[list(args.keys())]
-        s = pd.Series(args)
-        r = (ddf == s)
-        res = bool(r.all(axis=1).any())
-        return res
-
 
 from keras.callbacks import CSVLogger
 import csv
@@ -719,7 +672,6 @@ class FileLogger:
                 f.write("\nAll data;")
                 f.write(";".join(f'{k}:{v}' for k, v in args.items()))
                 f.write('\n')
-                # f.write(f'\nSignature;{args["run_signature"]}\n')
                 for name, dictionary in dicts.items():
                     f.write(f'{name};')
                     f.write(";".join(f'{k}:{v}' for k, v in dictionary.items())) if dictionary else f.write("None")
@@ -976,7 +928,7 @@ class FileLogger:
         column_names = ';'.join(column_names)
 
         values_args = [str(v) for k, v in args_dict.items()]
-        values_avg_results = [ str([np.round(v[0], 3), np.round(v[1], 3)]) for k, v in avg_results.items()]
+        values_avg_results = [ str([np.round(v[0], 3).item(), np.round(v[1], 3).item()]) for k, v in avg_results.items()]
         combined_results = ';'.join(values_args + values_avg_results)
 
         print("Writing results to", file_csv)
