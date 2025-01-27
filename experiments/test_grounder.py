@@ -21,7 +21,7 @@ from ns_lib.grounding.grounder_factory import BuildGrounder
 parser = argparse.ArgumentParser(description='Description of your script')  
 args = parser.parse_args()
 
-args.grounder = 'backward_1_2'
+args.grounder = 'backward_1_1'
 # args.grounder = 'backwardnoprune_2_1'
 
 # args.dataset_name = 'wn18rr'
@@ -34,7 +34,7 @@ args.train_file = 'train.txt'
 args.valid_file = 'valid.txt'
 args.test_file = 'test.txt'
 args.domain_file = 'domain2constants.txt'
-args.rules_file = 'rules_amie.txt' if (args.dataset_name == 'kinship_family' or args.dataset_name == 'FB15k237' ) else 'rules.txt'
+args.rules_file = 'rules_amie.txt' if (args.dataset_name == 'kinship_family') else 'rules.txt'
 
 args.num_negatives = 0
 args.test_negatives = 0
@@ -101,14 +101,14 @@ engine = BuildGrounder(args, rules, facts=facts, fol=fol, domain2adaptive_consta
 
 ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
 # print('ground_formulas:',ground_formulas)
-queries = queries[:1]
+queries = queries[:30]
 # queries = [[('locatedInCR','luxembourg','europe')]]
 print('number of queries:',len(queries))
 
 len_groundings = []
 n_queries_with_groundings = 0
 for query in queries:
-    # print('\nquery:',query)
+    print('\nquery:',query)
     ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(query)),deterministic=True)
 
     print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
