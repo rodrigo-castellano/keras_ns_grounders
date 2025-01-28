@@ -96,6 +96,14 @@ def _from_strings_to_tensors(fol, serializer,
         queries = tf.ragged.constant(queries, dtype=tf.int32)
         labels =  tf.ragged.constant(labels, dtype=tf.float32)
     else:
+        # for a query, there are 2 elements: 
+        # i) the query itself and the head corruptions
+        # ii) the query itself and the tail corruptions
+        # if head and tail corruptions are different, we need to pad
+        max_len = max([len(q) for q in queries])
+        queries = tf.keras.preprocessing.sequence.pad_sequences( queries, padding='post', maxlen=max_len, value=-1)
+        labels = tf.keras.preprocessing.sequence.pad_sequences( labels, padding='post', maxlen=max_len, value=-1)
+      
         queries = tf.constant(queries, dtype=tf.int32)
         labels = tf.constant(labels, dtype=tf.float32)
 
