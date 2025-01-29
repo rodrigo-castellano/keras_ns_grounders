@@ -17,17 +17,25 @@ from ns_lib.logic.commons import Atom, FOL,RuleGroundings
 from dataset import KGCDataHandler
 import argparse
 from ns_lib.grounding.grounder_factory import BuildGrounder
+from ns_lib.grounding.backward_chaining_grounder import ApproximateBackwardChainingGrounder
 
 parser = argparse.ArgumentParser(description='Description of your script')  
 args = parser.parse_args()
 
-args.grounder = 'backward_1_1'
+
+random.seed(0)
+np.random.seed(0)
+tf.random.set_seed(0)
+
+
+args.grounder = 'backward_1_3'
 # args.grounder = 'backwardnoprune_2_1'
 
+args.dataset_name = 'countries_s3'
 # args.dataset_name = 'wn18rr'
 # args.dataset_name = 'kinship_family'
 # args.dataset_name = 'FB15k237'
-args.dataset_name = 'pharmkg_full'
+# args.dataset_name = 'pharmkg_full'
 # args.dataset_name = 'dummy'
 args.data_path = "experiments/data"
 args.facts_file = 'facts.txt'
@@ -39,7 +47,7 @@ args.rules_file = 'rules_amie.txt' if (args.dataset_name == 'kinship_family') el
 # args.rules_file = 'rules_head.txt'
 # args.rules_file = 'rules_pca.txt'
 # args.rules_file = 'rules_std.txt'
-args.rules_file = 'rules_best.txt'
+# args.rules_file = 'rules_best.txt'
 
 
 args.num_negatives = 0
@@ -72,64 +80,67 @@ facts = fol.facts
 rules = ns.utils.read_rules(join(args.data_path, args.dataset_name, args.rules_file),args)
 queries, labels = dataset_test[0:len(dataset_test)]
 
-# type = args.grounder
-# backward_width = None
-# if type.count('_') == 2:
-#     backward_width = int(type[type.index('_')+1]) # take the first character after the first '_'
-#     backward_depth = int(type[-1])
-#     type = 'ApproximateBackwardChainingGrounder'
-# else:
-#     backward_depth = int(type[-1])
-#     type = 'BackwardChainingGrounder'
 
-# prune_incomplete_proofs = True #if (backward_width is None or backward_width == 0) else False
-# print('Grounder: ',args.grounder,'backward_depth:', backward_depth, 'Prune:', prune_incomplete_proofs, 'backward_width:', backward_width)
+type = args.grounder
+print('Building Grounder', type, flush=True)
 
-# if type == 'BackwardChainingGrounder':
-#     engine = BackwardChainingGrounder(
-#                 rules, facts=facts, domains={d.name:d for d in fol.domains},
-#                 domain2adaptive_constants=None,
-#                 pure_adaptive=False,
-#                 num_steps=backward_depth)
-# elif type == 'ApproximateBackwardChainingGrounder':
-#     engine = ApproximateBackwardChainingGrounder(
-#                 rules, facts=facts, domains={d.name:d for d in fol.domains},
-#                 domain2adaptive_constants=None,
-#                 pure_adaptive=False,
-#                 num_steps=backward_depth,
-#                 max_unknown_fact_count=backward_width,
-#                 max_unknown_fact_count_last_step=backward_width,
-#                 prune_incomplete_proofs=prune_incomplete_proofs)
+if 'backward' in type:
+    # if the count of '_' the name is 2, it means that the parameter 'a' is included. Else there is no parameter a. It goes after the first '_'
+    backward_width = None
+    if type.count('_') == 2:
+        backward_width = int(type[type.index('_')+1]) # take the first character after the first '_'
+        backward_depth = int(type[-1])
+        type = 'ApproximateBackwardChainingGrounder'
+    else:
+        backward_depth = int(type[-1])
+        type = 'BackwardChainingGrounder'
+    prune_incomplete_proofs = False if 'noprune' in args.grounder else True
+    print('Grounder: ',args.grounder,'backward_depth:', backward_depth, 'Prune:', prune_incomplete_proofs, 'backward_width:', backward_width)
+
+if type == 'ApproximateBackwardChainingGrounder':
+    # Requires Horn Clauses.
+    engine = ApproximateBackwardChainingGrounder(
+        rules, facts=facts, domains={d.name:d for d in fol.domains},
+        domain2adaptive_constants=None,
+        pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
+        num_steps=backward_depth,
+        max_unknown_fact_count=backward_width,
+        max_unknown_fact_count_last_step=backward_width,
+        prune_incomplete_proofs=prune_incomplete_proofs,
+        max_groundings_per_rule=get_arg(
+            args, 'backward_chaining_max_groundings_per_rule', -1),
+        force_determinism=True)
 
 
-engine = BuildGrounder(args, rules, facts=facts, fol=fol, domain2adaptive_constants=None)
+# engine = BuildGrounder(args, rules, facts=facts, fol=fol, domain2adaptive_constants=None)
 
+import time
+start = time.time()
 
-# ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
-# print('ground_formulas:',ground_formulas)
-queries = queries[:60]
-# queries = [[('locatedInCR','luxembourg','europe')]]
+# queries = queries[:1]
 print('number of queries:',len(queries))
 
 len_groundings = []
 n_queries_with_groundings = 0
 for query in queries:
-    print('\nquery:',query)
-    ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(query)),deterministic=True)
+    # print('\nquery:',query)
+    facts = sorted(facts)
+    ground_formulas = engine.ground(sorted(tuple(facts)),tuple(ns.utils.to_flat(query)),deterministic=True)
 
-    print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
+    # print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
     len_groundings.append(len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
     n_queries_with_groundings += 1 if len_groundings[-1] > 0 else 0
-    # print('ground_formulas:',ground_formulas)
 
-    # print('\n\nground_formulas:')
+    # print('ground_formulas:')
     # for rule in ground_formulas:
-    #     print('Rule:',rule)#,ground_formulas[rule])
-    #     for grounding in ground_formulas[rule]:
-    #         print(grounding[0][0],'       ',grounding[1][0], grounding[1][1])
+        # print('Rule:',rule)#,ground_formulas[rule])
+        # for grounding in ground_formulas[rule]:
+            # print(grounding[0][0],'       ',grounding[1][0], grounding[1][1])
 
 print('avg number of grounding:',round(np.mean(len_groundings),3), 'std:',round(np.std(len_groundings),3))
-print('converage:',round(n_queries_with_groundings/len(queries),3))
+print('coverage:',round(n_queries_with_groundings/len(queries),3))
 
 # ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
 # print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
+
+print('Time:',round(time.time()-start,3))
