@@ -31,7 +31,7 @@ wandb.login()
 if __name__ == '__main__':
 
     use_logger = True
-    use_WB = False
+    use_WB = True
     load_model_ckpt = False
     load_kge_ckpt = False
     save_model_ckpt = True
