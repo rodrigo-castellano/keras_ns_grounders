@@ -299,10 +299,7 @@ def main(data_path, log_filename, use_WB, args):
             run.finish
         args.time_train = 0
     
-    # save_embeddings_from_model(model, fol, serializer, save_dir="./../embeddings/"+args.run_signature)
-
-
-
+    # save_embeddings_from_model(model, fol, serializer, save_dir="./../embeddings/"+args.run_signature)    
     # EVALUATION
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
@@ -329,7 +326,10 @@ def main(data_path, log_filename, use_WB, args):
           '\nTest', np.round(np.array(list(test_metrics.values())), 3),
           flush=True)
 
-
+    if get_arg(args, 'store_ranks', False):
+        from ns_lib.utils import evaluate_and_store_ranks
+        evaluate_and_store_ranks(model, data_gen_test, seed, args)
+        
     if explain_enabled and enable_rules and (args.model_name == 'dcr' or args.model_name == 'cdcr'):
         model.explain_mode(True)
         print('\nExplain Train', flush=True)

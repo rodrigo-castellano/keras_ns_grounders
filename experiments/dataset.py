@@ -11,7 +11,6 @@ from ns_lib.utils import read_file_as_lines
 from ns_lib.logic.commons import Atom
 from itertools import product
 from collections import defaultdict,namedtuple
-from ns_lib.metrics import MRRMetric
 import numpy as np
 from functools import lru_cache
 import tensorflow as tf

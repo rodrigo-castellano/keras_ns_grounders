@@ -31,20 +31,20 @@ wandb.login()
 if __name__ == '__main__':
 
     use_logger = True
-    use_WB = True
+    use_WB = False
     load_model_ckpt = False
     load_kge_ckpt = False
     save_model_ckpt = True
     save_kge_ckpt = save_model_ckpt
-    log_folder :str = "./experiments/runs/"
-    ckpt_folder = "./../checkpoints/"
+    log_folder :str = "./experiments_xkge/runs/"
+    ckpt_folder = "./../checkpoints_xkge/"
     data_path :str = "experiments/data"
-    epochs: int = 100
+    epochs: int = 10
     EARLY_STOPPING = True
-    DATASET_NAME = ['countries_s1'] # ['ablation_d','ablation_d2','ablation_d3'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
+    DATASET_NAME = ['countries_s3'] # ['ablation_d','ablation_d2','ablation_d3'] #['countries_s2','countries_s3','nations','kinship_family','pharmkg_small','pharmkg_full','wn18rr','nations','FB15k237']
     GROUNDER = ['backward_1_1'] #['backwardnoprune_1_1','backward_1_1','backward_1_2','backward_1_3','backward_2_1','backward_2_2','backward_2_3']  #  'domainbody','relationentity','full']
     KGE = ['complex'] # ["distmult", "transe","complex", "rotate"]
-    MODEL_NAME = ['r2n'] #,['no_reasoner','dcr','sbr','r2n'] 
+    MODEL_NAME = ['no_reasoner'] #,['no_reasoner','dcr','sbr','r2n'] 
     RULE_MINER = ['amie','None'] 
     E = [100]
     DEPTH = [1]
@@ -100,7 +100,8 @@ if __name__ == '__main__':
         # Discern the datasets for which the grounders full, domainbody, and relationentity are too heavy to run
         if model_name == 'no_reasoner' and grounder not in {'backward_1_1'}:
             continue
-
+        
+        args.store_ranks = True
         args.dataset_name = dataset_name
         args.grounder = grounder
         args.kge = kge
@@ -165,7 +166,7 @@ if __name__ == '__main__':
         args.cdcr_use_positional_embeddings = False
         args.cdcr_num_formulas = 3
         args.valid_frequency = 5 if not EARLY_STOPPING else 1
-        args.resnet = True if 'ablation' not in dataset_name else False
+        args.resnet = False
         args.r2n_prediction_type = 'head' if 'ablation' in dataset_name else 'full'
         args.reasoner_depth = dp if nr > 0 else 0
         args.reasoner_regularization_factor = rr
@@ -185,8 +186,18 @@ if __name__ == '__main__':
         # args.relation_entity_grounder_max_elements = 20
         # args.semiring = "product"
 
-        run_vars = (args.dataset_name,grounder, kge, model_name, rule_miner, neg, e, args.batch_size, args.val_batch_size, args.test_batch_size)
-        args.keys_signature = ['dataset_name','grounder', 'kge', 'model_name', 'rule_miner','neg','e','train_batch_size','val_batch_size','test_batch_size']
+        run_data = {
+            'dataset_name': args.dataset_name,
+            'grounder': grounder,
+            'model_name': model_name,
+            'resnet': args.resnet,
+            'kge': kge,
+            'train_batch_size': args.batch_size,
+            'val_batch_size': args.val_batch_size,
+            'test_batch_size': args.test_batch_size
+        }
+        run_vars = tuple(run_data.values())
+        keys_signature = list(run_data.keys())
         args.run_signature = '-'.join(f'{v}' for v in run_vars)    
 
         args.ckpt_folder = ckpt_folder
