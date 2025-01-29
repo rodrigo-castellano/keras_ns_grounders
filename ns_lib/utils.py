@@ -1029,6 +1029,30 @@ def KgeLossFactory(name: str) -> tf.keras.losses.Loss:
         assert False, 'Unknown loss %s'% name
 
 
+class EvalOnlyMetric(tf.keras.metrics.Metric):
+    def __init__(self, name='eval_only_metric', **kwargs):
+        super(EvalOnlyMetric, self).__init__(name=name, **kwargs)
+        self.sum_of_values = self.add_weight(name='sum_of_values', initializer='zeros')
+        self.num_updates = self.add_weight(name='num_updates', initializer='zeros', dtype=tf.int32)
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        learning_phase = tf.keras.backend.learning_phase()
+        if learning_phase == 0:  # Evaluation phase
+            # Example: Mean Absolute Error (MAE) - you can customize this
+            values = tf.abs(y_true - y_pred)
+            # Ensure values are not NaN or Inf. Otherwise, the metric will not update
+            values = tf.where(tf.math.is_finite(values), values, tf.zeros_like(values))
+            self.sum_of_values.assign_add(tf.reduce_sum(values))
+            self.num_updates.assign_add(tf.cast(tf.shape(y_true)[0], tf.int32))
+
+    def result(self):
+        return tf.math.divide_no_nan(self.sum_of_values, tf.cast(self.num_updates, tf.float32))
+
+    def reset_state(self):
+        self.sum_of_values.assign(0.0)
+        self.num_updates.assign(0)
+
+
 class AUCPRMetric(tf.keras.metrics.AUC):
     """Implements AUC-PR metric with ragged tensor support."""
     def __init__(self, name='auc-pr', dtype=None, **kwargs):
@@ -1204,3 +1228,41 @@ def save_embeddings_from_model(model, fol, serializer, save_dir="embeddings"):
     # print('constant_embeddings_dict', constant_embeddings_dict)
     # print('predicate_embeddings_dict',  predicate_embeddings_dict)
     return constant_embeddings_dict,  predicate_embeddings_dict
+
+
+
+def evaluate_and_store_ranks(model, data_gen_test, seed, args):
+    """Evaluates the model and stores query ranks to a file."""
+    print('Evaluating model and storing ranks...')
+    os.makedirs('./ranks', exist_ok=True)
+    output_file = f'./ranks/{args.run_signature}_seed_{seed}.txt'
+    ranks = {}  # Or use a list if you don't need query IDs
+    # for j,batch in enumerate(data_gen_test):  # Iterate through your test data generator
+    queries, x, y_true = data_gen_test._get_batch_with_queries()
+    y_true = y_true['task']
+    y_pred = model(x)  # Get predictions
+    # Assuming y_pred shape is (batch_size, num_candidates)
+    y_pred = y_pred['task']
+    # Calculate ranks for the current batch (adapt as needed for your data format)
+    for i in range(y_pred.shape[0]): # loop over the elements of the batch
+        if len(queries[i]) == 0 or len(queries[i]) == 1:
+            continue # skip the queries with no or one query (only positive query)
+        print(f"\rProcessed {i + 1}/{y_pred.shape[0]} queries ({(i + 1) / y_pred.shape[0] * 100:.2f}%)", end="")
+        predictions_for_query = y_pred[i]
+        # true_labels_for_query = y_true[i]
+        # Sort predictions and get ranks
+        sorted_indices = tf.argsort(predictions_for_query, direction='DESCENDING').numpy()
+        # print('sorted_indices', sorted_indices) 
+        best_output = sorted_indices[0]
+        best_ranked_query = queries[i][best_output]  # Get the query with the highest score
+        query_id = queries[i][0]  # Get the query name
+        ranks[query_id] = best_ranked_query  # Store the rank of the best output for the query
+        # print('query_id', query_id, 'best_ranked_query', best_ranked_query)
+
+    if output_file:
+        # Write ranks to file (e.g., CSV, JSON, text file)
+        with open(output_file, 'w') as f:
+            for query_id, best_query in ranks.items():
+                f.write(f"{query_id}:{best_query}\n")  # Example CSV format
+    print()
+    return ranks # return the ranks dictionary

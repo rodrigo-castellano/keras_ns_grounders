@@ -203,6 +203,23 @@ class DataGenerator(tf.keras.utils.Sequence):
             deterministic=self.deterministic) 
 
         return (X_domains_data, A_predicates_data, A_rules_data, Q), {'concept': y, 'task': y}
+    
+    def _get_batch_with_queries(self):
+
+        queries, labels = self.dataset[:]
+        constants_features = self.dataset.constants_features
+
+        ((X_domains_data, A_predicates_data, A_rules_data, Q), y) = _from_strings_to_tensors(
+            fol=self.fol,
+            serializer=self.serializer,
+            queries=queries,
+            labels=labels,
+            engine=self.engine,
+            ragged=self.ragged,
+            constants_features=constants_features,
+            deterministic=self.deterministic) 
+
+        return queries, (X_domains_data, A_predicates_data, A_rules_data, Q), {'concept': y, 'task': y}
 
 
 
