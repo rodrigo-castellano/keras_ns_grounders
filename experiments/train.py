@@ -328,7 +328,7 @@ def main(data_path, log_filename, use_WB, args):
 
     if get_arg(args, 'store_ranks', False):
         from ns_lib.utils import evaluate_and_store_ranks
-        evaluate_and_store_ranks(model, data_gen_test, seed, args)
+        evaluate_and_store_ranks(model, data_gen_test, seed, args, test_metrics['task_mrr'])
         
     if explain_enabled and enable_rules and (args.model_name == 'dcr' or args.model_name == 'cdcr'):
         model.explain_mode(True)
