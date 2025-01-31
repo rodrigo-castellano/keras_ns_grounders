@@ -74,7 +74,7 @@ def read_atoms(paths: List[str], format: str):
     atoms = []
     for file in paths:
         if not os.path.exists(file):
-            print('Skipping reading %s because missing' % file, flush=True)
+            print('Skipping reading %s because missing' % file, flush=True) if 'facts' not in file else None
             continue
         atoms += [Atom(s=s, format=format).toTuple()
                   for s in read_file_as_lines(file)]
