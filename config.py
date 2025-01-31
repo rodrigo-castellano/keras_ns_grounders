@@ -55,7 +55,7 @@ def update_config(run: argparse.Namespace) -> argparse.Namespace:
     dataset = run.dataset_name
     run.num_rules = 0 if run.model_name == "no_reasoner" else 1
     run.valid_frequency = 5 if not run.early_stopping else 1
-    run.resnet = 'ablation' not in dataset
+    run.resnet = False if 'ablation' not in dataset else run.resnet
     run.r2n_prediction_type = 'head' if 'ablation' in dataset else 'full'
     run.reasoner_atom_embedding_size = run.kge_atom_embedding_size
     run.reasoner_formula_hidden_embedding_size = run.kge_atom_embedding_size
