@@ -27,10 +27,6 @@ explain_enabled: bool = False
 
 def main(data_path, log_filename, use_WB, args):
 
-    # # Start the TensorFlow Profiler server
-    # tf.profiler.experimental.server.start(6009)  # Choose any available port, e.g., 6009
-
-    print('\nARGS', args,'\n')
     seed = get_arg(args, 'seed_run_i', 0)
     random.seed(seed)
     np.random.seed(seed)
@@ -241,13 +237,7 @@ def main(data_path, log_filename, use_WB, args):
 
     callbacks.append(model_checkpoint)
     callbacks.append(kge_model_checkpoint)
-
-    # # Set up logging for TensorBoard
-    # import datetime
-    # log_dir = os.path.join("./../logs", "fit", datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-    # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, profile_batch=(1, 19))
-    # callbacks.append(tensorboard_callback)
-    
+   
 
     # Initialize a W&B run
     if use_WB:
