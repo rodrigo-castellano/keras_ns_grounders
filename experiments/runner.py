@@ -107,7 +107,7 @@ if __name__ == '__main__':
         args.model_name = model_name 
         args.rule_miner = rule_miner 
         args.seed = seed
-        if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237'): # For heavy datasets, run only one seed
+        if (dataset_name == 'pharmkg_full' or dataset_name == 'wn18rr' or dataset_name == 'FB15k237' or dataset_name == 'kinship_family'): # For heavy datasets, run only one seed
             args.seed = [0]
         args.kge_atom_embedding_size = e
         args.batch_size = 256 # Full batch only for explain.
