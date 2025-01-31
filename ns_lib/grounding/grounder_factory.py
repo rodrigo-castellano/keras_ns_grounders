@@ -12,7 +12,6 @@ def get_arg(args, name: str, default=None, assert_defined: bool=False):
 def BuildGrounder(args, rules: List[Rule], facts: List[Tuple], fol: FOL,
                   domain2adaptive_constants: Dict[str, List[str]]):
     type = args.grounder
-    print('Building Grounder', type, flush=True)
 
     if 'backward' in type:
         # if the count of '_' the name is 2, it means that the parameter 'a' is included. Else there is no parameter a. It goes after the first '_'
@@ -25,7 +24,7 @@ def BuildGrounder(args, rules: List[Rule], facts: List[Tuple], fol: FOL,
             backward_depth = int(type[-1])
             type = 'BackwardChainingGrounder'
         prune_incomplete_proofs = False if 'noprune' in args.grounder else True
-        print('Grounder: ',args.grounder,'backward_depth:', backward_depth, 'Prune:', prune_incomplete_proofs, 'backward_width:', backward_width)
+        print('Grounder: ',args.grounder,'backward_depth:', backward_depth, 'Prune:', prune_incomplete_proofs, 'backward_width:', backward_width,'\n')
 
     if type == 'ApproximateBackwardChainingGrounder':
         # Requires Horn Clauses.
