@@ -30,7 +30,7 @@ class ExperimentConfig:
                 'model_name': ['r2n'],
                 'kge': ['complex'],
                 'seed': [[0, 1, 2, 3, 4]],
-                'epochs': [1], #[100],
+                'epochs': [100],
                 'batch_size': [256],
                 'val_batch_size': [256],
                 'test_batch_size': [256],
