@@ -30,12 +30,13 @@ class ExperimentConfig:
                 'model_name': ['r2n'],
                 'kge': ['complex'],
                 'seed': [[0, 1, 2, 3, 4]],
-                'epochs': [100],
+                'epochs': [1], #[100],
                 'batch_size': [256],
                 'val_batch_size': [256],
                 'test_batch_size': [256],
                 'rule_miner': ['amie', 'None'],
                 'resnet': [True],
+                'store_ranks': [False],
 
                 'use_logger': [True],
                 'use_WB': [True],
@@ -71,21 +72,23 @@ class ExperimentConfig:
         parser.add_argument("--log_folder", default = None, help="log folder")
         parser.add_argument("--ckpt_folder", default = None, help="ckpt folder")
         parser.add_argument("--resnet", default = None, help="reset")
+        parser.add_argument("--store_ranks", default = None, help="reset")
         parser.add_argument("--epochs", default = None, help="epochs")
         
         args = parser.parse_args()
         # Update configuration with command line arguments
-        if args.d: self.datasets = args.d
-        if args.m: self.models = args.m
-        if args.g: self.grounders = args.g
-        if args.s: self.seeds = [ast.literal_eval(args.s)]
+        if args.d: self.dataset_name = args.d
+        if args.m: self.model_name = args.m
+        if args.g: self.grounder = args.g
+        if args.s: self.seed = [ast.literal_eval(args.s)]
         if args.load_model_ckpt: self.load_model_ckpt = [args.load_model_ckpt]
         if args.load_kge_ckpt: self.load_kge_ckpt = [args.load_kge_ckpt]
         if args.save_model_ckpt: self.save_model_ckpt = [args.save_model_ckpt]
         if args.log_folder: self.log_folder = [args.log_folder]
         if args.ckpt_folder: self.ckpt_folder = [args.ckpt_folder]
         if args.resnet: self.resnet = [args.resnet]
-        if args.epochs: self.epochs = [args.epochs]
+        if args.store_ranks: self.store_ranks = [args.store_ranks]
+        if args.epochs: self.epochs = [int(args.epochs)]
 
 
 def setup_tf():
@@ -125,7 +128,7 @@ def run_experiment(run):
 
     for seed in run.seed:
         run.seed_run_i = seed
-        print(f"Seed {seed} in {run.seed}")
+        print(f"\n\nSeed {seed} in {run.seed}")
         
         log_filename_tmp = os.path.join(log_folder, f'_tmp_log-{run.run_signature}-{logger.date}-seed_{seed}.csv') if use_logger else None
         
@@ -135,15 +138,15 @@ def run_experiment(run):
         metrics = main_train(data_path, log_filename_tmp, use_WB, run)
         
         if use_logger:
-            logged_data = {
-                **copy.deepcopy(run).__dict__,
+            # logged_data = {**copy.deepcopy(run).__dict__}
+            dicts_metrics = {
                 'train': metrics[0], 'valid': metrics[1], 
-                'test': metrics[2], 'training_info': metrics[3]
-            }
+                'test': metrics[2], 'training_info': metrics[3]}
             task_mrr = np.round(metrics[2]['task_mrr'], 3)
+            logger.log(log_filename_tmp,run.__dict__,dicts_metrics)
             final_log = os.path.join(log_folder, 'indiv_runs', 
                 f'_ind_log-{run.run_signature}-{logger.date}-{task_mrr}-seed_{seed}.csv')
-            logger.log(log_filename_tmp, logged_data, final_log)
+            logger.finalize_log_file(log_filename_tmp,final_log)
 
     if use_logger: 
         logger.get_avg_results(run.__dict__, run.run_signature, run.seed)
@@ -157,14 +160,11 @@ def main():
     print(f"Running {len(experiments)} experiments:")
     for idx, run in enumerate(experiments):
         print(f"\nExperiment {idx+1}/{len(experiments)}")
-        data_path = run.data_path
-        rules_file = run.rules_file
-        dataset_name = run.dataset_name
 
-        if not os.path.exists(os.path.join(data_path, dataset_name)):
-            print('skipping, dataset not existing', os.path.join(data_path, dataset_name))
+        if not os.path.exists(os.path.join(run.data_path, run.dataset_name)):
+            print('skipping, dataset not existing', os.path.join(run.data_path, run.dataset_name))
         if (run.model_name == 'no_reasoner' and run.grounder not in {'backward_1_1'}) or \
-            not os.path.exists(os.path.join(data_path, dataset_name, run.rules_file)):
+            not os.path.exists(os.path.join(run.data_path, run.dataset_name, run.rules_file)):
             continue
 
         run_experiment(run)
