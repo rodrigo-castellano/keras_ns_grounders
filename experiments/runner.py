@@ -25,9 +25,9 @@ class ExperimentConfig:
     def __init__(self):
  
         self.defaults = {
-                'dataset_name': ['wn18rr'],
+                'dataset_name': ['countries_s1'],
                 'grounder': ['backward_1_1'],
-                'model_name': ['sbr'],
+                'model_name': ['r2n'],
                 'kge': ['complex'],
                 'seed': [[0, 1, 2, 3, 4]],
                 'epochs': [1], #[100],
