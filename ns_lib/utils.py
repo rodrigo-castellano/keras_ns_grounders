@@ -1235,7 +1235,7 @@ def evaluate_and_store_ranks(model, data_gen_test, seed, args, metric):
     """Evaluates the model and stores query ranks to a file."""
     print('Evaluating model and storing ranks...')
     os.makedirs('./experiments/ranks/ranking', exist_ok=True)
-    output_file = f'./experiments/ranks/ranking/{args.run_signature}_seed_{seed}.txt'
+    output_file = f'./experiments/ranks/ranking/{args.run_signature}-seed_{seed}.txt'
     ranks = {}  # Or use a list if you don't need query IDs
     # for j,batch in enumerate(data_gen_test):  # Iterate through your test data generator
     queries, x, y_true = data_gen_test._get_batch_with_queries()
@@ -1261,7 +1261,7 @@ def evaluate_and_store_ranks(model, data_gen_test, seed, args, metric):
 
     if output_file:
         # Write ranks to file (e.g., CSV, JSON, text file)
-        with open(f'./experiments/ranks/ranking/ranks_{args.run_signature}_seed_{seed}_{metric}.txt', 'w') as f:
+        with open(f'./experiments/ranks/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric,3)}.txt', 'w') as f:
             for query_id, best_query in ranks.items():
                 f.write(f"{query_id}:{best_query}\n")  # Example CSV format
     print()
