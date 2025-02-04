@@ -290,6 +290,7 @@ def main(data_path, log_filename, use_WB, args):
         args.time_train = 0
     
     # save_embeddings_from_model(model, fol, serializer, save_dir="./../embeddings/"+args.run_signature)    
+    
     # EVALUATION
     print("\nEvaluation test", flush=True)
     start_inf = time.time()

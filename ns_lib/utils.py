@@ -324,7 +324,7 @@ def load_model_weights(model, ckpt_filepath, verbose=True):
     if os.path.exists(ckpt_filepath + '.weights.h5'):
         ckpt_filepath = ckpt_filepath + '.weights.h5'
     else:
-        print('THERE IS NO FILE:', ckpt_filepath + '.weights.h5','\n')
+        print('\nTHERE IS NO FILE:', ckpt_filepath + '.weights.h5','\n')
         return False
     
 
@@ -335,10 +335,10 @@ def load_model_weights(model, ckpt_filepath, verbose=True):
         # checkpoint.restore(ckpt_filepath)
         success = True
         if verbose:
-            print('Weights loaded from', ckpt_filepath)
+            print('\nWeights loaded from', ckpt_filepath,'\n')
     else:
         if verbose:
-            print('Weights not found in', ckpt_filepath)
+            print('\nWeights not found in', ckpt_filepath,'\n')
     return success
 
 
@@ -1231,38 +1231,43 @@ def save_embeddings_from_model(model, fol, serializer, save_dir="embeddings"):
 
 
 
-def evaluate_and_store_ranks(model, data_gen_test, seed, args, metric):
-    """Evaluates the model and stores query ranks to a file."""
+def evaluate_and_store_ranks(model, data_gen_test, seed, args, metric, batch_size=32):
+    """Evaluates the model in batches and stores query ranks to a file incrementally."""
     print('Evaluating model and storing ranks...')
     os.makedirs('./experiments/ranks/ranking', exist_ok=True)
-    output_file = f'./experiments/ranks/ranking/{args.run_signature}_seed_{seed}.txt'
-    ranks = {}  # Or use a list if you don't need query IDs
-    # for j,batch in enumerate(data_gen_test):  # Iterate through your test data generator
-    queries, x, y_true = data_gen_test._get_batch_with_queries()
-    y_true = y_true['task']
-    y_pred = model(x)  # Get predictions
-    # Assuming y_pred shape is (batch_size, num_candidates)
-    y_pred = y_pred['task']
-    # Calculate ranks for the current batch (adapt as needed for your data format)
-    for i in range(y_pred.shape[0]): # loop over the elements of the batch
-        if len(queries[i]) == 0 or len(queries[i]) == 1:
-            continue # skip the queries with no or one query (only positive query)
-        print(f"\rProcessed {i + 1}/{y_pred.shape[0]} queries ({(i + 1) / y_pred.shape[0] * 100:.2f}%)", end="")
-        predictions_for_query = y_pred[i]
-        # true_labels_for_query = y_true[i]
-        # Sort predictions and get ranks
-        sorted_indices = tf.argsort(predictions_for_query, direction='DESCENDING').numpy()
-        # print('sorted_indices', sorted_indices) 
-        best_output = sorted_indices[0]
-        best_ranked_query = queries[i][best_output]  # Get the query with the highest score
-        query_id = queries[i][0]  # Get the query name
-        ranks[query_id] = best_ranked_query  # Store the rank of the best output for the query
-        # print('query_id', query_id, 'best_ranked_query', best_ranked_query)
+    output_file = f'./experiments/ranks/ranking/{args.run_signature}-seed_{seed}.txt'
+    
+    dataset_size = len(data_gen_test.dataset)
+    
+    # Open the file in write mode initially to clear any existing content
+    with open(output_file, 'w') as f:
+        f.write('')
 
-    if output_file:
-        # Write ranks to file (e.g., CSV, JSON, text file)
-        with open(f'./experiments/ranks/ranking/ranks_{args.run_signature}_seed_{seed}_{metric}.txt', 'w') as f:
-            for query_id, best_query in ranks.items():
-                f.write(f"{query_id}:{best_query}\n")  # Example CSV format
-    print()
-    return ranks # return the ranks dictionary
+    for start_idx in range(0, dataset_size, batch_size):
+        queries, x, y_true = data_gen_test._get_batch_with_queries(start_idx, batch_size)
+        y_true = y_true['task']
+        y_pred = model(x)['task']  # Get predictions
+
+        batch_ranks = {}  # Store batch results temporarily
+        
+        for i in range(y_pred.shape[0]):
+            if len(queries[i]) == 0 or len(queries[i]) == 1:
+                continue  # Skip queries with no or one query
+
+            print(f"\rProcessed query {start_idx + i + 1}/{dataset_size} ({(start_idx + i + 1) / dataset_size * 100:.2f}%)", end="")
+
+            predictions_for_query = y_pred[i]
+            sorted_indices = tf.argsort(predictions_for_query, direction='DESCENDING').numpy()
+            best_output = sorted_indices[0]
+            best_ranked_query = queries[i][best_output]
+            query_id = queries[i][0]  # Get query name
+            
+            batch_ranks[query_id] = best_ranked_query  # Store in batch dictionary
+        
+        # Write results for this batch to file immediately
+        with open(f'./experiments/ranks/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric, 3)}.txt', 'a') as f:
+            for query_id, best_query in batch_ranks.items():
+                f.write(f"{query_id}:{best_query}\n")
+
+    print(f"\nRanks written to {output_file}")
+    return output_file  # Return file path for reference

@@ -28,15 +28,13 @@ np.random.seed(0)
 tf.random.set_seed(0)
 
 
-args.grounder = 'backward_1_3'
+args.grounder = 'backward_1_2'
 # args.grounder = 'backwardnoprune_2_1'
 
-args.dataset_name = 'countries_s3'
-# args.dataset_name = 'wn18rr'
-# args.dataset_name = 'kinship_family'
+# args.dataset_name = 'countries_s3'
+args.dataset_name = 'wn18rr'
 # args.dataset_name = 'FB15k237'
 # args.dataset_name = 'pharmkg_full'
-# args.dataset_name = 'dummy'
 args.data_path = "experiments/data"
 args.facts_file = 'facts.txt'
 args.train_file = 'train.txt'  
@@ -48,6 +46,9 @@ args.rules_file = 'rules_amie.txt' if (args.dataset_name == 'kinship_family') el
 # args.rules_file = 'rules_pca.txt'
 # args.rules_file = 'rules_std.txt'
 # args.rules_file = 'rules_best.txt'
+# args.rules_file = 'rules_generated_amie.txt'
+args.rules_file = 'rules_michelangelo.txt'
+# args.rules_file = 'rules.txt'
 
 
 args.num_negatives = 0
@@ -109,7 +110,7 @@ if type == 'ApproximateBackwardChainingGrounder':
         prune_incomplete_proofs=prune_incomplete_proofs,
         max_groundings_per_rule=get_arg(
             args, 'backward_chaining_max_groundings_per_rule', -1),
-        force_determinism=True)
+        force_determinism=False)
 
 
 # engine = BuildGrounder(args, rules, facts=facts, fol=fol, domain2adaptive_constants=None)
@@ -117,7 +118,7 @@ if type == 'ApproximateBackwardChainingGrounder':
 import time
 start = time.time()
 
-# queries = queries[:1]
+queries = queries[:1000]
 print('number of queries:',len(queries))
 
 len_groundings = []
@@ -127,7 +128,7 @@ for query in queries:
     facts = sorted(facts)
     ground_formulas = engine.ground(sorted(tuple(facts)),tuple(ns.utils.to_flat(query)),deterministic=True)
 
-    # print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
+    print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
     len_groundings.append(len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
     n_queries_with_groundings += 1 if len_groundings[-1] > 0 else 0
 
