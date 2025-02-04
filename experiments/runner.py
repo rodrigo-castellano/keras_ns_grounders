@@ -25,27 +25,27 @@ class ExperimentConfig:
     def __init__(self):
  
         self.defaults = {
-                'dataset_name': ['countries_s1'],
-                'grounder': ['backward_1_1'],
-                'model_name': ['r2n'],
+                'dataset_name': ['kinship_family'],
+                'grounder': ['backward_0_1'],
+                'model_name': ['dcr'],
                 'kge': ['complex'],
-                'seed': [[0, 1, 2, 3, 4]],
-                'epochs': [100],
+                'seed': [[0]],
+                'epochs': [100], # [100]
                 'batch_size': [256],
                 'val_batch_size': [256],
                 'test_batch_size': [256],
                 'rule_miner': ['amie', 'None'],
-                'resnet': [True],
-                'store_ranks': [False],
+                'resnet': [True], #[True]
+                'store_ranks': [False], #[False]
 
                 'use_logger': [True],
                 'use_WB': [True],
-                'load_model_ckpt': [False],
+                'load_model_ckpt': [False], # [False],
                 'load_kge_ckpt': [False],
                 'save_model_ckpt': [True],
                 'save_kge_ckpt': [True],
-                'log_folder': ["./experiments/runs/"],
-                'ckpt_folder': ["./../checkpoints/"],
+                'log_folder': ["./experiments/runs/"], #["./experiments/runs/"],
+                'ckpt_folder': ["./../checkpoints/"], #["./../checkpoints/"],
                 'data_path': ["experiments/data"],
         }
 
