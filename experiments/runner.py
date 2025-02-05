@@ -34,7 +34,6 @@ class ExperimentConfig:
                 'batch_size': [256],
                 'val_batch_size': [256],
                 'test_batch_size': [256],
-                'rule_miner': ['amie', 'None'],
                 'resnet': [True], #[True]
                 'store_ranks': [False], #[False]
 
