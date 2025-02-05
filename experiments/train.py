@@ -207,11 +207,11 @@ def main(data_path, log_filename, use_WB, args):
     
     if args.early_stopping:
         early_stopping = keras.callbacks.EarlyStopping(
-            monitor="val_loss",
-            mode='min',
-            # monitor="val_task_mrr",
-            # mode='max'
-            patience=20,
+            # monitor="val_loss",
+            # mode='min',
+            monitor="val_task_mrr",
+            mode='max'
+            patience=40,
             verbose=1,
             )
         callbacks.append(early_stopping)
