@@ -19,7 +19,7 @@ def update_config(run: argparse.Namespace) -> argparse.Namespace:
         'dropout_rate_embedder': 0.0,
         'kge_regularization': 0.0,
         # Model params
-        'early_stopping': True,
+        'early_stopping': False,
         'learning_rate': 0.01,
         'lr_sched': 'plateau',
         'optimizer': 'adam',
@@ -54,8 +54,8 @@ def update_config(run: argparse.Namespace) -> argparse.Namespace:
     # Dataset-specific settings
     dataset = run.dataset_name
     run.num_rules = 0 if run.model_name == "no_reasoner" else 1
-    run.valid_frequency = 5 if not run.early_stopping else 1
-    run.resnet = False if 'ablation' not in dataset else run.resnet
+    run.valid_frequency = 1# 5 if not run.early_stopping else 1
+    run.resnet = False if 'ablation' in dataset else run.resnet
     run.r2n_prediction_type = 'head' if 'ablation' in dataset else 'full'
     run.reasoner_atom_embedding_size = run.kge_atom_embedding_size
     run.reasoner_formula_hidden_embedding_size = run.kge_atom_embedding_size

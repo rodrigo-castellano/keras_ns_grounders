@@ -28,11 +28,12 @@ np.random.seed(0)
 tf.random.set_seed(0)
 
 
-args.grounder = 'backward_1_2'
+args.grounder = 'backward_0_1'
 # args.grounder = 'backwardnoprune_2_1'
 
 # args.dataset_name = 'countries_s3'
-args.dataset_name = 'wn18rr'
+args.dataset_name = 'kinship_family'
+# args.dataset_name = 'wn18rr'
 # args.dataset_name = 'FB15k237'
 # args.dataset_name = 'pharmkg_full'
 args.data_path = "experiments/data"
@@ -47,7 +48,7 @@ args.rules_file = 'rules_amie.txt' if (args.dataset_name == 'kinship_family') el
 # args.rules_file = 'rules_std.txt'
 # args.rules_file = 'rules_best.txt'
 # args.rules_file = 'rules_generated_amie.txt'
-args.rules_file = 'rules_michelangelo.txt'
+# args.rules_file = 'rules_michelangelo.txt'
 # args.rules_file = 'rules.txt'
 
 
@@ -128,7 +129,7 @@ for query in queries:
     facts = sorted(facts)
     ground_formulas = engine.ground(sorted(tuple(facts)),tuple(ns.utils.to_flat(query)),deterministic=True)
 
-    print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
+    # print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
     len_groundings.append(len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
     n_queries_with_groundings += 1 if len_groundings[-1] > 0 else 0
 
@@ -138,7 +139,7 @@ for query in queries:
         # for grounding in ground_formulas[rule]:
             # print(grounding[0][0],'       ',grounding[1][0], grounding[1][1])
 
-print('avg number of grounding:',round(np.mean(len_groundings),3), 'std:',round(np.std(len_groundings),3))
+print('num groundings:', sum(len_groundings),'avg number of grounding:',round(np.mean(len_groundings),3), 'std:',round(np.std(len_groundings),3))
 print('coverage:',round(n_queries_with_groundings/len(queries),3))
 
 # ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
