@@ -1,9 +1,9 @@
 import re
 import sys
  
-
-paths = ['./train_FB15k237']#, './train_nations','train_kinship_family']
-# save_path = path+'_triples'
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+paths = [current_dir+'/train_umls']#, './train_nations','train_kinship_family']
 
 for path in paths:
     atoms = []

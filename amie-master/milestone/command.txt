@@ -1,1 +1,1 @@
-java -jar amie-milestone-intKB.jar data/train_FB15k237.tsv >> rules/full.txt
+java -jar amie-master/milestone/amie-milestone-intKB.jar amie-master/milestone/data/train_umls.tsv >> amie-master/milestone/rules/umls_full.txt

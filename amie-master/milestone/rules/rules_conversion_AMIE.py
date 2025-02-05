@@ -7,8 +7,9 @@ import sys
 
 std_confidence_threshold = 0.0
 max_rules = 5000
-
-path = './FB15k237'
+import os
+current_path = os.path.dirname(os.path.realpath(__file__))
+path = current_path + '/umls'
 save_path = path+'_filtered'
 
 rules = []
@@ -50,8 +51,10 @@ with open(path+'.txt', 'r') as f:
         if std_confidence >= std_confidence_threshold :
             rules.append(( head, predicates,std_confidence,pca_confidence,head_coverage))
 
-# order the rules by std_confidence and then by pca_confidence and then by head coverage
+# # order the rules by std_confidence and then by pca_confidence and then by head coverage
 rules = sorted( rules, key=lambda x: (x[2], x[3], x[4]), reverse=True)
+# order the rules by head coverage, then by pca_confidence and then by std_confidence and then  
+# rules = sorted( rules, key=lambda x: (x[4], x[3], x[2]), reverse=True)
 #filter the number of rules
 rules = rules[:max_rules]
 
