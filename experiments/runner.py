@@ -163,9 +163,7 @@ def main():
 
         if not os.path.exists(os.path.join(run.data_path, run.dataset_name)):
             print('skipping, dataset not existing', os.path.join(run.data_path, run.dataset_name))
-        if (run.model_name == 'no_reasoner' and run.grounder not in {'backward_1_1'}) or \
-            not os.path.exists(os.path.join(run.data_path, run.dataset_name, run.rules_file)):
-            continue
+        assert os.path.exists(os.path.join(run.data_path, run.dataset_name, run.rules_file)), 'Rules file not found'
 
         run_experiment(run)
 

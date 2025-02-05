@@ -74,11 +74,6 @@ def update_config(run: argparse.Namespace) -> argparse.Namespace:
     else:
         run.test_batch_size = 256
 
-
-    # Rule miner selection
-    rules_files = {'amie': 'rules_amie.txt', 'ncrl': 'rules_ncrl.txt', 'None': 'rules.txt'}
-    run.rules_file = rules_files.get(run.rule_miner, ValueError(f'Rule miner not recognized for {run.dataset_name}'))
-
     run.test_negatives = 1000 if run.dataset_name == 'FB15k237' else None  # all possible negatives
 
     # Embedding size adjustments
