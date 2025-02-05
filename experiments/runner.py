@@ -128,7 +128,8 @@ def run_experiment(run):
 
     for seed in run.seed:
         run.seed_run_i = seed
-        print(f"\n\nSeed {seed} in {run.seed}")
+        print('\n\nSignature:', run.run_signature)
+        print(f"Seed {seed} in {run.seed}")
         
         log_filename_tmp = os.path.join(log_folder, f'_tmp_log-{run.run_signature}-{logger.date}-seed_{seed}.csv') if use_logger else None
         
