@@ -210,7 +210,7 @@ def main(data_path, log_filename, use_WB, args):
             # monitor="val_loss",
             # mode='min',
             monitor="val_task_mrr",
-            mode='max'
+            mode='max',
             patience=40,
             verbose=1,
             )
