@@ -279,8 +279,9 @@ def main(data_path, log_filename, use_WB, args):
         print('Training time:', np.round(end_train - start_train,2), 'seconds')
 
         # Restore the best weights after training
-        kge_model_checkpoint.restore_weights() if args.load_kge_ckpt else model_checkpoint.restore_weights()
-        model_checkpoint.write_train_time(args.time_train)
+        model_checkpoint.restore_weights() if args.save_model_ckpt else kge_model_checkpoint.restore_weights()
+        model_checkpoint.restore_weights()
+        model_checkpoint.write_train_time(args.time_train) if args.save_model_ckpt else kge_model_checkpoint.write_train_time(args.time_train)
 
     else:
         if use_WB:
