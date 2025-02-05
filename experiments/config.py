@@ -19,7 +19,7 @@ def update_config(run: argparse.Namespace) -> argparse.Namespace:
         'dropout_rate_embedder': 0.0,
         'kge_regularization': 0.0,
         # Model params
-        'early_stopping': False,
+        'early_stopping': True,
         'learning_rate': 0.01,
         'lr_sched': 'plateau',
         'optimizer': 'adam',
