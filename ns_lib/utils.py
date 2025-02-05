@@ -465,7 +465,7 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
         if improved:
             if self.verbose:
                 print(f'\nBest {self.name} {self.monitor}: {current_value:.5f}. '
-                      f'Delta = {self.best_value-current_value:.5f}') if self.best_epoch is not None else None
+                      f'Delta = {self.best_value-current_value:.5f}. Epoch {epoch+1}') if self.best_epoch is not None else None
             self.best_value = current_value
             self.best_epoch = epoch+1
             self.best_weights = self.model_.get_weights()
