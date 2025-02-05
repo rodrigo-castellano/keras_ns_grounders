@@ -49,8 +49,8 @@ def choose_lr_scheduler(name_lr_scheduler=None):
     elif name_lr_scheduler == 'polynomial_decay':
         lr_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(initial_learning_rate=1e-2,decay_steps=10000)
     elif name_lr_scheduler == 'plateau':
-        # lr_scheduler = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5,patience=10, min_lr=1e-4,min_delta=0.0001,mode='min') 
-        lr_scheduler = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_task_mrr', factor=0.5,patience=10, min_lr=1e-4,mode='max') 
+        lr_scheduler = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=1e-4,mode='min') 
+        # lr_scheduler = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_task_mrr', factor=0.5, patience=10, min_lr=1e-4,mode='max') 
     elif name_lr_scheduler == 'custom':
         lr_scheduler = tf.keras.callbacks.LearningRateScheduler(lr) # lr_exp function
     elif name_lr_scheduler == 'cyclical':
