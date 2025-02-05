@@ -29,7 +29,7 @@ class ExperimentConfig:
                 'grounder': ['backward_0_1'],
                 'model_name': ['dcr'],
                 'kge': ['complex'],
-                'seed': [[0]],
+                'seed': [[0,1,2,3,4]],
                 'epochs': [100], # [100]
                 'batch_size': [256],
                 'val_batch_size': [256],
