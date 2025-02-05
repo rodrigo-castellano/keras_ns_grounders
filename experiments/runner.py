@@ -25,7 +25,7 @@ class ExperimentConfig:
     def __init__(self):
  
         self.defaults = {
-                'dataset_name': ['kinship_family'],
+                'dataset_name': ['umls'],
                 'grounder': ['backward_0_1'],
                 'model_name': ['dcr'],
                 'kge': ['complex'],

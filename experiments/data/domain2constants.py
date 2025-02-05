@@ -1,13 +1,14 @@
 # take all the constants from train.txt for every line, with format predicate(constant1,constant2).
 # write the unique constants to domain2constants.txt
-dataset = 'countries_s2_nodomain'
+dataset = 'umls'
 # dataset = 'kinship_family'
 # path = './train.txt'
 # ctes_path = './domain2constants.txt'
-
-path = './'+dataset+'/train.txt'
-ctes_path = './'+dataset+'/domain2constants.txt'
-predicates_path = './'+dataset+'/relations.txt'
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+path = current_dir + '/'+dataset+'/train.txt'
+ctes_path = current_dir + '/'+dataset+'/domain2constants.txt'
+predicates_path = current_dir + '/'+dataset+'/relations.txt'
 
 constants = set()
 predicates = set()
@@ -37,7 +38,7 @@ with open(ctes_path, 'w') as f:
 #         f.write(pred + '\n')
 
 # for valid and test, cerate new files with only queries whose predicates and constants are present in the train set
-path = './'+dataset+'/valid.txt'
+path = current_dir + '/'+dataset+'/valid.txt'
 lines_valid = []
 with open(path, 'r') as f:  
     for line in open(path, 'r'):
@@ -49,12 +50,12 @@ with open(path, 'r') as f:
             lines_valid.append(line)
 
 # create a file called valid_new.txt with the lines
-with open('./'+dataset+'/valid_new.txt', 'w') as f:
+with open(current_dir + '/'+dataset+'/valid_new.txt', 'w') as f:
     for line in lines_valid:
         f.write(line)
 
 
-path = './'+dataset+'/test.txt'
+path = current_dir + '/'+dataset+'/test.txt'
 lines_valid = []
 with open(path, 'r') as f:  
     for line in open(path, 'r'):
@@ -66,7 +67,7 @@ with open(path, 'r') as f:
             lines_valid.append(line)
 
 # create a file called test_new.txt with the lines
-with open('./'+dataset+'/test_new.txt', 'w') as f:
+with open(current_dir + '/'+dataset+'/test_new.txt', 'w') as f:
     for line in lines_valid:
         f.write(line)
             
