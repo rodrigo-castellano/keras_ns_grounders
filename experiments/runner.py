@@ -103,7 +103,7 @@ def setup_tf():
 
 def generate_experiments(config):
     """Generate experiment configurations."""
-    from config import update_config
+    from experiments.config import update_config
     param_names = [attr for attr in dir(config) if not attr.startswith('_') and not callable(getattr(config, attr))]
     params = [getattr(config, name) for name in param_names]
 
