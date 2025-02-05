@@ -1235,7 +1235,7 @@ def evaluate_and_store_ranks(model, data_gen_test, seed, args, metric, batch_siz
     """Evaluates the model in batches and stores query ranks to a file incrementally."""
     print('Evaluating model and storing ranks...')
     os.makedirs('./experiments/ranks/ranking', exist_ok=True)
-    output_file = f'./experiments/ranks/ranking/{args.run_signature}-seed_{seed}.txt'
+    output_file = f'./experiments/ranks/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric, 3)}.txt'
     
     dataset_size = len(data_gen_test.dataset)
     
@@ -1265,7 +1265,7 @@ def evaluate_and_store_ranks(model, data_gen_test, seed, args, metric, batch_siz
             batch_ranks[query_id] = best_ranked_query  # Store in batch dictionary
         
         # Write results for this batch to file immediately
-        with open(f'./experiments/ranks/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric, 3)}.txt', 'a') as f:
+        with open(output_file, 'a') as f:
             for query_id, best_query in batch_ranks.items():
                 f.write(f"{query_id}:{best_query}\n")
 
