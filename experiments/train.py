@@ -134,6 +134,9 @@ def main(data_path, log_filename, use_WB, args):
         r2n_prediction_type=get_arg(args, 'r2n_prediction_type', 'full'),
     )
 
+    if args.stop_kge_gradients:
+        model.kge_model.trainable = False
+
 
     #LOSS
     loss_name = get_arg(args, 'loss', 'binary_crossentropy')
