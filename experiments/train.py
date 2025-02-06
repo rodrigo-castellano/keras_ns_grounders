@@ -136,6 +136,7 @@ def main(data_path, log_filename, use_WB, args):
 
     if args.stop_kge_gradients:
         model.kge_model.trainable = False
+        print('GRADIENTS OF KGE STOPPED')
 
 
     #LOSS
