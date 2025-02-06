@@ -136,6 +136,7 @@ def main(data_path, log_filename, use_WB, args):
 
     if args.stop_kge_gradients:
         model.kge_model.trainable = False
+        print('GRADIENTS OF KGE STOPPED')
 
 
     #LOSS
@@ -188,8 +189,8 @@ def main(data_path, log_filename, use_WB, args):
         if '_kge_model' in path_:
             # subtitute args.model_name with 'no_reasoner'
             path_ = path_.replace(args.model_name, 'no_reasoner')  
-            path_ = path_.replace(args.grounder, 'backward_1_1')
-            assert os.path.exists(os.path.dirname(path_)), 'The folder with no_reasoner does not exist'
+            path_ = path_.replace(args.grounder, 'backward_0_1')
+            assert os.path.exists(os.path.dirname(path_)), f'The folder with no_reasoner does not exist {os.path.dirname(path_)}'
             success = load_kge_weights(model, path_, verbose=True)
         else:
             success = load_model_weights(model, path_, verbose=True)
