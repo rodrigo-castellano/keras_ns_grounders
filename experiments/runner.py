@@ -36,6 +36,7 @@ class ExperimentConfig:
                 'test_batch_size': [256],
                 'resnet': [True], #[True]
                 'store_ranks': [False], #[False]
+                'stop_kge_gradients': [False],
 
                 'use_logger': [True],
                 'use_WB': [True],
@@ -73,6 +74,7 @@ class ExperimentConfig:
         parser.add_argument("--resnet", default = None, help="reset")
         parser.add_argument("--store_ranks", default = None, help="reset")
         parser.add_argument("--epochs", default = None, help="epochs")
+        parser.add_argument("--stop_kge_gradients", default = None, help="stop_kge_gradients")
         
         args = parser.parse_args()
         # Update configuration with command line arguments
@@ -88,6 +90,7 @@ class ExperimentConfig:
         if args.resnet: self.resnet = [args.resnet]
         if args.store_ranks: self.store_ranks = [args.store_ranks]
         if args.epochs: self.epochs = [int(args.epochs)]
+        if args.stop_kge_gradients: self.stop_kge_gradients = [args.stop_kge_gradients]
 
 
 def setup_tf():
