@@ -25,7 +25,7 @@ class ExperimentConfig:
     def __init__(self):
  
         self.defaults = {
-                'dataset_name': ['umls'],
+                'dataset_name': ['countries_s1'],
                 'grounder': ['backward_0_1'],
                 'model_name': ['dcr'],
                 'kge': ['complex'],
@@ -47,6 +47,7 @@ class ExperimentConfig:
                 'log_folder': ["./experiments/runs/"], #["./experiments/runs/"],
                 'ckpt_folder': ["./../checkpoints/"], #["./../checkpoints/"],
                 'data_path': ["experiments/data"],
+                'rules_file' : ['rules.txt'], 
         }
 
         # Initialize from defaults
@@ -75,6 +76,8 @@ class ExperimentConfig:
         parser.add_argument("--store_ranks", default = None, help="reset")
         parser.add_argument("--epochs", default = None, help="epochs")
         parser.add_argument("--stop_kge_gradients", default = None, help="stop_kge_gradients")
+        parser.add_argument("--rules_file", default = None, help="stop_kge_gradients")
+
         
         args = parser.parse_args()
         # Update configuration with command line arguments
@@ -82,15 +85,16 @@ class ExperimentConfig:
         if args.m: self.model_name = args.m
         if args.g: self.grounder = args.g
         if args.s: self.seed = [ast.literal_eval(args.s)]
-        if args.load_model_ckpt: self.load_model_ckpt = [args.load_model_ckpt]
-        if args.load_kge_ckpt: self.load_kge_ckpt = [args.load_kge_ckpt]
-        if args.save_model_ckpt: self.save_model_ckpt = [args.save_model_ckpt]
         if args.log_folder: self.log_folder = [args.log_folder]
         if args.ckpt_folder: self.ckpt_folder = [args.ckpt_folder]
-        if args.resnet: self.resnet = [args.resnet]
-        if args.store_ranks: self.store_ranks = [args.store_ranks]
         if args.epochs: self.epochs = [int(args.epochs)]
-        if args.stop_kge_gradients: self.stop_kge_gradients = [args.stop_kge_gradients]
+        if args.load_model_ckpt: self.load_model_ckpt = [ast.literal_eval(args.load_model_ckpt)]
+        if args.load_kge_ckpt: self.load_kge_ckpt = [ast.literal_eval(args.load_kge_ckpt)]
+        if args.save_model_ckpt: self.save_model_ckpt = [ast.literal_eval(args.save_model_ckpt)]
+        if args.stop_kge_gradients: self.stop_kge_gradients = [ast.literal_eval(args.stop_kge_gradients)]
+        if args.resnet: self.resnet = [ast.literal_eval(args.resnet)]
+        if args.store_ranks: self.store_ranks = [ast.literal_eval(args.store_ranks)]
+        if args.rules_file: self.rules_file = [args.rules_file]
 
 
 def setup_tf():
