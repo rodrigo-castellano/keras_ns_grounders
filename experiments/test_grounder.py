@@ -29,14 +29,14 @@ tf.random.set_seed(0)
 
 
 # args.grounder = 'backward_0_1'
-args.grounder = 'backward_1_2'
+args.grounder = 'backward_1_1'
 # args.grounder = 'backwardnoprune_2_1'
 
-args.dataset_name = 'umls'
+# args.dataset_name = 'umls'
 # args.dataset_name = 'nations'
 # args.dataset_name = 'countries_s3'
 # args.dataset_name = 'kinship_family'
-# args.dataset_name = 'wn18rr'
+args.dataset_name = 'wn18rr'
 # args.dataset_name = 'FB15k237'
 # args.dataset_name = 'pharmkg_full'
 args.data_path = "experiments/data"
@@ -45,15 +45,14 @@ args.train_file = 'train.txt'
 args.valid_file = 'valid.txt'
 args.test_file = 'test.txt'
 args.domain_file = 'domain2constants.txt'
-# args.rules_file = 'rules_head.txt'
-# args.rules_file = 'rules_pca.txt'
-# args.rules_file = 'rules_std.txt'
-# args.rules_file = 'rules_best.txt'
+# args.rules_file = 'rules.txt'
+
 # args.rules_file = 'rules_generated_amie.txt'
+args.rules_file = 'rules_amie_full.txt'
 # args.rules_file = 'rules_michelangelo.txt'
-# args.rules_file = 'rules_full_amie.txt'
-# args.rules_file = 'rules_amie.txt' 
-args.rules_file = 'rules.txt'
+# args.rules_file = 'rules_combined.txt'
+# args.rules_file = 'rules_uniker.txt'
+
 
 
 args.num_negatives = 0
@@ -123,7 +122,7 @@ if type == 'ApproximateBackwardChainingGrounder':
 import time
 start = time.time()
 
-# queries = queries[:1000]
+queries = queries[:1000]
 print('number of queries:',len(queries))
 
 len_groundings = []
