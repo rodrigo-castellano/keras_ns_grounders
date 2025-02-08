@@ -96,7 +96,7 @@ class ExperimentConfig:
         if args.resnet: self.resnet = [ast.literal_eval(args.resnet)]
         if args.store_ranks: self.store_ranks = [ast.literal_eval(args.store_ranks)]
         if args.rules_file: self.rules_file = [args.rules_file]
-        if ast.literal_eval(args.xkge): 
+        if args.xkge is not None and ast.literal_eval(args.xkge): 
             self.resnet = [False]
             self.store_ranks = [True]
             self.log_folder = ["./experiments/runs_xkge/"]
