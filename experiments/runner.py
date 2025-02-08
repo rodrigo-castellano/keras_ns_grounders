@@ -77,6 +77,7 @@ class ExperimentConfig:
         parser.add_argument("--epochs", default = None, help="epochs")
         parser.add_argument("--stop_kge_gradients", default = None, help="stop_kge_gradients")
         parser.add_argument("--rules_file", default = None, help="stop_kge_gradients")
+        parser.add_argument("--xkge", default = None, help="xkge")
 
         
         args = parser.parse_args()
@@ -95,6 +96,11 @@ class ExperimentConfig:
         if args.resnet: self.resnet = [ast.literal_eval(args.resnet)]
         if args.store_ranks: self.store_ranks = [ast.literal_eval(args.store_ranks)]
         if args.rules_file: self.rules_file = [args.rules_file]
+        if ast.literal_eval(args.xkge): 
+            self.resnet = [False]
+            self.store_ranks = [True]
+            self.log_folder = ["./experiments/runs_xkge/"]
+            self.ckpt_folder = ["./../checkpoints_xkge/"]
 
 
 def setup_tf():
