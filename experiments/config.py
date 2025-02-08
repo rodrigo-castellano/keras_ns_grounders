@@ -11,7 +11,6 @@ def update_config(run: argparse.Namespace) -> argparse.Namespace:
         'valid_file': 'valid.txt',
         'test_file': 'test.txt',
         'domain_file': 'domain2constants.txt',
-        'rules_file' : 'rules.txt', 
         # KGE params
         'num_negatives': 1, # in training
         'valid_negatives': 100,
@@ -94,7 +93,8 @@ def update_config(run: argparse.Namespace) -> argparse.Namespace:
         'test_negatives': run.test_negatives,
         'train_batch_size': run.batch_size,
         'val_batch_size': run.val_batch_size,
-        'test_batch_size': run.test_batch_size
+        'test_batch_size': run.test_batch_size,
+        'rules_file': run.rules_file,
     }
 
     run_vars = tuple(run_data.values())
