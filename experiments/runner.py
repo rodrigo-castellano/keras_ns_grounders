@@ -13,7 +13,7 @@ from train import main as main_train
 import ns_lib as ns
 import ast
 import numpy as np
-
+import yaml
 
 # Disable GPU if needed
 if "--gpu" not in sys.argv:
@@ -23,8 +23,10 @@ if "--gpu" not in sys.argv:
 class ExperimentConfig:
     """Central configuration class for experiment parameters"""
     def __init__(self):
+        
+        self.default = self.load_config_from_file(os.path.join(current_dir,'config.yaml')) # load config from json file
  
-        self.defaults = {
+        self.hparams = {
                 'dataset_name': ['countries_s1'],
                 'grounder': ['backward_0_1'],
                 'model_name': ['dcr'],
@@ -50,16 +52,36 @@ class ExperimentConfig:
                 'rules_file' : ['rules.txt'], 
         }
 
-        # Initialize from defaults
-        for key, val in self.defaults.items():
+        # update default with hparams
+        self.config_data = {**self.default, **self.hparams}
+
+        # Initialize from config_data
+        for key, val in self.config_data.items():
             setattr(self, key, val)
         
         # delete default values
-        del self.defaults
+        del self.hparams
+        del self.default
+        del self.config_data
         
         # Parse command line arguments
         self.parse_args()
-        
+
+    def load_config_from_file(self, config_file):
+        """Load configuration from a YAML file if it exists."""
+        try:
+            with open(config_file, 'r') as f:
+                config_data = yaml.safe_load(f) # Use yaml.safe_load for security
+                if config_data is None: # Handle empty YAML file
+                    config_data = {}
+                for key, val in config_data.items():
+                        config_data[key] = [val]
+        except FileNotFoundError:
+            print(f"Config file {config_file} not found. Using default settings from code.")
+        except yaml.YAMLError as e: # Catch YAML parsing errors
+            print(f"Error parsing YAML from {config_file}: {e}")
+        return config_data
+
     def parse_args(self):
         """Parse command line arguments"""
         parser = argparse.ArgumentParser(description='Experiment Runner')
@@ -115,10 +137,9 @@ def setup_tf():
 
 def generate_experiments(config):
     """Generate experiment configurations."""
-    from experiments.config import update_config
+    from experiments.update_config import update_config
     param_names = [attr for attr in dir(config) if not attr.startswith('_') and not callable(getattr(config, attr))]
     params = [getattr(config, name) for name in param_names]
-
     experiments = []
     for combination in product(*params):
         experiment = dict(zip(param_names, combination))
@@ -130,8 +151,6 @@ def generate_experiments(config):
 
 def run_experiment(run):
     """Run a single experiment configuration"""
-    sorted_run = {k: run.__dict__[k] for k in sorted(run.__dict__)}
-    print(f"\nRunning experiment: {sorted_run}")
     data_path, log_folder, use_logger, use_WB = run.data_path, run.log_folder, run.use_logger, run.use_WB
 
     if use_logger:
@@ -140,8 +159,7 @@ def run_experiment(run):
 
     for seed in run.seed:
         run.seed_run_i = seed
-        print('\n\nSignature:', run.run_signature)
-        print(f"Seed {seed} in {run.seed}")
+        print(f"\nSeed {seed} in {run.seed}")
         
         log_filename_tmp = os.path.join(log_folder, f'_tmp_log-{run.run_signature}-{logger.date}-seed_{seed}.csv') if use_logger else None
         

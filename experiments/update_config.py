@@ -4,51 +4,7 @@ import argparse
 def update_config(run: argparse.Namespace) -> argparse.Namespace:
     """Update configuration"""
 
-    updated_run = {
-        'valid_size': None,
-        'facts_file': 'facts.txt',
-        'train_file': 'train.txt',
-        'valid_file': 'valid.txt',
-        'test_file': 'test.txt',
-        'domain_file': 'domain2constants.txt',
-        # KGE params
-        'num_negatives': 1, # in training
-        'valid_negatives': 100,
-        'kge_atom_embedding_size': 100,
-        'dropout_rate_embedder': 0.0,
-        'kge_regularization': 0.0,
-        # Model params
-        'early_stopping': True,
-        'learning_rate': 0.01,
-        'lr_sched': 'plateau',
-        'optimizer': 'adam',
-        'loss': 'binary_crossentropy',
-        'weight_loss': 0.5,
-        'dropout': 0.0,
-        'cdcr_use_positional_embeddings': False,
-        'cdcr_num_formulas': 3,
-        'reasoner_depth': 1,
-        'reasoner_regularization_factor': 0.0,
-        'reasoner_dropout_rate': 0.0,
-        'kge_dropout_rate': 0.0,
-        'format': 'functional',
-        'engine_num_negatives': None,
-        'engine_num_adaptive_constants': 0,
-        'ragged': True,
-        # DCR/R2N params
-        'signed': True,
-        'temperature': 0.0,
-        'aggregation_type': 'max',
-        'filter_num_heads': 3,
-        'filter_activity_regularization': 0.0,
-        # Other
-        # args.adaptation_layer = "identity"  # "dense", "sigmoid","identity"
-        # args.output_layer = "dense" # "wmc" or "kge" or "positive_dense" or "max"
-        # args.relation_entity_grounder_max_elements = 20
-        # args.semiring = "product"
-    }
-
-    run = argparse.Namespace(**updated_run, **run.__dict__)
+    # run = argparse.Namespace(**updated_run, **run.__dict__)
 
     # Dataset-specific settings
     dataset = run.dataset_name
