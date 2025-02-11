@@ -89,8 +89,8 @@ class ExperimentConfig:
         parser.add_argument("--m", nargs='+', help="Models")
         parser.add_argument("--g", nargs='+', help="Grounders")
         parser.add_argument("--s", help="Seeds")
-        parser.add_argument("--load_model_ckpt", default = None, help="load model ckpt",nargs='+')
-        parser.add_argument("--load_kge_ckpt", default = None, help="load kge ckpt",nargs='+')
+        parser.add_argument("--load_model_ckpt", default = None, help="load model ckpt")
+        parser.add_argument("--load_kge_ckpt", default = None, help="load kge ckpt")
         parser.add_argument("--save_model_ckpt", default = None, help="save_model_ckpt")
         parser.add_argument("--log_folder", default = None, help="log folder")
         parser.add_argument("--ckpt_folder", default = None, help="ckpt folder")
@@ -103,6 +103,7 @@ class ExperimentConfig:
 
         
         args = parser.parse_args()
+
         # Update configuration with command line arguments
         if args.d: self.dataset_name = args.d
         if args.m: self.model_name = args.m
