@@ -27,6 +27,10 @@ explain_enabled: bool = False
 
 def main(data_path, log_filename, use_WB, args):
 
+    sorted_args = {k: args.__dict__[k] for k in sorted(args.__dict__)}
+    print('\nSignature:', args.run_signature)
+    print(f"\nRunning experiment: {sorted_args}\n")
+
     seed = get_arg(args, 'seed_run_i', 0)
     random.seed(seed)
     np.random.seed(seed)
