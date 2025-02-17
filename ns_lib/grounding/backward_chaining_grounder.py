@@ -138,8 +138,6 @@ def approximate_backward_chaining_grounding_one_rule(
             new_ground_atoms.add(((q,), groundings))
             continue
 
-        if force_determinism:
-            groundings = sorted(groundings)
         for ground_atom in groundings:
             # print('\n     -GROUND ATOM', ground_atom) if cont< lim else None
             # This loop is only needed to ground at least one atom in the body
@@ -389,14 +387,14 @@ class ApproximateBackwardChainingGrounder(Engine):
 
         if self.prune_incomplete_proofs:
             # check all the groundings with at least 1 atom missing, to see if they are proved (all atoms present in the facts)
-            time_start = time.time()
+            # time_start = time.time()
             # print('Num groundings before pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
             self.rule2groundings = PruneIncompleteProofs(self.rule2groundings,
                                                          self.rule2proofs,
                                                          self._fact_index,
-                                                         self.num_steps-1)
+                                                         self.num_steps)
             # print('Num groundings after pruning',sum([len(v) for k, v in self.rule2groundings.items()]))
-            time_end = time.time()
+            # time_end = time.time()
             # print('Time to prune', time_end - time_start)
         # This should be done after sorting the groundings to ensure the output
         # to be deterministic.
