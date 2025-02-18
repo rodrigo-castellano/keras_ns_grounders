@@ -357,32 +357,32 @@ class RotatE(KGELayer, Layer):
         head = c_embeddings[..., 0, :]
         tail = c_embeddings[..., 1, :]
 
-        if tf.shape(head)[0] == 0 or tf.shape(tail)[0] == 0:
+        # Use TensorFlow operations to handle the condition
+        head_shape = tf.shape(head)[0]
+        tail_shape = tf.shape(tail)[0]
+        condition = tf.logical_or(tf.equal(head_shape, 0), tf.equal(tail_shape, 0))
+
+        def zero_embeddings():
             return tf.zeros([0, self.atom_embedding_size])
 
-        re_head, im_head = tf.split(head, 2, axis=-1)
-        re_tail, im_tail = tf.split(tail, 2, axis=-1)
+        def compute_embeddings():
+            re_head, im_head = tf.split(head, 2, axis=-1)
+            re_tail, im_tail = tf.split(tail, 2, axis=-1)
 
-        phase_relation = p_embeddings * self.norm_factor
-        re_relation = tf.math.cos(phase_relation)
-        im_relation = tf.math.sin(phase_relation)
-        #hadamard = tf.multiply(tf.complex(re_head, im_head),
-        #                       tf.complex(re_relation, im_relation))
-        #complex_tail = tf.complex(re_tail, im_tail)
-        re_score = re_relation * re_tail + im_relation * im_tail
-        im_score = re_relation * im_tail - im_relation * re_tail
-        re_score = re_score - re_head
-        im_score = im_score - im_head
-        # embeddings = re_score - im_score  # (B,atom_emb_size)
-        embeddings = tf.math.sqrt(tf.maximum(
-            1e-9,
-            re_score * re_score + im_score * im_score))  # (B,atom_emb_size)
-        # embeddings = hadamard - complex_tail
-        #if self.regularization > 0.0:
-        #    self.add_loss(self.regularization * tf.nn.l2_loss(p_embeddings))
-        #if self.regularization_n3 > 0.0:
-        #    self.add_loss(self.regularization_n3 * tf.nn.l2_loss(embeddings))
+            phase_relation = p_embeddings * self.norm_factor
+            re_relation = tf.math.cos(phase_relation)
+            im_relation = tf.math.sin(phase_relation)
+            re_score = re_relation * re_tail + im_relation * im_tail
+            im_score = re_relation * im_tail - im_relation * re_tail
+            re_score = re_score - re_head
+            im_score = im_score - im_head
+            return tf.math.sqrt(tf.maximum(
+                1e-9,
+                re_score * re_score + im_score * im_score))  # (B,atom_emb_size)
+
+        embeddings = tf.cond(condition, zero_embeddings, compute_embeddings)
         return embeddings
+    
 
 ############################################
 class Tucker(KGELayer, Layer):
