@@ -32,6 +32,7 @@ domain_file: 'domain2constants.txt'
 # KGE parameters
 num_negatives: 1    # Number of negative samples in training
 valid_negatives: 100
+test_negatives: null
 kge_atom_embedding_size: 100
 dropout_rate_embedder: 0.0
 kge_regularization: 0.0

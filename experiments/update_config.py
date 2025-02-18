@@ -46,7 +46,7 @@ def update_config(run: argparse.Namespace) -> argparse.Namespace:
         'model_name': run.model_name,
         'kge': run.kge,
         'resnet': run.resnet,
-        'test_negatives': run.test_negatives,
+        # 'test_negatives': run.test_negatives,
         'train_batch_size': run.batch_size,
         'val_batch_size': run.val_batch_size,
         'test_batch_size': run.test_batch_size,
