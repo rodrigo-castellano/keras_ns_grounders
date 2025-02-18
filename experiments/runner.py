@@ -1,3 +1,21 @@
+import tensorflow as tf
+import os
+
+# if "--gpu" not in sys.argv:
+#     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+#     tf.config.set_soft_device_placement(True)
+
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+tf.config.set_soft_device_placement(True)
+
+# gpus = tf.config.experimental.list_physical_devices('GPU')
+# if gpus:
+#     for gpu in gpus:
+#         tf.config.experimental.set_memory_growth(gpu, True)
+# print("GPUs used: ", gpus)
+tf.config.run_functions_eagerly(False)
+
 import sys
 import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -7,7 +25,6 @@ sys.path.append(os.path.join(current_dir, '..', 'ns_lib'))
 import copy
 import argparse
 from itertools import product
-import tensorflow as tf
 import wandb
 from train import main as main_train
 import ns_lib as ns
@@ -15,10 +32,6 @@ import ast
 import numpy as np
 import yaml
 
-# Disable GPU if needed
-if "--gpu" not in sys.argv:
-    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-    tf.config.set_soft_device_placement(True)
 
 class ExperimentConfig:
     """Central configuration class for experiment parameters"""
@@ -41,7 +54,7 @@ class ExperimentConfig:
                 'stop_kge_gradients': [False],
 
                 'use_logger': [True],
-                'use_WB': [True],
+                'use_WB': [False],
                 'load_model_ckpt': [False], # [False],
                 'load_kge_ckpt': [False],
                 'save_model_ckpt': [True],
@@ -185,7 +198,7 @@ def run_experiment(run):
 
 def main():
     config = ExperimentConfig()
-    setup_tf()
+    # setup_tf()
     wandb.login()
     experiments = generate_experiments(config)
 
@@ -195,6 +208,8 @@ def main():
 
         if not os.path.exists(os.path.join(run.data_path, run.dataset_name)):
             print('skipping, dataset not existing', os.path.join(run.data_path, run.dataset_name))
+        if run.model_name == 'no_reasoner' and run.grounder != 'backward_0_1':
+            print('skipping, selec grounder 0_1 with no reasoner', run.grounder)
         assert os.path.exists(os.path.join(run.data_path, run.dataset_name, run.rules_file)), 'Rules file not found'
 
         run_experiment(run)
