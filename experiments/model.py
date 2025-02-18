@@ -293,7 +293,7 @@ class CollectiveModel(Model):
     def explain_mode(self, mode=True):
         self._explain_mode = mode
 
-
+    # @tf.function 
     def call(self, inputs, training=False, *args, **kwargs):
         '''
         X_domains type is Dict[str, tensor[constant_indices_in_domain]]

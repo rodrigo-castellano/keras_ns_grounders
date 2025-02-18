@@ -13,7 +13,7 @@ for f in files_with_reasoner:
     model_name = f.split('-')[2] 
     grounder = f.split('-')[1]
     metric = f.split('-')[-1]
-    no_reasoner = f.replace(model_name, 'no_reasoner').replace(grounder, 'backward_1_1').replace(metric, '')
+    no_reasoner = f.replace(model_name, 'no_reasoner').replace(grounder, 'backward_0_1').replace(metric, '')
     # print()
     found = False
     for f2 in files_no_reasoner:
