@@ -29,7 +29,7 @@ def update_config(run: argparse.Namespace) -> argparse.Namespace:
     else:
         run.test_batch_size = 256
 
-    run.test_negatives = 1000 if run.dataset_name == 'FB15k237' else None  # all possible negatives
+    # run.test_negatives = 1000 if run.dataset_name == 'FB15k237' else None  # all possible negatives
 
     # Embedding size adjustments
     kge_type = getattr(run, 'kge', '')
