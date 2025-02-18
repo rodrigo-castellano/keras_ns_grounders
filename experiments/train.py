@@ -20,7 +20,8 @@ import wandb
 from wandb.integration.keras import WandbCallback
 from wandb.integration.keras import WandbMetricsLogger
 from ns_lib.utils import save_embeddings_from_model
-
+from tensorflow.keras.callbacks import TensorBoard
+import datetime
 explain_enabled: bool = False
 
 
@@ -244,7 +245,39 @@ def main(data_path, log_filename, use_WB, args):
 
     callbacks.append(model_checkpoint)
     callbacks.append(kge_model_checkpoint)
-   
+
+    # # Add TensorBoard callback with profiling enabled
+    # REMEMBER TO ADD THE @tf.function decorator to the model's call method
+    # date = datetime.datetime.now()
+    # date_log = date.strftime("%Y_%m_%d_%H_%M_%S")
+    # log_dir = os.path.join("logs", "fit", date_log)
+    # tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch='0,10')
+    # callbacks.append(tensorboard_callback)
+
+    # class ProfilingCallback(tf.keras.callbacks.Callback):
+    #     def __init__(self, log_dir):
+    #         self.log_dir = log_dir
+    #         self.step = 0  # Initialize step counter
+
+    #     def on_train_begin(self, logs=None):
+    #         tf.profiler.experimental.start(self.log_dir)
+
+    #     def on_train_batch_begin(self, batch, logs=None):
+    #         # Start profiling step (Not always necessary with tf.function)
+    #         # tf.profiler.experimental.start_step()
+    #         pass  # No-op in most cases since model.fit() will use tf.function
+
+    #     def on_train_batch_end(self, batch, logs=None):
+    #         # End profiling step (Not always necessary with tf.function)
+    #         # tf.profiler.experimental.stop_step()
+    #         self.step += 1 # Increment the step count
+
+    #     def on_train_end(self, logs=None):
+    #         tf.profiler.experimental.stop()
+
+    # # Create the profiling callback
+    # profiling_callback = ProfilingCallback(log_dir)
+    # callbacks.append(profiling_callback)
 
     # Initialize a W&B run
     if use_WB:
@@ -270,12 +303,15 @@ def main(data_path, log_filename, use_WB, args):
     # TRAIN
     do_training = args.epochs > 0 #and not (args.load_model_ckpt or args.load_kge_ckpt):
     if do_training: 
+        
+        # tf.profiler.experimental.start(log_dir)
 
         history = model.fit(data_gen_train,
                 epochs=args.epochs,
                 callbacks=callbacks,
                 validation_data=data_gen_valid,
                 validation_freq=args.valid_frequency)
+        # tf.profiler.experimental.stop()
 
         end_train = time.time()
 
@@ -292,11 +328,11 @@ def main(data_path, log_filename, use_WB, args):
 
     else:
         if use_WB:
-            run.finish
+            run.finish()
         args.time_train = 0
     
     # save_embeddings_from_model(model, fol, serializer, save_dir="./../embeddings/"+args.run_signature)    
-    
+
     # EVALUATION
     print("\nEvaluation test", flush=True)
     start_inf = time.time()
