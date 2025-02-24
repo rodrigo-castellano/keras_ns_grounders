@@ -296,14 +296,19 @@ class ComplEx(KGELayer, Layer):
                 tf.reduce_sum(abs_R * abs_R * abs_R)))
         return embeddings
 
+# new class
+class RotatE(KGELayer, tf.keras.layers.Layer):
+    """
+    `RotatE: Knowledge Graph Embedding by Relational Rotation in Complex Space`_
+    (RotatE) defines each relation as a rotation from the source entity to the target entity
+    in the complex vector space.
 
-class RotatE(KGELayer, Layer):
-    """`RotatE: Knowledge Graph Embedding by Relational Rotation in Complex Space`_ (RotatE), which defines each relation as a rotation from the source entity to the target entity in the complex vector space.
     https://openreview.net/forum?id=HkgEQnRqYQ
+
     Attributes:
         args: Model configuration parameters.
-        epsilon: Calculate embedding_range.
-        margin: Calculate embedding_range and loss.
+        epsilon: A constant for calculating the embedding range.
+        margin: The margin (also called gamma) used in the score.
     """
     # Class attributes.
     epsilon = 0.5
@@ -312,76 +317,222 @@ class RotatE(KGELayer, Layer):
     def __init__(self, atom_embedding_size, regularization=0.0,
                  regularization_n3=0.0,
                  dropout_rate=0.0, **kwargs):
-        super().__init__()
-        assert atom_embedding_size > 0
+        super().__init__(**kwargs)
+        # Ensure the total embedding size is even so that it can be split into real and imag parts.
+        assert atom_embedding_size > 0 and atom_embedding_size % 2 == 0, \
+            "atom_embedding_size must be a positive even integer."
         self.regularization = regularization
         self.regularization_n3 = regularization_n3
         if dropout_rate > 0.0:
             self.dropout_layer = tf.keras.layers.Dropout(rate=dropout_rate)
         else:
-            self.dropout_layer = tf.identity
+            # When no dropout is used, simply return the input unchanged.
+            self.dropout_layer = lambda x: x
 
         self.atom_embedding_size = atom_embedding_size
-        self.embedding_range = (self.margin + self.epsilon) / (
-            atom_embedding_size)
+        # Here, the effective complex dimension is half of atom_embedding_size.
+        self.embedding_range = (self.margin + self.epsilon) / (atom_embedding_size / 2)
         self.norm_factor = math.pi / self.embedding_range
 
     @classmethod
     def output_layer(cls):
         def __internal__(inputs):
-            outputs = cls.margin - tf.reduce_sum(inputs, axis=-1)  # B,1
+            # Assuming inputs is a tensor of shape (B, 1)
+            outputs = cls.margin - tf.reduce_sum(inputs, axis=-1)
             outputs = tf.sigmoid(outputs)
             return outputs
         return __internal__
 
     def input_size(self):
+        # The input is a tuple (p_embeddings, c_embeddings)
+        # where c_embeddings has shape (B, 2, atom_embedding_size)
+        # and p_embeddings is expected to have shape (B, atom_embedding_size/2)
         return 2 * self.atom_embedding_size
 
     def output_size(self):
-        return self.atom_embedding_size
+        # The call() method returns a tensor of shape (B, 1)
+        return 1
 
     def call(self, inputs):
-        """Calculating the score of triples.
-        The formula for calculating the score is :math:`\margin - \|h \circ r - t\|`
+        """
+        Calculates the triple score for RotatE.
+
+        The formula (in complex space) is:
+            score = || h ∘ r - t ||
+        where h ∘ r is computed as:
+            rotated_head_real = h_real * cos(theta) - h_imag * sin(theta)
+            rotated_head_imag = h_real * sin(theta) + h_imag * cos(theta)
+        and then the L2-norm is computed over the difference with t.
+
         Args:
-            head_emb: The head entity embedding.
-            relation_emb: The relation embedding.
-            tail_emb: The tail entity embedding.
+            inputs: a tuple (p_embeddings, c_embeddings)
+                - p_embeddings: relation phase embeddings (B, atom_embedding_size/2)
+                - c_embeddings: entity embeddings for head and tail (B, 2, atom_embedding_size)
+                  where the first dimension (index 0) is the head and index 1 is the tail.
         Returns:
-            embeddings: The output embeddings (B, atom_embedding_size)
+            A tensor of shape (B, 1) with the computed norm.
         """
         p_embeddings, c_embeddings = inputs
         p_embeddings = self.dropout_layer(p_embeddings)
         c_embeddings = self.dropout_layer(c_embeddings)
 
-        head = c_embeddings[..., 0, :]
-        tail = c_embeddings[..., 1, :]
+        head = c_embeddings[..., 0, :]  # shape (B, atom_embedding_size)
+        tail = c_embeddings[..., 1, :]  # shape (B, atom_embedding_size)
 
-        # Use TensorFlow operations to handle the condition
-        head_shape = tf.shape(head)[0]
-        tail_shape = tf.shape(tail)[0]
-        condition = tf.logical_or(tf.equal(head_shape, 0), tf.equal(tail_shape, 0))
+        # Check if the batch is empty.
+        head_batch = tf.shape(head)[0]
+        tail_batch = tf.shape(tail)[0]
+        condition = tf.logical_or(tf.equal(head_batch, 0), tf.equal(tail_batch, 0))
 
         def zero_embeddings():
-            return tf.zeros([0, self.atom_embedding_size])
+            return tf.zeros([0, 1])
 
         def compute_embeddings():
-            re_head, im_head = tf.split(head, 2, axis=-1)
+            # Split head and tail into real and imaginary parts.
+            re_head, im_head = tf.split(head, 2, axis=-1)  # each of shape (B, atom_embedding_size/2)
             re_tail, im_tail = tf.split(tail, 2, axis=-1)
 
-            phase_relation = p_embeddings * self.norm_factor
-            re_relation = tf.math.cos(phase_relation)
-            im_relation = tf.math.sin(phase_relation)
-            re_score = re_relation * re_tail + im_relation * im_tail
-            im_score = re_relation * im_tail - im_relation * re_tail
-            re_score = re_score - re_head
-            im_score = im_score - im_head
-            return tf.math.sqrt(tf.maximum(
-                1e-9,
-                re_score * re_score + im_score * im_score))  # (B,atom_emb_size)
+            # Compute the phase for the relation and apply dropout already done above.
+            phase_relation = p_embeddings * self.norm_factor  # shape (B, atom_embedding_size/2)
+            # Apply the rotation to the head:
+            rotated_head_real = re_head * tf.math.cos(phase_relation) - im_head * tf.math.sin(phase_relation)
+            rotated_head_imag = re_head * tf.math.sin(phase_relation) + im_head * tf.math.cos(phase_relation)
+
+            # Compute the difference between rotated head and tail.
+            diff_real = rotated_head_real - re_tail
+            diff_imag = rotated_head_imag - im_tail
+            # Compute the L2 norm over the complex components.
+            norm = tf.sqrt(
+                tf.reduce_sum(tf.maximum(1e-9, diff_real * diff_real + diff_imag * diff_imag),
+                              axis=-1, keepdims=True)
+            )
+            return norm
 
         embeddings = tf.cond(condition, zero_embeddings, compute_embeddings)
         return embeddings
+
+
+# class RotatE(KGELayer, Layer):
+#     """`RotatE: Knowledge Graph Embedding by Relational Rotation in Complex Space`_ (RotatE), which defines each relation as a rotation from the source entity to the target entity in the complex vector space.
+#     https://openreview.net/forum?id=HkgEQnRqYQ
+#     Attributes:
+#         args: Model configuration parameters.
+#         epsilon: Calculate embedding_range.
+#         margin: Calculate embedding_range and loss.
+#     """
+#     # Class attributes.
+#     epsilon = 0.5
+#     margin = 6.0  # also called gamma
+
+#     def __init__(self, atom_embedding_size, regularization=0.0,
+#                  regularization_n3=0.0,
+#                  dropout_rate=0.0, **kwargs):
+#         super().__init__()
+#         assert atom_embedding_size > 0
+#         self.regularization = regularization
+#         self.regularization_n3 = regularization_n3
+#         if dropout_rate > 0.0:
+#             self.dropout_layer = tf.keras.layers.Dropout(rate=dropout_rate)
+#         else:
+#             self.dropout_layer = tf.identity
+
+#         self.atom_embedding_size = atom_embedding_size
+#         self.embedding_range = (self.margin + self.epsilon) / (
+#             atom_embedding_size)
+#         self.norm_factor = math.pi / self.embedding_range
+
+#     @classmethod
+#     def output_layer(cls):
+#         def __internal__(inputs):
+#             outputs = cls.margin - tf.reduce_sum(inputs, axis=-1)  # B,1
+#             outputs = tf.sigmoid(outputs)
+#             return outputs
+#         return __internal__
+
+#     def input_size(self):
+#         return 2 * self.atom_embedding_size
+
+#     def output_size(self):
+#         return self.atom_embedding_size
+
+#     def call(self, inputs):
+#         """Calculating the score of triples.
+#         The formula for calculating the score is :math:`\margin - \|h \circ r - t\|`
+#         Args:
+#             head_emb: The head entity embedding.
+#             relation_emb: The relation embedding.
+#             tail_emb: The tail entity embedding.
+#         Returns:
+#             embeddings: The output embeddings (B, atom_embedding_size)
+#         """
+#         p_embeddings, c_embeddings = inputs
+#         p_embeddings = self.dropout_layer(p_embeddings)
+#         c_embeddings = self.dropout_layer(c_embeddings)
+
+#         head = c_embeddings[..., 0, :]
+#         tail = c_embeddings[..., 1, :]
+
+#         # Use TensorFlow operations to handle the condition
+#         head_shape = tf.shape(head)[0]
+#         tail_shape = tf.shape(tail)[0]
+#         condition = tf.logical_or(tf.equal(head_shape, 0), tf.equal(tail_shape, 0))
+
+#         def zero_embeddings():
+#             return tf.zeros([0, self.atom_embedding_size])
+
+#         def compute_embeddings():
+#             re_head, im_head = tf.split(head, 2, axis=-1)
+#             re_tail, im_tail = tf.split(tail, 2, axis=-1)
+
+#             phase_relation = p_embeddings * self.norm_factor
+#             re_relation = tf.math.cos(phase_relation)
+#             im_relation = tf.math.sin(phase_relation)
+#             re_score = re_relation * re_tail + im_relation * im_tail
+#             im_score = re_relation * im_tail - im_relation * re_tail
+#             re_score = re_score - re_head
+#             im_score = im_score - im_head
+#             return tf.math.sqrt(tf.maximum(
+#                 1e-9,
+#                 re_score * re_score + im_score * im_score))  # (B,atom_emb_size)
+
+#         embeddings = tf.cond(condition, zero_embeddings, compute_embeddings)
+#         return embeddings
+
+#     # def call(self, inputs):
+#     #     """Calculating the score of triples.
+#     #     The formula for calculating the score is :math:`\margin - \|h \circ r - t\|`
+#     #     Args:
+#     #         head_emb: The head entity embedding.
+#     #         relation_emb: The relation embedding.
+#     #         tail_emb: The tail entity embedding.
+#     #     Returns:
+#     #         embeddings: The output embeddings (B, atom_embedding_size)
+#     #     """
+#     #     p_embeddings, c_embeddings = inputs
+#     #     p_embeddings = self.dropout_layer(p_embeddings)
+#     #     c_embeddings = self.dropout_layer(c_embeddings)
+
+#     #     head = c_embeddings[..., 0, :]
+#     #     tail = c_embeddings[..., 1, :]
+
+#     #     if tf.shape(head)[0] == 0 or tf.shape(tail)[0] == 0:
+#     #         return tf.zeros([0, self.atom_embedding_size])
+
+#     #     re_head, im_head = tf.split(head, 2, axis=-1)
+#     #     re_tail, im_tail = tf.split(tail, 2, axis=-1)
+
+#     #     phase_relation = p_embeddings * self.norm_factor
+#     #     re_relation = tf.math.cos(phase_relation)
+#     #     im_relation = tf.math.sin(phase_relation)
+
+#     #     re_score = re_relation * re_tail + im_relation * im_tail
+#     #     im_score = re_relation * im_tail - im_relation * re_tail
+#     #     re_score = re_score - re_head
+#     #     im_score = im_score - im_head
+#     #     embeddings = tf.math.sqrt(tf.maximum(
+#     #         1e-9,
+#     #         re_score * re_score + im_score * im_score))
+#     #     return embeddings
     
 
 ############################################
