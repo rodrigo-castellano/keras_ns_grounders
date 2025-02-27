@@ -1237,11 +1237,12 @@ def evaluate_and_store_ranks(model, data_gen_test, seed, args, metric, batch_siz
     os.makedirs('./experiments/ranks/ranking', exist_ok=True)
     output_file = f'./experiments/ranks/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric, 3)}.txt'
     
-    dataset_size = len(data_gen_test.dataset)
+    dataset_size = len(data_gen_test.dataset)*2 # positives and negatives
     
     # Open the file in write mode initially to clear any existing content
     with open(output_file, 'w') as f:
         f.write('')
+
 
     for start_idx in range(0, dataset_size, batch_size):
         queries, x, y_true = data_gen_test._get_batch_with_queries(start_idx, batch_size)
@@ -1249,10 +1250,12 @@ def evaluate_and_store_ranks(model, data_gen_test, seed, args, metric, batch_siz
         y_pred = model(x)['task']  # Get predictions
 
         batch_ranks = {}  # Store batch results temporarily
-        
+        query_ids = []
+        best_ranked_queries = []
+
         for i in range(y_pred.shape[0]):
-            if len(queries[i]) == 0 or len(queries[i]) == 1:
-                continue  # Skip queries with no or one query
+            # if len(queries[i]) == 0 or len(queries[i]) == 1:
+            #     continue  # Skip queries with no or one query
 
             print(f"\rProcessed query {start_idx + i + 1}/{dataset_size} ({(start_idx + i + 1) / dataset_size * 100:.2f}%)", end="")
 
@@ -1262,12 +1265,15 @@ def evaluate_and_store_ranks(model, data_gen_test, seed, args, metric, batch_siz
             best_ranked_query = queries[i][best_output]
             query_id = queries[i][0]  # Get query name
             
-            batch_ranks[query_id] = best_ranked_query  # Store in batch dictionary
-        
+            # batch_ranks[query_id] = best_ranked_query  # Store in batch dictionary
+            query_ids.append(query_id)
+            best_ranked_queries.append(best_ranked_query)
+
         # Write results for this batch to file immediately
         with open(output_file, 'a') as f:
-            for query_id, best_query in batch_ranks.items():
-                f.write(f"{query_id}:{best_query}\n")
+            for query, best_ranked in zip(query_ids, best_ranked_queries):
+                f.write(f"{query}:{best_ranked}\n")
 
     print(f"\nRanks written to {output_file}")
     return output_file  # Return file path for reference
+
