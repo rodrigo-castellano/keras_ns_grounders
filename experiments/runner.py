@@ -114,6 +114,7 @@ class ExperimentConfig:
         parser.add_argument("--rules_file", default = None, help="stop_kge_gradients")
         parser.add_argument("--kge", default = None, help="kge")
         parser.add_argument("--xkge", default = None, help="xkge")
+        parser.add_argument("--test_file", nargs='+', default = None, help="test")
 
         
         args = parser.parse_args()
@@ -139,6 +140,7 @@ class ExperimentConfig:
             self.store_ranks = [True]
             self.log_folder = ["./experiments/runs_xkge/"]
             self.ckpt_folder = ["./../checkpoints_xkge/"]
+        if args.test_file: self.test_file = args.test_file
 
 
 def setup_tf():
@@ -208,12 +210,8 @@ def main():
     for idx, run in enumerate(experiments):
         print(f"\nExperiment {idx+1}/{len(experiments)}")
 
-        if not os.path.exists(os.path.join(run.data_path, run.dataset_name)):
-            print('skipping, dataset not existing', os.path.join(run.data_path, run.dataset_name))
         if run.model_name == 'no_reasoner' and run.grounder != 'backward_0_1':
-            print('skipping, selec grounder 0_1 with no reasoner', run.grounder)
-        assert os.path.exists(os.path.join(run.data_path, run.dataset_name, run.rules_file)), 'Rules file not found'
-
+            continue
         run_experiment(run)
 
 if __name__ == '__main__':
