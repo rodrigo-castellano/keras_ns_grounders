@@ -29,14 +29,15 @@ tf.random.set_seed(0)
 
 
 # args.grounder = 'backward_0_1'
-args.grounder = 'backward_1_1'
+args.grounder = 'backward_0_1'
 # args.grounder = 'backwardnoprune_2_1'
 
 # args.dataset_name = 'umls'
 # args.dataset_name = 'nations'
 # args.dataset_name = 'ablation_d2'
 # args.dataset_name = 'countries_s3'
-args.dataset_name = 'kinship_family'
+# args.dataset_name = 'kinship_family'
+args.dataset_name = 'kinship'
 # args.dataset_name = 'wn18rr'
 # args.dataset_name = 'FB15k237'
 # args.dataset_name = 'pharmkg_full'
@@ -123,19 +124,28 @@ if type == 'ApproximateBackwardChainingGrounder':
 import time
 start = time.time()
 
-queries = queries[:1000]
+queries = queries[:]
 print('number of queries:',len(queries))
 
 len_groundings = []
 n_queries_with_groundings = 0
-for query in queries:
+queries_with_groundings = []
+for i,query in enumerate(queries):
+    print('i',i,'/',len(queries))
     # print('\nquery:',query)
     facts = sorted(facts)
     ground_formulas = engine.ground(sorted(tuple(facts)),tuple(ns.utils.to_flat(query)),deterministic=True)
 
     print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
+    print('current coverage:',round(n_queries_with_groundings/i,3)) if i > 0 else 0
     len_groundings.append(len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
     n_queries_with_groundings += 1 if len_groundings[-1] > 0 else 0
+    predicate = query[0][0]
+    cte1 = query[0][1]
+    cte2 = query[0][2]
+    query_str = f"{predicate}({cte1},{cte2})."
+    print('query:',query_str)
+    queries_with_groundings.append(query_str) if len_groundings[-1] > 0 and query_str not in queries_with_groundings else 0
 
     # print('ground_formulas:')
     # for rule in ground_formulas:
@@ -150,3 +160,8 @@ print('coverage:',round(n_queries_with_groundings/len(queries),3))
 # print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
 
 print('Time:',round(time.time()-start,3))
+
+# write the queries into a file with the name of the dataset, the grounder
+with open(f'test_{args.dataset_name}_{args.grounder}.txt', 'w') as f:
+    for item in queries_with_groundings:
+        f.write("%s\n" % item) 
