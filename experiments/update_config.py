@@ -22,7 +22,7 @@ def update_config(run: argparse.Namespace) -> argparse.Namespace:
 
     if dataset in {'wn18rr', 'FB15k237', 'pharmkg_full'}:
         run.test_batch_size = 1
-    elif dataset == 'kinship_family':
+    elif dataset == 'kinship_family' or dataset == 'kinship':
         run.test_batch_size = 4
     elif dataset == 'countries_s3':
         run.test_batch_size = 128

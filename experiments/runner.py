@@ -40,7 +40,7 @@ class ExperimentConfig:
         self.default = self.load_config_from_file(os.path.join(current_dir,'config.yaml')) # load config from json file
  
         self.hparams = {
-                'dataset_name': ['countries_s1'],
+                'dataset_name': ['kinship'],
                 'grounder': ['backward_0_1'],
                 'model_name': ['dcr'],
                 'kge': ['complex'],
