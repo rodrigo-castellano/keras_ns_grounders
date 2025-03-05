@@ -184,8 +184,10 @@ class CollectiveModel(Model):
                  dot_product: bool,
                  cdcr_use_positional_embeddings: bool,
                  cdcr_num_formulas: int,
-                 r2n_prediction_type: str):
+                 r2n_prediction_type: str,
+                 distill: bool):
         super().__init__()
+        self.distill = distill
         # Reasoning depth of the model structure.
         self.reasoner_depth = reasoner_depth
         # Reasoning depth currently used, this can differ from  self.reasoner_depth during multi-stage learning (like if pretraining the KGEs).
@@ -335,7 +337,41 @@ class CollectiveModel(Model):
         task_output = tf.gather(params=tf.squeeze(task_output, -1), indices=Q)
         concept_output = tf.gather(params=tf.squeeze(concept_output, -1),indices=Q)
 
-        loss = tf.reduce_sum(tf.multiply(concept_output.to_tensor(), task_output.to_tensor()))
+        def safe_to_tensor(x):
+            return x.to_tensor() if isinstance(x, tf.RaggedTensor) else x
+
+        # Always work with the dense version
+        concept_output_dense = safe_to_tensor(concept_output)
+        task_output_dense = safe_to_tensor(task_output)
+
+        # Ensure self.distill is a tensor (not a Python bool)
+        distill_cond = tf.cast(self.distill, tf.bool)
+
+        # Use tf.cond so that when distill is False, the outputs are zeros
+        concept_output_ = tf.cond(
+            distill_cond,
+            lambda: concept_output_dense,
+            lambda: tf.zeros_like(concept_output_dense)
+        )
+
+        task_output_ = tf.cond(
+            distill_cond,
+            lambda: task_output_dense,
+            lambda: tf.zeros_like(task_output_dense)
+        )
+
+        non_empty = tf.logical_and(
+            tf.reduce_any(tf.shape(concept_output_) > 0),
+            tf.reduce_any(tf.shape(task_output_) > 0)
+        )
+
+        diff = concept_output_ - task_output_
+        loss = tf.where(
+            non_empty,
+            diff * diff,
+            tf.constant(0.0)
+        )
+
         self.add_loss(loss)
 
         if self.resnet and self.reasoning is not None:

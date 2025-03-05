@@ -137,6 +137,7 @@ def main(data_path, log_filename, use_WB, args):
             args, 'cdcr_use_positional_embeddings', True),
         cdcr_num_formulas=get_arg(args, 'cdcr_num_formulas', 3),
         r2n_prediction_type=get_arg(args, 'r2n_prediction_type', 'full'),
+        distill=get_arg(args, 'distill', False),
     )
 
     if args.stop_kge_gradients:
