@@ -1232,12 +1232,14 @@ def save_embeddings_from_model(model, fol, serializer, save_dir="embeddings"):
 def evaluate_and_store_ranks(model, data_gen_test, seed, args, metric, batch_size=32):
     """Evaluates the model in batches and stores query ranks to a file incrementally."""
     print('Evaluating model and storing ranks...')
-    os.makedirs('./experiments/ranks/ranking', exist_ok=True)
-    if args.distill:
+    if args.distill: 
+        os.makedirs('./experiments/ranks_distill/ranking', exist_ok=True)
         output_file = f'./experiments/ranks_distill/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric, 3)}.txt'
     elif args.xkge:
+        os.makedirs('./experiments/ranks_xkge/ranking', exist_ok=True)
         output_file = f'./experiments/ranks_xkge/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric, 3)}.txt'
     else:
+        os.makedirs('./experiments/ranks/ranking', exist_ok=True)
         output_file = f'./experiments/ranks/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric, 3)}.txt'
     dataset_size = len(data_gen_test.dataset)*2 # positives and negatives
     
