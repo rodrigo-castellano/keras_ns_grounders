@@ -381,8 +381,6 @@ def load_kge_weights(model, ckpt_filepath, verbose=True):
         print('THERE IS NO FILE:', ckpt_filepath + '.weights.h5','\n')
         return False
     
-
-    print('ckpt_filepath', ckpt_filepath)
     if os.path.exists(ckpt_filepath):
         model.kge_model.load_weights(ckpt_filepath)
         # checkpoint = tf.train.Checkpoint(model=model.kge_model)
