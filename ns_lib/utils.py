@@ -1235,8 +1235,12 @@ def evaluate_and_store_ranks(model, data_gen_test, seed, args, metric, batch_siz
     """Evaluates the model in batches and stores query ranks to a file incrementally."""
     print('Evaluating model and storing ranks...')
     os.makedirs('./experiments/ranks/ranking', exist_ok=True)
-    output_file = f'./experiments/ranks/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric, 3)}.txt'
-    
+    if args.distill:
+        output_file = f'./experiments/ranks_distill/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric, 3)}.txt'
+    elif args.xkge:
+        output_file = f'./experiments/ranks_xkge/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric, 3)}.txt'
+    else:
+        output_file = f'./experiments/ranks/ranking/ranks_{args.run_signature}-seed_{seed}-{round(metric, 3)}.txt'
     dataset_size = len(data_gen_test.dataset)*2 # positives and negatives
     
     # Open the file in write mode initially to clear any existing content
