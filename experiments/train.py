@@ -201,7 +201,8 @@ def main(data_path, log_filename, use_WB, args):
                             if os.path.isdir(os.path.join(base_dir, d)) 
                             and 'no_reasoner' in d 
                             and args.kge in d 
-                            and args.dataset_name in d]
+                            and args.dataset_name in d
+                            and 'seed_' + str(seed) in d]
             
             if not matching_dirs:
                 raise ValueError(f"No directory found with 'no_reasoner', '{args.kge}' and '{args.dataset_name}'")
