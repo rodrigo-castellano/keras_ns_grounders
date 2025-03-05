@@ -334,7 +334,10 @@ class CollectiveModel(Model):
 
         task_output = tf.gather(params=tf.squeeze(task_output, -1), indices=Q)
         concept_output = tf.gather(params=tf.squeeze(concept_output, -1),indices=Q)
-        
+
+        loss = tf.reduce_sum(tf.multiply(concept_output.to_tensor(), task_output.to_tensor()))
+        self.add_loss(loss)
+
         if self.resnet and self.reasoning is not None:
             task_output = self.logic.disj_pair(task_output, concept_output)
 

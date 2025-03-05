@@ -60,6 +60,8 @@ class ReasoningLayer(Layer):
         if aggregation_type == 'mean':
             return tf.reduce_mean(data_all_formulas, axis=0)
         elif self.aggregation_type == 'max':
+            agg = tf.reduce_max(data_all_formulas, axis=0)
+            return tf.where(agg == tf.float32.min, 0.0, agg)
             return tf.reduce_max(data_all_formulas, axis=0)
         elif self.aggregation_type == 'sum':
             return tf.reduce_sum(data_all_formulas, axis=0)

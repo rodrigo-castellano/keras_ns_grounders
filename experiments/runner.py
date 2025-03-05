@@ -40,7 +40,7 @@ class ExperimentConfig:
         self.default = self.load_config_from_file(os.path.join(current_dir,'config.yaml')) # load config from json file
  
         self.hparams = {
-                'dataset_name': ['kinship'],
+                'dataset_name': ['kinship_family'],
                 'grounder': ['backward_0_1'],
                 'model_name': ['dcr'],
                 'kge': ['complex'],
@@ -52,7 +52,9 @@ class ExperimentConfig:
                 'resnet': [True], #[True]
                 'store_ranks': [False], #[False]
                 'stop_kge_gradients': [False],
-
+                'rules_file' : ['rules.txt'], 
+                'test_file': ['test.txt'],
+                'distill': [True],
                 'use_logger': [True],
                 'use_WB': [False],
                 'load_model_ckpt': [False], # [False],
@@ -62,7 +64,6 @@ class ExperimentConfig:
                 'log_folder': ["./experiments/runs/"], #["./experiments/runs/"],
                 'ckpt_folder': ["./../checkpoints/"], #["./../checkpoints/"],
                 'data_path': ["experiments/data"],
-                'rules_file' : ['rules.txt'], 
         }
 
         # update default with hparams
@@ -98,23 +99,24 @@ class ExperimentConfig:
     def parse_args(self):
         """Parse command line arguments"""
         parser = argparse.ArgumentParser(description='Experiment Runner')
-        parser.add_argument("--d", nargs='+', help="Datasets")
-        parser.add_argument("--m", nargs='+', help="Models")
-        parser.add_argument("--g", nargs='+', help="Grounders")
-        parser.add_argument("--s", help="Seeds")
-        parser.add_argument("--load_model_ckpt", default = None, help="load model ckpt")
-        parser.add_argument("--load_kge_ckpt", default = None, help="load kge ckpt")
-        parser.add_argument("--save_model_ckpt", default = None, help="save_model_ckpt")
-        parser.add_argument("--log_folder", default = None, help="log folder")
-        parser.add_argument("--ckpt_folder", default = None, help="ckpt folder")
-        parser.add_argument("--resnet", default = None, help="reset")
-        parser.add_argument("--store_ranks", default = None, help="reset")
-        parser.add_argument("--epochs", default = None, help="epochs")
-        parser.add_argument("--stop_kge_gradients", default = None, help="stop_kge_gradients")
-        parser.add_argument("--rules_file", default = None, help="stop_kge_gradients")
-        parser.add_argument("--kge", default = None, help="kge")
-        parser.add_argument("--xkge", default = None, help="xkge")
-        parser.add_argument("--test_file", nargs='+', default = None, help="test")
+        parser.add_argument("--d", nargs='+')
+        parser.add_argument("--m", nargs='+')
+        parser.add_argument("--g", nargs='+')
+        parser.add_argument("--s", )
+        parser.add_argument("--load_model_ckpt", default = None)
+        parser.add_argument("--load_kge_ckpt", default = None)
+        parser.add_argument("--save_model_ckpt", default = None)
+        parser.add_argument("--log_folder", default = None)
+        parser.add_argument("--ckpt_folder", default = None)
+        parser.add_argument("--resnet", default = None, action='store_const', const='True')
+        parser.add_argument("--store_ranks", default = None, action='store_const', const='True')
+        parser.add_argument("--epochs", default = None)
+        parser.add_argument("--stop_kge_gradients", default = None, action='store_const', const='True')
+        parser.add_argument("--rules_file", default = None)
+        parser.add_argument("--kge", default = None)
+        parser.add_argument("--xkge", default = None, action='store_const', const='True')
+        parser.add_argument("--test_file", nargs='+', default = None)
+        parser.add_argument("--distill", default = None, action='store_const', const='True')
 
         
         args = parser.parse_args()
@@ -135,12 +137,21 @@ class ExperimentConfig:
         if args.store_ranks: self.store_ranks = [ast.literal_eval(args.store_ranks)]
         if args.rules_file: self.rules_file = [args.rules_file]
         if args.kge: self.kge = [args.kge]
+        if args.test_file: self.test_file = args.test_file
         if args.xkge is not None and ast.literal_eval(args.xkge): 
+            self.xkge = [True]
             self.resnet = [False]
             self.store_ranks = [True]
             self.log_folder = ["./experiments/runs_xkge/"]
             self.ckpt_folder = ["./../checkpoints_xkge/"]
-        if args.test_file: self.test_file = args.test_file
+        if args.distill is not None and ast.literal_eval(args.distill): 
+            self.distill = [True]
+            self.resnet = [False]
+            self.store_ranks = [True]
+            self.load_kge_ckpt = [True]
+            self.stop_kge_gradients = [True]
+            self.log_folder = ["./experiments/runs_distill/"]
+            self.ckpt_folder = ["./../checkpoints_distill/"]
 
 
 def setup_tf():
