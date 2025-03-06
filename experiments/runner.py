@@ -40,7 +40,7 @@ class ExperimentConfig:
         self.default = self.load_config_from_file(os.path.join(current_dir,'config.yaml')) # load config from json file
  
         self.hparams = {
-                'dataset_name': ['kinship_family'],
+                'dataset_name': ['countries_s3'],
                 'grounder': ['backward_0_1'],
                 'model_name': ['dcr'],
                 'kge': ['complex'],
@@ -55,6 +55,7 @@ class ExperimentConfig:
                 'rules_file' : ['rules.txt'], 
                 'test_file': ['test.txt'],
                 'distill': [True],
+                'distill_kge_labels': [True],
                 'use_logger': [True],
                 'use_WB': [False],
                 'load_model_ckpt': [False], # [False],
@@ -117,6 +118,7 @@ class ExperimentConfig:
         parser.add_argument("--xkge", default = None, action='store_const', const='True')
         parser.add_argument("--test_file", nargs='+', default = None)
         parser.add_argument("--distill", default = None, action='store_const', const='True')
+        parser.add_argument("--distill_kge_labels", default = None, action='store_const', const='True')
 
         
         args = parser.parse_args()
@@ -152,7 +154,7 @@ class ExperimentConfig:
             self.stop_kge_gradients = [True]
             self.log_folder = ["./experiments/runs_distill/"]
             self.ckpt_folder = ["./../checkpoints_distill/"]
-
+        if args.distill_kge_labels: self.distill_kge_labels = [ast.literal_eval(args.distill_kge_labels)]
 
 def setup_tf():
     """Configure TensorFlow settings"""
