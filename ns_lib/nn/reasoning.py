@@ -573,7 +573,16 @@ class _GatedSBRReasoningLayerBase(SBRReasoningLayer):
                                            name='rule_weight(%s)' % rule.name,
                                            dtype=tf.float32)
                                for rule in rules}
+            
+    def build(self, input_shape):
+        super().build(input_shape)
+        atom_embeddings_shape = input_shape[1]
+        tf.debugging.assert_equal(atom_embeddings_shape[-1],
+                                  self.atom_embedding_size)
 
+        if self.per_grounding_gate:
+            for r,g in zip(self.rules, self.rule_gates.values(), strict=True):
+                g.build((None, atom_embeddings_shape[-1] * len(r.body),))
 
     # TODO: add explain mode.
     def call(self, inputs):
