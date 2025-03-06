@@ -149,8 +149,11 @@ def main(data_path, log_filename, use_WB, args):
     loss_name = get_arg(args, 'loss', 'binary_crossentropy')
     loss = KgeLossFactory(loss_name)
 
-    loss = { 'concept': loss, 'task': loss}
-    loss_weights = { 'concept': 1-args.weight_loss, 'task': args.weight_loss  }
+    loss = {'concept': loss, 'task': loss}
+    loss_weights = {'concept': 1-args.weight_loss, 'task': args.weight_loss }
+    if args.distill_kge_labels:
+        loss_weights = {'concept': 0, 'task': 0}
+        print('Distilling only KGE labels')
 
     metrics = {
         'concept': [
