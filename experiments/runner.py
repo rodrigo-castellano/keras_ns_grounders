@@ -55,7 +55,7 @@ class ExperimentConfig:
                 'rules_file' : ['rules.txt'], 
                 'test_file': ['test.txt'],
                 'distill': [True],
-                'distill_kge_labels': [True],
+                'distill_kge_labels': [False],
                 'use_logger': [True],
                 'use_WB': [False],
                 'load_model_ckpt': [False], # [False],
