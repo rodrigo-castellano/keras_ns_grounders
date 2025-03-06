@@ -54,7 +54,7 @@ class ExperimentConfig:
                 'stop_kge_gradients': [False],
                 'rules_file' : ['rules.txt'], 
                 'test_file': ['test.txt'],
-                'distill': [True],
+                'distill': [False],
                 'distill_kge_labels': [False],
                 'use_logger': [True],
                 'use_WB': [False],
