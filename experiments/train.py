@@ -195,8 +195,21 @@ def main(data_path, log_filename, use_WB, args):
         if '_kge_model' in path_:
             # subtitute args.model_name with 'no_reasoner'
             path_ = path_.replace(args.model_name, 'no_reasoner')  
-            path_ = path_.replace(args.grounder, 'backward_0_1')
-            assert os.path.exists(os.path.dirname(path_)), f'The folder with no_reasoner does not exist {os.path.dirname(path_)}'
+            # Find directory with no_reasoner, args.kge and args.dataset_name
+            base_dir = args.ckpt_folder
+            matching_dirs = [d for d in os.listdir(base_dir) 
+                            if os.path.isdir(os.path.join(base_dir, d)) 
+                            and 'no_reasoner' in d 
+                            and args.kge in d 
+                            and args.dataset_name in d
+                            and 'seed_' + str(seed) in d]
+            
+            if not matching_dirs:
+                raise ValueError(f"No directory found with 'no_reasoner', '{args.kge}' and '{args.dataset_name}'")
+            
+            assert len(matching_dirs) == 1, f"Multiple directories found: {matching_dirs}"
+            no_reasoner_dir = os.path.join(base_dir, matching_dirs[0])
+            path_ = os.path.join(no_reasoner_dir, no_reasoner_dir.split('/')[-1]+'_kge_model')
             success = load_kge_weights(model, path_, verbose=True)
         else:
             success = load_model_weights(model, path_, verbose=True)
