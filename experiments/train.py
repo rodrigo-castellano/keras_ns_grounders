@@ -160,13 +160,15 @@ def main(data_path, log_filename, use_WB, args):
             ns.utils.MRRMetric(),
             ns.utils.HitsMetric(1),
             ns.utils.HitsMetric(3),
-            ns.utils.HitsMetric(10)
+            ns.utils.HitsMetric(10),
+            ns.utils.AUCPRMetric(),
         ],
         'task': [
             ns.utils.MRRMetric(),
             ns.utils.HitsMetric(1),
             ns.utils.HitsMetric(3),
-            ns.utils.HitsMetric(10)
+            ns.utils.HitsMetric(10),
+            ns.utils.AUCPRMetric(),
         ]
     }
 

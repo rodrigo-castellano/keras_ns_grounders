@@ -40,25 +40,25 @@ class ExperimentConfig:
         self.default = self.load_config_from_file(os.path.join(current_dir,'config.yaml')) # load config from json file
  
         self.hparams = {
-                'dataset_name': ['countries_s3'],
-                'grounder': ['backward_0_1'],
-                'model_name': ['dcr'],
+                'dataset_name': ['wn18rr'],
+                'grounder': ['backward_1_2'],
+                'model_name': ['sbr'],
                 'kge': ['complex'],
-                'seed': [[0,1,2,3,4]],
+                'seed': [[0]],
                 'epochs': [100], # [100]
                 'batch_size': [256],
                 'val_batch_size': [256],
                 'test_batch_size': [256],
-                'resnet': [True], #[True]
+                'resnet': [False], #[True]
                 'store_ranks': [False], #[False]
                 'stop_kge_gradients': [False],
                 'rules_file' : ['rules.txt'], 
-                'test_file': ['test.txt'],
-                'distill': [True],
+                'test_file': ['test.txt'], # ['depths/test_d1.txt','depths/test_d2.txt','depths/test_d3.txt','depths/test_d4.txt','depths/test_d6.txt'], # 
+                'distill': [False],
                 'distill_kge_labels': [False],
                 'use_logger': [True],
                 'use_WB': [False],
-                'load_model_ckpt': [False], # [False],
+                'load_model_ckpt': [False],
                 'load_kge_ckpt': [False],
                 'save_model_ckpt': [True],
                 'save_kge_ckpt': [True],
