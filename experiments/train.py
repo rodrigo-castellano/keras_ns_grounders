@@ -107,7 +107,11 @@ def main(data_path, log_filename, use_WB, args):
     args.time_ground_test = np.round(end- start,2)
     print("Time to create data generator test: ",  np.round(end - start,2),'\n************************************')
 
-
+    # import json
+    # config_path = './config.json'
+    # with open(config_path, 'w') as f:
+    #     json.dump(vars(args), f, indent=4)
+    # print(f"Configuration saved to {config_path}")
     # COMPILING MODEL
     model = CollectiveModel(
         fol, rules,
