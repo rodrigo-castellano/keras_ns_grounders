@@ -18,6 +18,13 @@ from dataset import KGCDataHandler
 import argparse
 from ns_lib.grounding.grounder_factory import BuildGrounder
 from ns_lib.grounding.backward_chaining_grounder import ApproximateBackwardChainingGrounder
+from ns_lib.grounding.backward_chaining_exact import BackwardChainingGrounder
+
+
+'''
+This script is used to test the grounding of rules in a knowledge graph.
+Mainly used to find the number of groundings for each rule.
+'''
 
 parser = argparse.ArgumentParser(description='Description of your script')  
 args = parser.parse_args()
@@ -29,7 +36,9 @@ tf.random.set_seed(0)
 
 
 # args.grounder = 'backward_0_1'
-args.grounder = 'backward_0_1'
+# args.grounder = 'backward_1_2'
+# args.grounder = 'backward_1_3'
+args.grounder = 'backward_1'
 # args.grounder = 'backwardnoprune_2_1'
 
 # args.dataset_name = 'umls'
@@ -116,7 +125,19 @@ if type == 'ApproximateBackwardChainingGrounder':
         prune_incomplete_proofs=prune_incomplete_proofs,
         max_groundings_per_rule=get_arg(
             args, 'backward_chaining_max_groundings_per_rule', -1),
-        force_determinism=False)
+        force_determinism=False,
+        exact=True)
+
+elif type == 'BackwardChainingGrounder':
+    # Requires Horn Clauses.
+    engine = BackwardChainingGrounder(
+        rules, facts=facts, domains={d.name:d for d in fol.domains},
+        domain2adaptive_constants=None,
+        pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
+        num_steps=backward_depth,
+        accumulate_groundings=False,
+        )
+
 
 
 # engine = BuildGrounder(args, rules, facts=facts, fol=fol, domain2adaptive_constants=None)
@@ -131,20 +152,21 @@ len_groundings = []
 n_queries_with_groundings = 0
 queries_with_groundings = []
 for i,query in enumerate(queries):
-    print('i',i,'/',len(queries))
+    # print('i',i,'/',len(queries))
     # print('\nquery:',query)
     facts = sorted(facts)
     ground_formulas = engine.ground(sorted(tuple(facts)),tuple(ns.utils.to_flat(query)),deterministic=True)
 
     print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
-    print('current coverage:',round(n_queries_with_groundings/i,3)) if i > 0 else 0
     len_groundings.append(len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
     n_queries_with_groundings += 1 if len_groundings[-1] > 0 else 0
+    # print('current coverage:',round(n_queries_with_groundings/i,3)) if i > 0 else 0
+    print('n_queries_with_groundings:',n_queries_with_groundings)
     predicate = query[0][0]
     cte1 = query[0][1]
     cte2 = query[0][2]
     query_str = f"{predicate}({cte1},{cte2})."
-    print('query:',query_str)
+    # print('query:',query_str)
     queries_with_groundings.append(query_str) if len_groundings[-1] > 0 and query_str not in queries_with_groundings else 0
 
     # print('ground_formulas:')
@@ -154,14 +176,14 @@ for i,query in enumerate(queries):
             # print(grounding[0][0],'       ',grounding[1][0], grounding[1][1])
 
 print('num groundings:', sum(len_groundings),'avg number of grounding:',round(np.mean(len_groundings),3), 'std:',round(np.std(len_groundings),3))
-print('coverage:',round(n_queries_with_groundings/len(queries),3))
+print('coverage (of groundings, not rules):',round(n_queries_with_groundings/len(queries),3))
 
 # ground_formulas = engine.ground(tuple(facts),tuple(ns.utils.to_flat(queries)),deterministic=True)
 # print('num groundings:',len([grounding for rule in ground_formulas for grounding in ground_formulas[rule]]))
 
 print('Time:',round(time.time()-start,3))
 
-# write the queries into a file with the name of the dataset, the grounder
-with open(f'test_{args.dataset_name}_{args.grounder}.txt', 'w') as f:
-    for item in queries_with_groundings:
-        f.write("%s\n" % item) 
+# # write the queries into a file with the name of the dataset, the grounder
+# with open(f'test_{args.dataset_name}_{args.grounder}.txt', 'w') as f:
+#     for item in queries_with_groundings:
+#         f.write("%s\n" % item) 

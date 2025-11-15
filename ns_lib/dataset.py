@@ -210,6 +210,8 @@ class DataGenerator(tf.keras.utils.Sequence):
         
         queries, labels = self.dataset[start_idx:end_idx]  # Select only a batch
         constants_features = self.dataset.constants_features
+        
+        print('Queries, labels:', queries, labels)
 
         ((X_domains_data, A_predicates_data, A_rules_data, Q), y) = _from_strings_to_tensors(
             fol=self.fol,

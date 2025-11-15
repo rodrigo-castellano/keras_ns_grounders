@@ -9,6 +9,7 @@ from ns_lib.logic import FOL, Rule
 from ns_lib.logic.semantics import GodelTNorm
 from typing import Dict, List, Union
 
+
 class KGEModel(Model):
 
     def __init__(self, fol:FOL,
@@ -19,7 +20,9 @@ class KGEModel(Model):
                  kge_atom_embedding_size: int,
                  kge_dropout_rate: float,
                  num_adaptive_constants: int=0,
-                 dot_product: bool=False):
+                 dot_product: bool=False,
+                 trainable: bool=False,
+                 dtype=tf.int32):
         super().__init__()
         self.fol = fol
         self.predicate_index_tensor = tf.constant(
@@ -293,7 +296,7 @@ class CollectiveModel(Model):
     def explain_mode(self, mode=True):
         self._explain_mode = mode
 
-    # @tf.function 
+    @tf.function(reduce_retracing=True)
     def call(self, inputs, training=False, *args, **kwargs):
         '''
         X_domains type is Dict[str, tensor[constant_indices_in_domain]]
