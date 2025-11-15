@@ -198,7 +198,7 @@ def read_rules(path,args):
                 elif 'kinship' in args.dataset_name:
                     # var_names = {"x": "people", "y": "people", "z": "people","a": "people", "b": "people","c": "people","d": "people"}
                     for var in variables:
-                        var_names[var] = "people" 
+                        var_names[var] = "cte" 
                 else: 
                     for var in variables:
                         var_names[var] = "cte" 
@@ -484,7 +484,12 @@ class MMapModelCheckpoint(tf.keras.callbacks.Callback):
 
                 save_path = f'{self.filepath}.weights.h5'
                 os.makedirs(os.path.dirname(save_path), exist_ok=True)
-                self.model_.save_weights(save_path)
+                if self.save_weights_only:
+                    # Save only weights
+                    self.model_.save_weights(save_path)
+                else:
+                    # Save full model
+                    self.model_.save(save_path)
 
                 self.last_save_path = save_path
                 self.write_info(epoch+1, current_value)
@@ -1062,6 +1067,27 @@ class AUCPRMetric(tf.keras.metrics.AUC):
             labels, predictions, _, _ = ragged_to_dense(labels, predictions, None)
         return super()._compute(labels, predictions)
 
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        # 1. Print the initial shape of the inputs as they come from the model
+        # tf.print("--- [update_state] Initial y_pred type:", y_pred)
+        
+        # 2. Handle ragged tensors by converting them to dense and flattening
+        y_true_dense, y_pred_dense, _, _  = ragged_to_dense(y_true, y_pred, None)
+        
+        # 3. Print the FINAL shape of the predictions that will be used for calculation
+        tf.print("--- [update_state] Final y_pred dense shape:", tf.shape(y_pred_dense))
+
+        # 4. Call the parent's update_state method with the processed dense tensors
+        super().update_state(y_true_dense, y_pred_dense, sample_weight)
+
+    def result(self):
+        # 1. Calculate the final AUC value by calling the parent's result method
+        final_auc = super().result()
+        
+        # 2. Print the final scalar AUC value before returning it
+        tf.print("--- [result] Final Calculated AUC-PR:", final_auc)
+        
+        return final_auc
 
 class HitsMetric(tf.keras.metrics.Metric):
     """Implements HITS@N metric with ragged tensor support."""
