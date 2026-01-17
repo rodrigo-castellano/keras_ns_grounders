@@ -40,10 +40,10 @@ class ExperimentConfig:
         self.default = self.load_config_from_file(os.path.join(current_dir,'config.yaml')) # load config from json file
  
         self.hparams = {
-                'dataset_name': ['kinship_family', 'wn18rr'],
-                'grounder': ['backward_1_2'],
-                'model_name': ['sbr','dcr','sbr'], # ['no_reasoner', 'resnet', 'distmult', 'convE']
-                'kge': ['rotate'],
+                'dataset_name': ['kinship_family'],
+                'grounder': ['backward_0_1'],
+                'model_name': ['no_reasoner'], # ['no_reasoner', 'resnet', 'distmult', 'convE']
+                'kge': ['complex'],
                 'seed': [[0]],
                 'epochs': [100], # [100]
                 'batch_size': [256],
