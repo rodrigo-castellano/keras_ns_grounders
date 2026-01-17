@@ -1075,7 +1075,7 @@ class AUCPRMetric(tf.keras.metrics.AUC):
         y_true_dense, y_pred_dense, _, _  = ragged_to_dense(y_true, y_pred, None)
         
         # 3. Print the FINAL shape of the predictions that will be used for calculation
-        tf.print("--- [update_state] Final y_pred dense shape:", tf.shape(y_pred_dense))
+        # tf.print("--- [update_state] Final y_pred dense shape:", tf.shape(y_pred_dense))
 
         # 4. Call the parent's update_state method with the processed dense tensors
         super().update_state(y_true_dense, y_pred_dense, sample_weight)
@@ -1085,7 +1085,7 @@ class AUCPRMetric(tf.keras.metrics.AUC):
         final_auc = super().result()
         
         # 2. Print the final scalar AUC value before returning it
-        tf.print("--- [result] Final Calculated AUC-PR:", final_auc)
+        # tf.print("--- [result] Final Calculated AUC-PR:", final_auc)
         
         return final_auc
 
