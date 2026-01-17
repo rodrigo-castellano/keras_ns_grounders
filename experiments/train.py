@@ -56,21 +56,19 @@ def main(data_path, log_filename, use_WB, args):
     dataset_train = data_handler.get_dataset(split="train",number_negatives=args.num_negatives)
     dataset_valid = data_handler.get_dataset(split="valid",number_negatives=args.valid_negatives, corrupt_mode=args.corrupt_mode)
     dataset_test = data_handler.get_dataset(split="test",  number_negatives=args.test_negatives,  corrupt_mode=args.corrupt_mode)
-    if explain_enabled and enable_rules and (args.model_name == 'dcr' or args.model_name == 'cdcr'):
-        dataset_test_positive_only = data_handler.get_dataset(split="test", number_negatives=0, corrupt_mode=args.corrupt_mode)
-
-    fol = data_handler.fol
     domain2adaptive_constants: Dict[str, List[str]] = None
     dot_product = get_arg(args, 'engine_dot_product', False)
-
     num_adaptive_constants = get_arg(args, 'engine_num_adaptive_constants', 0)
-
 
     # DEFINING RULES AND GROUNDING ENGINE
     rules = []
     engine = None
-
     enable_rules = (args.reasoner_depth > 0 and args.num_rules > 0)
+    
+    if explain_enabled and enable_rules and (args.model_name == 'dcr' or args.model_name == 'cdcr'):
+        dataset_test_positive_only = data_handler.get_dataset(split="test", number_negatives=0, corrupt_mode=args.corrupt_mode)
+
+    fol = data_handler.fol
     if enable_rules:
         rules = ns.utils.read_rules(join(data_path, args.dataset_name, args.rules_file),args)
         facts = list(data_handler.train_known_facts_set)
@@ -238,7 +236,7 @@ def main(data_path, log_filename, use_WB, args):
       callbacks.append(lr_scheduler)
     
     if args.early_stopping:
-        early_stopping = keras.callbacks.EarlyStopping(
+        early_stopping = tf.keras.callbacks.EarlyStopping(
             # monitor="val_loss",
             # mode='min',
             monitor="val_task_mrr",
