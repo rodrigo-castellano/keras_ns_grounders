@@ -41,15 +41,15 @@ class ExperimentConfig:
  
         self.hparams = {
                 'dataset_name': ['kinship_family'],
-                'grounder': ['backward_0_1'],
-                'model_name': ['no_reasoner'], # ['no_reasoner', 'resnet', 'distmult', 'convE']
-                'kge': ['complex'],
+                'grounder': ['backward_1_1'],
+                'model_name': ['r2n'], # ['no_reasoner', 'r2n', 'sbr', 'dcr']
+                'kge': ['rotate'],
                 'seed': [[0]],
                 'epochs': [100], # [100]
                 'batch_size': [256],
                 'val_batch_size': [256],
                 'test_batch_size': [256],
-                'resnet': [True], #[True]
+                'resnet': [False], #[True]
                 'store_ranks': [False], #[False]
                 'stop_kge_gradients': [False],
                 'rules_file' : ['rules.txt'], 

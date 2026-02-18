@@ -345,7 +345,13 @@ class KGCDataHandler():
             domains = [name2domain[d] for d in domain_list[0]]
             self.predicates.append(Predicate(p, tuple(domains)))
 
-        self.fol = FOL(self.domains, self.predicates, self.train_facts_set,
+        if self.known_facts_set:
+            grounder_facts = self.known_facts_set
+            print(f'[FOL] Using facts.txt as grounder facts ({len(grounder_facts)} facts)', flush=True)
+        else:
+            grounder_facts = self.train_facts_set
+            print(f'[FOL] No facts.txt found, using train.txt as grounder facts ({len(grounder_facts)} facts)', flush=True)
+        self.fol = FOL(self.domains, self.predicates, grounder_facts,
                        constant2domain_name=self.constant2domain)
         self.constant_features = None
         if feature_file is not None and feature_loader is not None:

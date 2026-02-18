@@ -237,13 +237,14 @@ def approximate_backward_chaining_grounding_one_rule(
 def PruneIncompleteProofs(rule2groundings, rule2proofs, fact_index, num_steps):
     atom2proved = {}
 
-    def update_atom2proved(proofs):
-        for query, proof in proofs:
-            if query not in atom2proved or not atom2proved[query]:
-                atom2proved[query] = all(map(atom2proved.get, proof, [False] * len(proof)))
-    
     for _ in range(num_steps):
-        list(map(update_atom2proved, rule2proofs.values()))
+        # Snapshot: lookups use state from START of this step, not in-place updates.
+        # This prevents cascading within a single step (e.g. chain1→chain2→chain3).
+        snapshot = dict(atom2proved)
+        for proofs in rule2proofs.values():
+            for query, proof in proofs:
+                if query not in atom2proved or not atom2proved[query]:
+                    atom2proved[query] = all(map(snapshot.get, proof, [False] * len(proof)))
 
 
     fact_index_get = fact_index._index.get
