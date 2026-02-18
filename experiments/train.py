@@ -71,7 +71,7 @@ def main(data_path, log_filename, use_WB, args):
     fol = data_handler.fol
     if enable_rules:
         rules = ns.utils.read_rules(join(data_path, args.dataset_name, args.rules_file),args)
-        facts = list(data_handler.train_known_facts_set)
+        facts = list(fol.facts)  # Use base-only facts from facts.txt (not all training triples)
         engine = BuildGrounder(args, rules, facts, fol, domain2adaptive_constants)
     serializer = ns.serializer.LogicSerializerFast(
         predicates=fol.predicates, domains=fol.domains,
@@ -179,7 +179,8 @@ def main(data_path, log_filename, use_WB, args):
                     loss=loss,
                     loss_weights = loss_weights,
                     metrics=metrics,
-                    run_eagerly=False)
+                    run_eagerly=False,
+                    jit_compile=False)  # Disable XLA (RaggedTensor not supported)
 
 
 
@@ -237,11 +238,9 @@ def main(data_path, log_filename, use_WB, args):
     
     if args.early_stopping:
         early_stopping = tf.keras.callbacks.EarlyStopping(
-            # monitor="val_loss",
-            # mode='min',
-            monitor="val_task_mrr",
-            mode='max',
-            patience=40,
+            monitor="val_loss",
+            min_delta=0.001,
+            patience=50,
             verbose=1,
             )
         callbacks.append(early_stopping)
@@ -266,6 +265,22 @@ def main(data_path, log_filename, use_WB, args):
 
     callbacks.append(model_checkpoint)
     callbacks.append(kge_model_checkpoint)
+
+    # Custom callback to log batch progress (useful for file logging)
+    class BatchLogger(tf.keras.callbacks.Callback):
+        def on_epoch_begin(self, epoch, logs=None):
+            self.epoch_start = time.time()
+            print(f"\nEpoch {epoch+1}/{args.epochs} started", flush=True)
+        def on_train_batch_begin(self, batch, logs=None):
+            self.batch_start = time.time()
+            if batch == 0:
+                print(f"  Batch {batch+1} STARTING (graph compilation expected)...", flush=True)
+        def on_train_batch_end(self, batch, logs=None):
+            batch_time = time.time() - self.batch_start
+            elapsed = time.time() - self.epoch_start
+            if batch == 0 or (batch + 1) % 10 == 0:
+                print(f"  Batch {batch+1}/{len(data_gen_train)} - loss: {logs.get('loss', 0):.4f} - batch_time: {batch_time:.2f}s - total: {elapsed:.1f}s", flush=True)
+    callbacks.append(BatchLogger())
 
     # # Add TensorBoard callback with profiling enabled
     # REMEMBER TO ADD THE @tf.function decorator to the model's call method
@@ -323,15 +338,16 @@ def main(data_path, log_filename, use_WB, args):
 
     # TRAIN
     do_training = args.epochs > 0 #and not (args.load_model_ckpt or args.load_kge_ckpt):
-    if do_training: 
-        
+    if do_training:
+
         # tf.profiler.experimental.start(log_dir)
 
         history = model.fit(data_gen_train,
                 epochs=args.epochs,
                 callbacks=callbacks,
                 validation_data=data_gen_valid,
-                validation_freq=args.valid_frequency)
+                validation_freq=args.valid_frequency,
+                verbose=2)  # One line per epoch (for file logging)
         # tf.profiler.experimental.stop()
 
         end_train = time.time()

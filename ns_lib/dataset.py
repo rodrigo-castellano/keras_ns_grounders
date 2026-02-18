@@ -152,7 +152,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                  batch_size=None,
                  ragged: bool=False,
                  name= "None"):
-        
+        super().__init__()
         self.dataset = dataset
         self.deterministic = deterministic
         self.fol = fol
@@ -235,7 +235,7 @@ class DataGeneratorTensor(tf.keras.utils.Sequence):
                  engine=None,
                  batch_size=None,
                  ragged: bool=False):
-
+        super().__init__()
         self.dataset = dataset
         self.engine = engine
         self.serializer = serializer
@@ -309,7 +309,7 @@ class DataGeneratorTensorFast(tf.keras.utils.Sequence):
                  dataset: Dataset,
                  batch_size=None,
                  ragged: bool=False):
-
+        super().__init__()
         self.dataset = dataset
 
         self.ragged = ragged
