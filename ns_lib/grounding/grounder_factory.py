@@ -2,12 +2,7 @@ import argparse
 from typing import List, Dict
 from ns_lib.logic.commons import FOL
 from ns_lib.grounding import *
-
-def get_arg(args, name: str, default=None, assert_defined: bool=False):
-    value = getattr(args, name) if hasattr(args, name) else default
-    if assert_defined:
-        assert value is not None, 'Arg %s is not defined: %s' % (name, str(args))
-    return value
+from ns_lib.utils import get_arg
 
 def BuildGrounder(args, rules: List[Rule], facts: List[Tuple], fol: FOL,
                   domain2adaptive_constants: Dict[str, List[str]]):

@@ -3,7 +3,7 @@ import copy
 from typing import Dict, List, Set, Tuple, Union
 from ns_lib.logic.commons import Atom, Rule, RuleGroundings
 from ns_lib.grounding.engine import Engine
-from ns_lib.grounding.backward_chaining_grounder import AtomIndex
+from ns_lib.grounding.utils import AtomIndex
 from itertools import product
 
 class KnownBodyGrounder(Engine):

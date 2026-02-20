@@ -11,7 +11,7 @@ import sys
 from typing import Dict, Any, Optional
 import datetime
 # from tensorflow_ranking.python.utils import sort_by_scores, ragged_to_dense
-from ns_lib.logic.commons import Atom, Domain, Rule, RuleLoader
+from ns_lib.logic.commons import Atom, Domain, Rule
 from collections import defaultdict
 from collections import defaultdict
 import pickle
