@@ -11,7 +11,7 @@ from typing import List, Tuple, Dict
 from dataset import KGCDataHandler
 from model import CollectiveModel
 # from keras.callbacks import CSVLogger
-from ns_lib.logic.commons import Atom, Domain, FOL, Rule, RuleLoader
+from ns_lib.logic.commons import Atom, Domain, FOL, Rule
 from ns_lib.grounding.grounder_factory import BuildGrounder
 from ns_lib.utils import MMapModelCheckpoint, KgeLossFactory, get_arg, load_model_weights, load_kge_weights
 import time
