@@ -8,15 +8,20 @@ def update_config(run: argparse.Namespace) -> argparse.Namespace:
 
     # Dataset-specific settings
     dataset = run.dataset_name
-    run.num_rules = 0 if run.model_name == "no_reasoner" else 1
+    run.num_rules = 0 if run.model_name == "no_reasoner" else 9999
     run.valid_frequency = 1# 5 if not run.early_stopping else 1
-    run.resnet = False if 'ablation' in dataset else run.resnet
+    run.resnet = False  # Parity experiments: resnet=False for all datasets
     run.r2n_prediction_type = 'head' if 'ablation' in dataset else 'full'
     run.reasoner_atom_embedding_size = run.kge_atom_embedding_size
     run.reasoner_formula_hidden_embedding_size = run.kge_atom_embedding_size
 
     run.corrupt_mode = 'TAIL' if any(ds in dataset for ds in ['countries', 'ablation']) else 'HEAD_AND_TAIL'
-    
+    # countries/ablation have few domain-restricted candidates (~5) — use all corruptions.
+    # kinship/other datasets have many entities — use sampled negatives.
+    if any(ds in dataset for ds in ['countries', 'ablation']):
+        run.valid_negatives = None  # all domain-restricted corruptions
+        run.test_negatives = None
+
     if dataset in {'pharmkg_full', 'wn18rr', 'FB15k237', 'kinship_family'}:
         run.seed = [0]
 

@@ -8,7 +8,7 @@ from typing import Dict, List, Union, Set, Tuple
 from os.path import join
 from collections import OrderedDict
 from ns_lib.utils import read_file_as_lines
-from ns_lib.logic.commons import Atom
+from ns_lib.logic.commons import Atom, Predicate2Domains
 from itertools import product
 from collections import defaultdict,namedtuple
 import numpy as np
@@ -118,23 +118,6 @@ def read_ontology(paths: List[str], format: str):
             if c not in constants:
                 constants[c] = len(constants)
     return constants, predicates
-
-# Computes a dict predicate_name -> (domain_name1, domain_name2, ...)
-def Predicate2Domains(
-    atoms: List[Tuple[str, str, str]],
-    constant2domain: Dict[str, str]) -> Dict[str, List[Tuple[str]]]:
-    predictate2domains = {}
-    for a in atoms:
-        p = a[0]
-        for c in a[1:]:
-            assert c in constant2domain, 'Unknown domain for %s' % c
-        domain_tuple = tuple([constant2domain[c] for c in a[1:]])
-        if (p in predictate2domains and
-            domain_tuple not in predictate2domains[p]):
-            predictate2domains[p].append(domain_tuple)
-        else:
-            predictate2domains[p] = [domain_tuple]
-    return predictate2domains
 
 
 class KGCTrainingDataset(Dataset):

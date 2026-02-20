@@ -249,33 +249,6 @@ class Rule():
     def hard(self) -> bool:
         return self.weight == 1.0
 
-class RuleLoader(object):
-
-    @staticmethod
-    def load(filepath:str, num_rules:int, format:str='functional',
-             force_hard_rules:bool=False) -> List[Rule]:
-        rules = []
-        var2domain = None
-        with open(filepath) as f:
-            for line in f:
-                if line.startswith('#'):
-                    continue
-                elif line.startswith('var2domain'):
-                    line = line.strip()
-                    assert len(rules) == 0, 'var2domain must precede the rules.'
-                    tokens = line.split(' ')[1:]  # skip var2domain
-                    var2domain = {}
-                    for i in range(0, len(tokens), 2):
-                        var2domain[tokens[i]] = tokens[i+1]
-                else:
-                    r = Rule(s=line, var2domain=var2domain, format=format)
-                    if force_hard_rules:
-                        r.weight = 1.0
-                    rules.append(r)
-                    if len(rules) == num_rules:
-                        break
-        return rules
-
 
 # Aliases for the basic types.
 GroundAtom = Tuple[str, str, str]

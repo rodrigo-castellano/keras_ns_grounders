@@ -65,6 +65,7 @@ class ReasoningLayer(Layer):
             return tf.reduce_sum(data_all_formulas, axis=0)
         else:
             raise Exception('Unknown aggregation method: %s' % aggregation_type)
+            assert False, 'Unknown aggregation method'  # blocking error
 
     def _gumbel(self, logits, temperature: float,
                 make_prob: bool=False, hard: bool=False):
