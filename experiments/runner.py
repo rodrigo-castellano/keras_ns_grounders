@@ -6,14 +6,13 @@ import os
 #     tf.config.set_soft_device_placement(True)
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 tf.config.set_soft_device_placement(True)
 
-# gpus = tf.config.experimental.list_physical_devices('GPU')
-# if gpus:
-#     for gpu in gpus:
-#         tf.config.experimental.set_memory_growth(gpu, True)
-# print("GPUs used: ", gpus)
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
+print("GPUs used: ", gpus)
 tf.config.run_functions_eagerly(False)
 
 import sys
@@ -49,7 +48,7 @@ class ExperimentConfig:
                 'batch_size': [256],
                 'val_batch_size': [256],
                 'test_batch_size': [256],
-                'resnet': [False], #[True]
+                'resnet': [True], #[False]
                 'store_ranks': [False], #[False]
                 'stop_kge_gradients': [False],
                 'rules_file' : ['rules.txt'], 
