@@ -44,15 +44,6 @@ def _facts_to_triples(facts):
     return triples
 
 
-def _triple_to_fact(triple):
-    h, r, t = triple
-    return "%s(%s,%s)" % (r, h, t)
-
-
-def _triples_to_facts(triples):
-    return ["%s(%s,%s)" % (r, h, t) for h, r, t in triples]
-
-
 def read_ntp_ontology_only(file, base_path):
     file = join(base_path, file)
     predicates = OrderedDict()
