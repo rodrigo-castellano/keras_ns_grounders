@@ -116,9 +116,12 @@ def approximate_backward_chaining_grounding_one_rule(
                 for j in range(len(rule.body)):
                     if i == j:
                         new_ground_atom = ground_atom
-                        # by definition as it is coming from the groundings.
-                        is_known_fact = True
-                        # print('         -j=',j,'=i, it is a fact by def') if cont< lim else None
+                        # True when anchor came from fact_index; when
+                        # the anchor was fully ground from head vars
+                        # (line 63), verify against the fact index.
+                        is_known_fact = (fact_index._index.get(
+                            new_ground_atom, None) is not None)
+                        # print('         -j=',j,'=i, is_known_fact:', is_known_fact) if cont< lim else None
                     else:
                         body_atom2 = rule.body[j]
                         new_ground_atom = (body_atom2[0], ) + tuple(
