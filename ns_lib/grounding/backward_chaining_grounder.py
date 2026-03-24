@@ -127,12 +127,13 @@ def approximate_backward_chaining_grounding_one_rule(
                         new_ground_atom = (body_atom2[0], ) + tuple(
                             [full_ground_vars.get(body_atom2[k+1], None)
                              for k in range(len(body_atom2)-1)])
-                        if new_ground_atom == q:
-                            # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, ' Same atom as query, discard') if cont< lim else None
-                            accepted = False
-                            break
                         is_known_fact = (fact_index._index.get(
                             new_ground_atom, None) is not None)
+                    # Query exclusion: discard if ANY body atom (including
+                    # anchor) equals the query — prevents circular proofs.
+                    if new_ground_atom == q:
+                        accepted = False
+                        break
                         # print('         -j=',j,'NEW GROUND ATOM', new_ground_atom, '. Is known_fact:',is_known_fact) if cont< lim else None
 
                     assert all(new_ground_atom), (

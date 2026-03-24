@@ -163,3 +163,7 @@ cython_debug/
 #.idea/
 *pycache__/*
 runner.py
+
+# include main/submodules/keras-ns/experiments/runs in gitignore
+main/submodules/keras-ns/experiments/runs/*
+experiments/runs/*
