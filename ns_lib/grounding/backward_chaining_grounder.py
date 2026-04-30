@@ -67,11 +67,15 @@ def approximate_backward_chaining_grounding_one_rule(
             groundings = fact_index._index.get(ground_body_atom, [])
             # print('     possible groundings:', groundings) if cont< lim else None
 
-        if len(rule.body) == 1:
-            # Shortcut, we are done, the clause has no free variables.
-            # print('ADDED', q, '->', (groundings,)) if cont< lim else None
-            new_ground_atoms.add(((q,), groundings))
-            continue
+        # NOTE: Removed the original 1-body shortcut here. It bypassed
+        # ``max_unknown_fact_count`` entirely AND skipped proof recording,
+        # so 1-body apps were admitted regardless of whether the body
+        # atom was a fact. Per the paper convention u=0 every leaf body
+        # atom must be a fact; the original shortcut violated that. The
+        # multi-body path below already handles 1-body rules correctly
+        # (``product`` returns a single empty tuple, the loop runs once,
+        # and the width / head_pred checks at lines ~142-149 apply
+        # uniformly). See: torch-ns paper-strict V=1 parity discussion.
 
         for ground_atom in groundings:
             # print('\n     -GROUND ATOM', ground_atom) if cont< lim else None
