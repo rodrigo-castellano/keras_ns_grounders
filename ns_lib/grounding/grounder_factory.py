@@ -29,7 +29,11 @@ def BuildGrounder(args, rules: List[Rule], facts: List[Tuple], fol: FOL,
             pure_adaptive=get_arg(args, 'engine_pure_adaptive', False),
             num_steps=backward_depth,
             max_unknown_fact_count=backward_width,
-            max_unknown_fact_count_last_step=backward_width,
+            # Paper convention u=0: every leaf body atom must be a fact.
+            # The original code set this to backward_width which made
+            # the last step admit unknowns — diverging from the paper
+            # and producing extra firings that inflated MRR.
+            max_unknown_fact_count_last_step=0,
             prune_incomplete_proofs=prune_incomplete_proofs,
             max_groundings_per_rule=get_arg(
                 args, 'backward_chaining_max_groundings_per_rule', -1))
