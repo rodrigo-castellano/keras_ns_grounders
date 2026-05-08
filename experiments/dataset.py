@@ -198,14 +198,31 @@ class KGCEvalDataset(Dataset):
             domain2constants=self.domain2constants,
             num_negatives=self.num_negatives,
             corrupt_mode=self.corrupt_mode)
-        # Eval corruptions are split head and tail corruptions
+        # Eval corruptions are split head and tail corruptions.
+        # FIX (env-gated): skip empty corruption side. TAIL-only
+        # datasets have c.head=[]; the original code's `Q.append(q+[])`
+        # appends a trivial single-positive entry whose MRR is always
+        # 1.0 → inflates the average. Set
+        # `KERAS_NS_FIX_EVAL_INFLATION=1` to enable the fix; default
+        # leaves the paper-reproducing inflated behavior.
+        import os as _os
+        fix = _os.environ.get("KERAS_NS_FIX_EVAL_INFLATION", "1") == "1"
         Q = []
         L = []
         for q,l,c in zip(queries, labels, corruptions_per_query):
-            Q.append(q + c.head)
-            Q.append(q + c.tail)
-            L.append(l + [0] * len(c.head))
-            L.append(l + [0] * len(c.tail))
+            if fix:
+                if c.head:
+                    Q.append(q + c.head)
+                    L.append(l + [0] * len(c.head))
+                if c.tail:
+                    Q.append(q + c.tail)
+                    L.append(l + [0] * len(c.tail))
+            else:
+                # Original (paper-reproducing inflated) behavior.
+                Q.append(q + c.head)
+                Q.append(q + c.tail)
+                L.append(l + [0] * len(c.head))
+                L.append(l + [0] * len(c.tail))
         return Q, L
 
 
