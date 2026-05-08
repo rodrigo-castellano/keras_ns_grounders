@@ -108,7 +108,8 @@ class ExperimentConfig:
         parser.add_argument("--save_model_ckpt", default = None)
         parser.add_argument("--log_folder", default = None)
         parser.add_argument("--ckpt_folder", default = None)
-        parser.add_argument("--resnet", default = None, action='store_const', const='True')
+        parser.add_argument("--resnet", default = None)  # accept 'True' / 'False' explicitly
+        parser.add_argument("--batch_size", default = None, type=int)
         parser.add_argument("--store_ranks", default = None, action='store_const', const='True')
         parser.add_argument("--epochs", default = None)
         parser.add_argument("--stop_kge_gradients", default = None, action='store_const', const='True')
@@ -130,6 +131,7 @@ class ExperimentConfig:
         if args.log_folder: self.log_folder = [args.log_folder]
         if args.ckpt_folder: self.ckpt_folder = [args.ckpt_folder]
         if args.epochs: self.epochs = [int(args.epochs)]
+        if args.batch_size is not None: self.batch_size = [int(args.batch_size)]
         if args.load_model_ckpt: self.load_model_ckpt = [ast.literal_eval(args.load_model_ckpt)]
         if args.load_kge_ckpt: self.load_kge_ckpt = [ast.literal_eval(args.load_kge_ckpt)]
         if args.save_model_ckpt: self.save_model_ckpt = [ast.literal_eval(args.save_model_ckpt)]
@@ -185,9 +187,12 @@ def run_experiment(run):
 
     if use_logger:
         logger = ns.utils.FileLogger(base_folder=log_folder)
-        if logger.exists_experiment(run.__dict__): return
+        # exists_experiment skipped: it short-circuits on any seed already
+        # logged for this config, blocking new seeds. The per-seed
+        # exists_run check below is the right granularity.
 
-    for seed in run.seed:
+    seeds = run.seed if isinstance(run.seed, (list, tuple)) else [run.seed]
+    for seed in seeds:
         run.seed_run_i = seed
         print(f"\nSeed {seed} in {run.seed}")
         
@@ -209,8 +214,8 @@ def run_experiment(run):
                 f'_ind_log-{run.run_signature}-{logger.date}-{task_mrr}-seed_{seed}.csv')
             logger.finalize_log_file(log_filename_tmp,final_log)
 
-    if use_logger: 
-        logger.get_avg_results(run.__dict__, run.run_signature, run.seed)
+    if use_logger:
+        logger.get_avg_results(run.__dict__, run.run_signature, seeds)
 
 def main():
     config = ExperimentConfig()
