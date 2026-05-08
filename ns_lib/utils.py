@@ -49,7 +49,12 @@ def ragged_to_dense(labels, predictions, weights):
     A tuple (labels, predictions, weights, mask) of dense `tf.Tensor`s.
   """
   _PADDING_LABEL = -1.
-  _PADDING_PREDICTION = -1e6
+  # Use -inf so that padding always sorts below any model output, including
+  # the model's own masking sentinel ``-FLT_MAX`` (~-3.4e38). With the old
+  # ``-1e6`` value, a positive scored at ``-FLT_MAX`` (e.g. SBR/DCR with
+  # zero rule firings) would be ranked *below* padding, causing trivial
+  # single-positive entries in the inflated TAIL-only eval to give MRR<1.
+  _PADDING_PREDICTION = float("-inf")
   _PADDING_WEIGHT = 0.
   # TODO: Add checks to validate (ragged) shapes of input tensors.
   mask = tf.cast(tf.ones_like(labels).to_tensor(0.), dtype=tf.bool)
