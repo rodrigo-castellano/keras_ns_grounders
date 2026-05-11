@@ -120,7 +120,18 @@ class ExperimentConfig:
         parser.add_argument("--distill", default = None, action='store_const', const='True')
         parser.add_argument("--distill_kge_labels", default = None, action='store_const', const='True')
 
-        
+        # Sweep-side dual-eval plumbing: explicit CLI overrides for
+        # eval-only knobs that the IJCAI tkk parity script supplies.
+        # ``valid_size`` caps val queries; ``valid_negatives`` and
+        # ``test_negatives`` set the sampled-negative count (0 or 'None'
+        # → exhaustive over the relation's domain). When provided here
+        # they override config.yaml AND ``update_config.py``'s
+        # countries/ablation force-None branch.
+        parser.add_argument("--valid_size", default=None, type=int)
+        parser.add_argument("--valid_negatives", default=None)
+        parser.add_argument("--test_negatives", default=None)
+
+
         args = parser.parse_args()
 
         # Update configuration with command line arguments
@@ -156,6 +167,20 @@ class ExperimentConfig:
             self.log_folder = ["./experiments/runs_distill/"]
             self.ckpt_folder = ["./../checkpoints_distill/"]
         if args.distill_kge_labels: self.distill_kge_labels = [ast.literal_eval(args.distill_kge_labels)]
+        # Eval knobs supplied by the tkk parity sweep. Each is stored
+        # as a 1-element list to match the hparams convention. The
+        # ``update_config`` auto-override for countries/ablation
+        # (forcing both negatives to None) still fires; we leave that
+        # alone since the parity sweep doesn't pass these for those
+        # datasets anyway.
+        if args.valid_size is not None:
+            self.valid_size = [int(args.valid_size)]
+        if args.valid_negatives is not None:
+            v = args.valid_negatives
+            self.valid_negatives = [None if v in ("None", "none", "") else int(v)]
+        if args.test_negatives is not None:
+            v = args.test_negatives
+            self.test_negatives = [None if v in ("None", "none", "") else int(v)]
 
 def setup_tf():
     """Configure TensorFlow settings"""
