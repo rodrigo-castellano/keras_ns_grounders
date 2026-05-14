@@ -222,9 +222,14 @@ def run_experiment(run):
         print(f"\nSeed {seed} in {run.seed}")
         
         log_filename_tmp = os.path.join(log_folder, f'_tmp_log-{run.run_signature}-{logger.date}-seed_{seed}.csv') if use_logger else None
-        
-        if use_logger and logger.exists_run(run.run_signature, seed): 
-            continue
+
+        # exists_run skipped: external orchestrators (run_baselines.py)
+        # may legitimately want to re-train the same (signature, seed)
+        # after changing eval knobs (tie-breaking seed, valid_negatives,
+        # etc) that don't affect the run_signature. Re-running is cheap
+        # vs the cost of silently using stale results.
+        # if use_logger and logger.exists_run(run.run_signature, seed):
+        #     continue
 
         metrics = main_train(data_path, log_filename_tmp, use_WB, run)
         
