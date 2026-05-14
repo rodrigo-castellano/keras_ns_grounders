@@ -1121,7 +1121,7 @@ class HitsMetric(tf.keras.metrics.Metric):
             labels, predictions, _, _ = ragged_to_dense(labels, predictions, None)
 
         topn = tf.shape(predictions)[1]
-        sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None)
+        sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None, seed=0)
         relevance = tf.cast(tf.greater_equal(sorted_labels, 1.0), dtype=tf.float32)
         top_relevance = relevance[:, :self._n]
         hits = tf.reduce_sum(top_relevance, axis=1, keepdims=True)
@@ -1160,7 +1160,7 @@ class MRRMetric(tf.keras.metrics.Metric):
             labels, predictions, _, _ = ragged_to_dense(labels, predictions, None)
 
         topn = tf.shape(predictions)[1]
-        sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None)
+        sorted_labels, = sort_by_scores(predictions, [labels], topn=topn, mask=None, seed=0)
         sorted_list_size = tf.shape(input=sorted_labels)[1]
         relevance = tf.cast(tf.greater_equal(sorted_labels, 1.0), dtype=tf.float32)
         reciprocal_rank = 1.0 / tf.cast(
