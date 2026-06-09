@@ -164,6 +164,7 @@ cython_debug/
 *pycache__/*
 runner.py
 
-# include main/submodules/keras-ns/experiments/runs in gitignore
+# experiment outputs (large / transient) — ignore the whole folders
 main/submodules/keras-ns/experiments/runs/*
-experiments/runs/*
+experiments/runs/
+experiments/runs_initial/
